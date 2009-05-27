@@ -1,0 +1,5 @@
+ALTER TABLE clusters ADD COLUMN default_cluster boolean NOT NULL DEFAULT false;
+ALTER TABLE clusters ADD COLUMN hide_legend boolean NOT NULL DEFAULT false;
+ALTER TABLE clusters ADD COLUMN hide_tree boolean NOT NULL DEFAULT false;
+ALTER TABLE clusters ADD COLUMN background_cluster boolean NOT NULL DEFAULT false;
+ALTER TABLE clusters ADD COLUMN extra_level boolean NOT NULL DEFAULT false;
