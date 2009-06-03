@@ -50,23 +50,16 @@ public class CycloramaFetcherServlet extends HttpServlet {
         super.init(config);
 
         privateBase64Key = getConfigValue(config, "privateBase64Key", null);
-        initSecurity();
-        accountId = getConfigValue(config, "accountId", "2194");
+        accountId = getConfigValue(config, "accountId", null);
         cyclomediaUrl = getConfigValue(config, "cyclomediaUrl", "http://live.cyclomedia.nl/cycloscopeliteview/cycloviewui.asp?");
+        if (privateBase64Key == null || accountId==null) {
+            log.error("error getting key for cyclomedia client");
+            return;
+        }
+        initSecurity();
     }
 
     private void initSecurity() {
-        if (privateBase64Key == null) {
-            StringBuffer privateBase64KeyDefault = new StringBuffer();
-            privateBase64KeyDefault.append("MIIBPAIBAAJBAKjeVutOmj3gQAv5tRCEvCmDr8qCMCiavtJGFekZ6X9kO3i2Gsq+\n");
-            privateBase64KeyDefault.append("4zS+c2/hPgquiJMVJ+9O+nlFYnQy7btrtxsCAwEAAQJBAIXDgWRpYgKLhRA3X7bS\n");
-            privateBase64KeyDefault.append("/d2Ao5otIAq58VfNDoQT84LlUCYxmsJMrFox9ybqoQDQj68LuaaLiAjzQI5DS60z\n");
-            privateBase64KeyDefault.append("m3ECIQDW8ykzf4SDpC6mA1ofn9fnnnfdv9JA1xvkNhYy4FC/cwIhAMkeRlss89UW\n");
-            privateBase64KeyDefault.append("t4hNVpcLl4owhKZByVXbA5GYdbYJF++5AiEAkib5/8MXxi6PbV/gGpqjwiBU3lk8\n");
-            privateBase64KeyDefault.append("S8w3cb947pTpMpMCIQC/EWoZ+Mz15o0aiw72lOa1PH7pTJqwXFA5pDRAasc40QIg\n");
-            privateBase64KeyDefault.append("PbiSX7GYGWggb20XFCPHEf6MHwfH/EZYIXCYxz7K6DM=\n");
-            privateBase64Key = privateBase64KeyDefault.toString();
-        }
         // Determine cyclomedia private key for signing
         Security.addProvider(new BouncyCastleProvider());
         provBC = Security.getProvider("BC");
@@ -190,12 +183,13 @@ public class CycloramaFetcherServlet extends HttpServlet {
 
     public static void main(String[] args) throws Exception {
         CycloramaFetcherServlet cyclomediaWMSClient = new CycloramaFetcherServlet();
+        // maarssen
+        accountId = "2372";
+        cyclomediaUrl = "http://live.cyclomedia.nl/cycloscopeliteview/cycloviewui.asp?";
+        privateBase64Key = "MIIBOgIBAAJBAPPSWn66HQDg88shBGH+7/vRxUMI4y+Ug8qZMjutA3jFbFjm4NmFKOIiAXt0icEf6vY66LOTbd6mP6mnejOaKkkCAwEAAQJBAMNCfn5mhbuiaxsNgfkItR+xyov4nhgIk9K4BOaNk+4ufG3YK+WuyRQa0DZE9uUndSka8E2LLN3ZcfWkiZ8/LEECIQD+yXI38enlgzlCARPAcmL2L0eRReJANoEhk/QWbZNgHQIhAPT7isbEPXE08THONbh1oYhGfddWnQ0RpcqkVNMuRLMdAiAHw4GsfL2g1b/P6BJ/Ab1MPSKUJaoAROjoaga9DDe6bQIgRw2t8nh4WZ1BV3C3pAh6EUxgs1QruN6ld2CyOY3x3wECIA5NYgbwMUN3sfLehJF5FxWfE0NiLTgqVH1sQG+BNVAl";
+        String imageId = "0K002JUG";
         cyclomediaWMSClient.initSecurity();
 
-        accountId = "2194";
-        cyclomediaUrl = "http://live.cyclomedia.nl/cycloscopeliteview/cycloviewui.asp?";
-
-        String imageId = "3N005KAW";
         SimpleDateFormat sdf = (SimpleDateFormat) SimpleDateFormat.getDateInstance();
         Date now = new Date();
         sdf.applyPattern("yyyyMMddHHmm");
