@@ -135,8 +135,9 @@ public class ConfigListsUtil {
             try{
                 conn = c.getJdbcConnection();
                 List columns=SpatialUtil.getColumnNames(feature, conn);
-                if (columns!=null)
-                    returnValue=new ArrayList();
+                if (columns==null)
+                    return null;
+                returnValue=new ArrayList();
                 for (int i=0; i < columns.size(); i++){
                     String[] s = new String[2];
                     s[0]=(String)columns.get(i);
