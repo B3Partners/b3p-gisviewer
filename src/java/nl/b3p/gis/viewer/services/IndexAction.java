@@ -96,6 +96,7 @@ public class IndexAction extends BaseGisAction {
      * @throws Exception
      */
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        createLists(dynaForm, request);
         return mapping.findForward(SUCCESS);
     }
 
@@ -152,6 +153,7 @@ public class IndexAction extends BaseGisAction {
         }
 
         addDefaultMessage(mapping, request);
+        createLists(dynaForm, request);
         return getDefaultForward(mapping, request);
     }
 
@@ -206,6 +208,7 @@ public class IndexAction extends BaseGisAction {
         request.setAttribute("clusterlist", clusterlist);
 
         addDefaultMessage(mapping, request);
+        createLists(dynaForm, request);
         return getDefaultForward(mapping, request);
     }
 }

@@ -140,8 +140,8 @@ public class GisPrincipal implements Principal {
             String name = layer.getName();
             if (name != null && name.length() > 0) {
                 if ((legendGraphicOnly && hasLegendGraphic(layer)) ||
-                        !legendGraphicOnly) {                    
-                    allLayers.add(name);                    
+                        !legendGraphicOnly) {
+                    allLayers.add(name);
                 }
             }
         }
@@ -150,7 +150,8 @@ public class GisPrincipal implements Principal {
         }
         return allLayers;
     }
-    public List getLayers(boolean legendGraphicOnly,boolean nameOnly){
+
+    public List getLayers(boolean legendGraphicOnly, boolean nameOnly) {
         if (sp == null) {
             return null;
         }
@@ -163,9 +164,9 @@ public class GisPrincipal implements Principal {
         while (it.hasNext()) {
             Layer layer = (Layer) it.next();
             if ((legendGraphicOnly && hasLegendGraphic(layer)) ||
-                        !legendGraphicOnly) {
-                if ((nameOnly && layer.getName()!=null) ||
-                        !nameOnly){
+                    !legendGraphicOnly) {
+                if ((nameOnly && layer.getName() != null) ||
+                        !nameOnly) {
                     allLayers.add(layer);
                 }
             }
@@ -175,12 +176,12 @@ public class GisPrincipal implements Principal {
         return allLayers;
     }
 
-    public boolean hasLegendGraphic(Layer l) {        
-        return getLegendGraphicUrl(l)!=null;
+    public boolean hasLegendGraphic(Layer l) {
+        return getLegendGraphicUrl(l) != null;
     }
-    
+
     public String getLegendGraphicUrl(Layer l) {
-        if (l==null){
+        if (l == null) {
             return null;
         }
         Set styles = l.getStyles();
@@ -188,7 +189,7 @@ public class GisPrincipal implements Principal {
             return null;
         }
         Iterator it = styles.iterator();
-        String legendUrl=null;
+        String legendUrl = null;
         while (it.hasNext()) {
             Style style = (Style) it.next();
             Set ldrs = style.getDomainResource();
@@ -197,8 +198,8 @@ public class GisPrincipal implements Principal {
                 while (it2.hasNext()) {
                     StyleDomainResource sdr = (StyleDomainResource) it2.next();
                     if ("LegendURL".equalsIgnoreCase(sdr.getDomain())) {
-                        legendUrl= sdr.getUrl();
-                        if (style.getName().equalsIgnoreCase("default")){
+                        legendUrl = sdr.getUrl();
+                        if (style.getName().equalsIgnoreCase("default")) {
                             return legendUrl;
                         }
                     }
@@ -239,52 +240,41 @@ public class GisPrincipal implements Principal {
     }
 
     public static GisPrincipal getGisPrincipal(HttpServletRequest request) {
-        Principal user = request.getUserPrincipal();        
-        if (user == null) {
-            // Eventueel fake Principal aanmaken
-            if (!HibernateUtil.isCheckLoginKaartenbalie()) {
-                user = GisSecurityRealm.authenticateFake(HibernateUtil.ANONYMOUS_USER);
-            } else {
-                String url = GisSecurityRealm.createCapabilitiesURL(null);
-                user = GisSecurityRealm.authenticateHttp(url, HibernateUtil.ANONYMOUS_USER, null, null);
-            }
-
-            if (request instanceof SecurityRequestWrapper) {
-                SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
-                srw.setUserPrincipal(user);
-                log.debug("Automatic login for user: " + HibernateUtil.ANONYMOUS_USER);
-            }
-
-        }
-        if (!(user instanceof GisPrincipal)) {
+        Principal user = request.getUserPrincipal();
+        if (!(user instanceof GisPrincipal && request instanceof SecurityRequestWrapper)) {
             return null;
         }
-        GisPrincipal gp  =(GisPrincipal) user;
-        String code=request.getParameter(BaseGisAction.URL_AUTH);
-        if(code!=null && code.length()>0 && gp.getCode()!=null && gp.getCode().length()>0){
-            if (gp.getCode().equals(code)){
-                return gp;
-            }else{
-                HttpSession session = request.getSession();
-                String sesId = session.getId();
-                session.invalidate();
-                String url = GisSecurityRealm.createCapabilitiesURL(code);
-                user = GisSecurityRealm.authenticateHttp(url, HibernateUtil.ANONYMOUS_USER, null, code);
-                if (user != null) {
-                    // invalidate old session if the user was already authenticated, and they logged in as a different user
-                    if (request.getUserPrincipal() != null && false == request.getUserPrincipal().equals(user)) {
-                        request.getSession().invalidate();
-                    }
-                    SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
-                    srw.setUserPrincipal(user);
-                    log.debug("Automatic login for user: " + HibernateUtil.ANONYMOUS_USER);
+        GisPrincipal gp = (GisPrincipal) user;
 
-                }
-                gp=(GisPrincipal) user;
+        String code = request.getParameter(BaseGisAction.URL_AUTH);
+        if (code != null && code.length() != 0) {
+            if (gp!=null && code.equals(gp.getCode())) {
+                return gp;
             }
+
+            // user is using different code, so invalidate session and login again
+            HttpSession session = request.getSession();
+            session.invalidate();
+            String url = GisSecurityRealm.createCapabilitiesURL(code);
+            gp = GisSecurityRealm.authenticateHttp(url, HibernateUtil.ANONYMOUS_USER, null, code);
         }
+
+        // no principal, is login required?
+        if (gp == null && !HibernateUtil.isCheckLoginKaartenbalie()) {
+            // Fake Principal aanmaken
+            gp = GisSecurityRealm.authenticateFake(HibernateUtil.ANONYMOUS_USER);
+        }
+        
+        // log in found principal
+        if (gp != null) {
+            SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
+            srw.setUserPrincipal(gp);
+            log.debug("Automatic login for user: " + gp.name);
+        }
+
         return gp;
-    }    
+    }
+
     /**
      * @return the kbWfsConnectie
      */
