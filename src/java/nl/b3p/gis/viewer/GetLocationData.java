@@ -22,7 +22,7 @@
  */
 package nl.b3p.gis.viewer;
 
-import com.vividsolutions.jump.feature.Feature;
+import com.vividsolutions.jts.geom.Geometry;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -49,6 +49,7 @@ import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.filter.Filter;
 import org.opengis.geometry.BoundingBox;
@@ -104,7 +105,7 @@ public class GetLocationData {
                 WebContext ctx = WebContextFactory.get();
                 HttpServletRequest request = ctx.getHttpServletRequest();
                 Feature f = WfsUtil.getWfsObject(t, attributeName, compareValue,request);
-                area = f.getGeometry().getArea();
+                area = ((Geometry)f.getDefaultGeometryProperty().getValue()).getArea();
             } catch (Exception ex) {
                 log.error("", ex);
                 returnValue[1] = "Fout (zie log)";

@@ -315,7 +315,6 @@ is divided into following sections:
         <ant antfile="${project.b3p-commons-gis}/build.xml" inheritall="false" target="jar"/>
         <ant antfile="${project.b3p-commons-hibernate}/build.xml" inheritall="false" target="jar"/>
         <ant antfile="${project.b3p-geotools-filterImpl2}/build.xml" inheritall="false" target="jar"/>
-        <ant antfile="${project.jump-b3p}/build.xml" inheritall="false" target="jar"/>
         <ant antfile="${project.securityfilter-b3p}/build.xml" inheritall="false" target="jar"/>
     </target>
     <target depends="init,-check-automatic-build,-clean-after-automatic-build" name="-verify-automatic-build"/>
@@ -632,7 +631,6 @@ is divided into following sections:
         <ant antfile="${project.b3p-commons-gis}/build.xml" inheritall="false" target="clean"/>
         <ant antfile="${project.b3p-commons-hibernate}/build.xml" inheritall="false" target="clean"/>
         <ant antfile="${project.b3p-geotools-filterImpl2}/build.xml" inheritall="false" target="clean"/>
-        <ant antfile="${project.jump-b3p}/build.xml" inheritall="false" target="clean"/>
         <ant antfile="${project.securityfilter-b3p}/build.xml" inheritall="false" target="clean"/>
     </target>
     <target depends="init" name="-do-clean">

@@ -22,7 +22,6 @@
  */
 package nl.b3p.gis.viewer;
 
-import com.vividsolutions.jump.feature.Feature;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
@@ -51,6 +50,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.hibernate.Session;
+import org.opengis.feature.Feature;
 
 public abstract class BaseGisAction extends BaseHibernateAction {
 
@@ -786,11 +786,11 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             return null;
         }
         String attName = rawName.trim();
-        if (f.getSchema().hasAttribute(attName)) {
+        if (f.getProperty(attName)!=null) {
             return attName;
         }
         attName=removeNamespace(attName);
-        if (f.getSchema().hasAttribute(attName)) {
+        if (f.getProperty(attName)!=null) {
             return attName;
         }
         return null;
@@ -828,7 +828,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
         String adminPk = convertAttributeName(t.getAdmin_pk(), f);
         if (adminPk != null) {
-            regel.setPrimairyKey(f.getAttribute(adminPk));
+            regel.setPrimairyKey(f.getProperty(adminPk));
         }
         Iterator it = thema_items.iterator();
         while (it.hasNext()) {
@@ -851,9 +851,11 @@ public abstract class BaseGisAction extends BaseHibernateAction {
              * en aan de arraylist regel toegevoegd te worden.
              */
             if (td.getDataType().getId() == DataTypen.DATA && kolomnaam != null) {
-
-                regel.addValue(f.getString(kolomnaam));
-
+                if (f.getProperty(kolomnaam).getValue()==null){
+                    regel.addValue(null);
+                }else{
+                    regel.addValue(f.getProperty(kolomnaam).getValue().toString());
+                }
             /*
              * In het tweede geval dient de informatie in de thema data als link naar een andere
              * informatiebron. Deze link zal enigszins aangepast moeten worden om tot vollende
@@ -872,7 +874,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
                 Object value = null;
                 if (adminPk != null) {
-                    value = f.getString(adminPk);
+                    value = f.getProperty(adminPk).getValue();
                     if (value != null) {
                         url.append("&");
                         url.append(adminPk);
@@ -882,7 +884,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 }
 
                 if (kolomnaam != null && kolomnaam.length() > 0 && !kolomnaam.equalsIgnoreCase(adminPk)) {
-                    value = f.getString(kolomnaam);
+                    value = f.getProperty(kolomnaam).getValue();
                     if (value != null) {
                         url.append("&");
                         url.append(kolomnaam);
@@ -907,7 +909,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
                 Object value = null;
                 if (kolomnaam != null) {
-                    value = f.getString(kolomnaam);
+                    value = f.getProperty(kolomnaam).getValue();
                 }
                 if (value != null) {
                     url.append(value.toString().trim());
@@ -918,13 +920,13 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             } else if (td.getDataType().getId() == DataTypen.FUNCTION) {
                 Object keyValue = null;
                 if (adminPk != null) {
-                    keyValue = f.getAttribute(adminPk);
+                    keyValue = f.getProperty(adminPk).getValue();
                 }
                 if (keyValue != null) {
                     String attributeName = kolomnaam;
                     Object attributeValue = null;
                     if (attributeName != null) {
-                        attributeValue = f.getAttribute(attributeName);
+                        attributeValue = f.getProperty(attributeName).getValue();
                     } else {
                         attributeName = adminPk;
                         attributeValue = keyValue;

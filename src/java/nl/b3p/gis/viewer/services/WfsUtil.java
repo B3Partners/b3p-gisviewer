@@ -24,10 +24,7 @@ package nl.b3p.gis.viewer.services;
 
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import javax.servlet.http.HttpServletRequest;
-import nl.b3p.gis.readers.B3pGMLReader;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.ogc.utils.OGCConstants;
@@ -38,11 +35,9 @@ import nl.b3p.xml.wfs.GetFeature;
 import nl.b3p.xml.wfs.WFS_Capabilities;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.exolab.castor.types.AnyNode;
-import org.exolab.castor.xml.MarshalException;
 import org.exolab.castor.xml.Unmarshaller;
+import org.opengis.feature.Feature;
 import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 
 /**
  *
@@ -140,7 +135,7 @@ public class WfsUtil {
         return OgcWfsClient.getFeatureElements(gf,or);
     }
     
-    public static com.vividsolutions.jump.feature.Feature getWfsObject(Themas t, String attributeName, String compareValue,HttpServletRequest request) throws Exception{
+    public static Feature getWfsObject(Themas t, String attributeName, String compareValue,HttpServletRequest request) throws Exception{
         Connecties conn =getWfsConnection(t,request);
         if (conn==null)
             return null;
@@ -152,7 +147,7 @@ public class WfsUtil {
         if (features==null || features.size()!=1){
             throw new Exception("De gegeven id is niet uniek. Query geeft meerdere objecten");
         }
-        return (com.vividsolutions.jump.feature.Feature)features.get(0);
+        return (Feature)features.get(0);
         
     }
     

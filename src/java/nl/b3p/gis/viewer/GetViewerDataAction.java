@@ -22,7 +22,6 @@
  */
 package nl.b3p.gis.viewer;
 
-import com.vividsolutions.jump.feature.Feature;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -42,7 +41,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.transaction.NotSupportedException;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
-import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.HibernateUtil;
@@ -54,6 +52,7 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.hibernate.Session;
+import org.opengis.feature.Feature;
 
 public class GetViewerDataAction extends BaseGisAction {
 
