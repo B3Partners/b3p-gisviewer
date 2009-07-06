@@ -248,7 +248,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
             return;
         }
         dynaForm.set("themaID", Integer.toString(t.getId()));
-        dynaForm.set("code", t.getCode());
+        dynaForm.set("themaCode", t.getCode());
         dynaForm.set("naam", t.getNaam());
         dynaForm.set("metadatalink", t.getMetadata_link());
         String val = "";
@@ -295,7 +295,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
 
     private void populateThemasObject(DynaValidatorForm dynaForm, Themas t, HttpServletRequest request) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        t.setCode(FormUtils.nullIfEmpty(dynaForm.getString("code")));
+        t.setCode(FormUtils.nullIfEmpty(dynaForm.getString("themaCode")));
         t.setNaam(FormUtils.nullIfEmpty(dynaForm.getString("naam")));
         t.setMetadata_link(FormUtils.nullIfEmpty(dynaForm.getString("metadatalink")));
         if (FormUtils.nullIfEmpty(dynaForm.getString("connectie")) != null) {
