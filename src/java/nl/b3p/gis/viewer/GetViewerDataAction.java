@@ -64,7 +64,7 @@ public class GetViewerDataAction extends BaseGisAction {
     protected static final String ANALYSEDATA = "analysedata";
     protected static final String ANALYSEWAARDE = "analysewaarde";
     protected static final String ANALYSEOBJECT = "analyseobject";
-    protected static final double clickTolerance = 5.0;
+    protected static final double DEFAULTTOLERANCE = 5.0;
 
     /**
      * Return een hashmap die een property koppelt aan een Action.
@@ -758,6 +758,16 @@ public class GetViewerDataAction extends BaseGisAction {
         } catch (NumberFormatException nfe) {
             scale = 0.0;
             log.debug("Scale is geen double dus wordt genegeerd");
+        }
+        String tolerance= request.getParameter("tolerance");
+        double clickTolerance=DEFAULTTOLERANCE;
+        try{
+            if (tolerance!=null){
+                clickTolerance=Double.parseDouble(tolerance);
+            }
+        }catch (NumberFormatException nfe) {
+            clickTolerance=DEFAULTTOLERANCE;
+            log.debug("Tolerance is geen double dus de default wordt gebruikt: "+DEFAULTTOLERANCE+" pixels");
         }
         double distance = clickTolerance;
         if (scale > 0.0) {
