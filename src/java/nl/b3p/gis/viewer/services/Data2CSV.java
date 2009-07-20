@@ -75,6 +75,7 @@ public class Data2CSV extends HttpServlet {
             }
             Connection conn=null;
             if (WfsUtil.validWfsConnection(thema)){
+                log.error("Connection type "+Connecties.TYPE_WFS+" not supported");
                 throw new ServletException("Connection type "+Connecties.TYPE_WFS+" not supported");
             }else if (SpatialUtil.validJDBCConnection(thema)){
                 try {

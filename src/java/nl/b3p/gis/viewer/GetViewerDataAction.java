@@ -65,6 +65,7 @@ public class GetViewerDataAction extends BaseGisAction {
     protected static final String ANALYSEWAARDE = "analysewaarde";
     protected static final String ANALYSEOBJECT = "analyseobject";
     protected static final double DEFAULTTOLERANCE = 5.0;
+    protected static final String PK_FIELDNAME_PARAM = "pkFieldName";
 
     /**
      * Return een hashmap die een property koppelt aan een Action.
@@ -235,7 +236,7 @@ public class GetViewerDataAction extends BaseGisAction {
         List thema_items = SpatialUtil.getThemaData(t, false);
         request.setAttribute("thema_items", thema_items);
         if (SpatialUtil.validJDBCConnection(t)) {
-            List pks = getPks(t, dynaForm, request);
+            List pks = getPks(t, dynaForm, request,request.getParameter(PK_FIELDNAME_PARAM));
             request.setAttribute("regels", getThemaObjects(t, pks, thema_items));
             if (addKaart) {
                 request.setAttribute("envelops",getThemaEnvelops(t,pks));

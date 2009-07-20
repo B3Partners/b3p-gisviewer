@@ -306,21 +306,32 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         }
         return true;
     }
-
+    /**
+     * Om getPks backwardcompatable te maken
+     */
+    @Deprecated 
+    protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request) throws SQLException, NotSupportedException {
+        return getPks(t,dynaForm,request,null);
+    }
     /**
      * DOCUMENT ME!!!
      *
      * @param t Themas
      * @param dynaForm DynaValidatorForm
      * @param request HttpServletRequest
-     *
+     * @param pksField String. De naam van de Parameter waar alle  primary keys
+     *      in opgeslagen zijn. Als het null is wordt de pk naam van het thema
+     *      gebruikt om het van het request te halen. Dit is gedaan omdat de pk
+     *      uit een namespace kan bestaan voorbeeld "{www.b3p.nl}id" Dit gaat fout in js
+     *      als je dit gebruikt om een ref te maken naar het veld. Vandaar dat je dus ook
+     *      een andere kan opgeven als parameter naam. Dus dat is niet verstandig om te gebruiken!
      * @return List
      *
      * @throws SQLException
      *
      * @see Themas
      */
-    protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request) throws SQLException, NotSupportedException {
+    protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request, String pksField) throws SQLException, NotSupportedException {
         ArrayList pks = new ArrayList();
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -333,7 +344,13 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         }
         int dt = SpatialUtil.getPkDataType(t, connection);
         String adminPk = t.getAdmin_pk();
-        String adminIds = request.getParameter(adminPk);
+        String adminIds=null;
+        if (pksField==null){
+            adminIds = request.getParameter(adminPk);
+        }else{
+            adminIds = request.getParameter(pksField);
+        }
+
         String[] adminIdsArr = adminIds.split(",");
         for (int i = 0; i < adminIdsArr.length; i++) {
             String adminId = adminIdsArr[i];
@@ -828,7 +845,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
         String adminPk = convertAttributeName(t.getAdmin_pk(), f);
         if (adminPk != null) {
-            regel.setPrimairyKey(f.getProperty(adminPk));
+            regel.setPrimairyKey(f.getProperty(adminPk).getValue());
         }
         Iterator it = thema_items.iterator();
         while (it.hasNext()) {
