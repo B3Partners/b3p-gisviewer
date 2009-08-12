@@ -683,7 +683,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      *
      * @see Themas
      */
-    protected AdminDataRowBean getRegel(ResultSet rs, Themas t, List thema_items) throws SQLException, UnsupportedEncodingException {
+    protected AdminDataRowBean getRegel(ResultSet rs, Themas t, List thema_items) throws SQLException, UnsupportedEncodingException, Exception {
         //ArrayList regel = new ArrayList();
         AdminDataRowBean regel = new AdminDataRowBean();
         regel.setPrimairyKey(rs.getObject(t.getAdmin_pk()));
@@ -743,16 +743,64 @@ public abstract class BaseGisAction extends BaseHibernateAction {
              */
             } else if (td.getDataType().getId() == DataTypen.QUERY) {
                 StringBuffer url = new StringBuffer(td.getCommando());
-                String kolomNaam = td.getKolomnaam();
-                if (kolomNaam == null || kolomNaam.length() == 0) {
-                    kolomNaam = t.getAdmin_pk();
-                }
-                Object value = rs.getObject(kolomNaam);
-                if (value != null) {
-                    url.append(value.toString().trim());
+                String commando = url.toString();
+                if(commando.contains("[") || commando.contains("]")){
+                    /*
+                     * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
+                     * Bijvoorbeeld:
+                     * http://plannen.kaartenbalie.nl/[planeigenaar]/[plannaam]/[planidentificyaty].html
+                     * Kan dan worden:
+                     * http://plannen.kaartenbalie.nl/gemeente/plansoen/p38.html
+                     */
+                    int begin = -1;
+                    int eind = -1;
+                    for(int i = 0; i < url.length(); i++){
+                        char c = url.charAt(i);
+                        if(c == '['){
+                            if(begin == -1){
+                                begin = i;
+                            }else{
+                                log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                                throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                            }
+                        }else if(c == ']'){
+                            eind = i;
+                            if(begin != -1 && eind != -1){
+                                String kolomnaam = url.substring(begin+1, eind);
+                                if(kolomnaam == null || kolomnaam.length() == 0){
+                                    log.error("Commando \""+commando+"\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                                    throw new Exception("Commando \""+commando+"\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                                }
+                                Object value = rs.getObject(kolomnaam);
+                                if (value == null) {
+                                    value = "";
+                                }
+                                url.replace(begin, eind+1, value.toString().trim());
+                                begin = -1;
+                                eind = -1;
+                                i = 0;
+                            }else{
+                                log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een [ .");
+                                throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een [ .");
+                            }
+                        }else if(i == url.length()-1 && begin != -1){
+                            log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                            throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                        }
+                    }
                     regel.addValue(url.toString());
-                } else {
-                    regel.addValue("");
+                }else{
+                    String kolomNaam = td.getKolomnaam();
+                    if (kolomNaam == null || kolomNaam.length() == 0) {
+                        kolomNaam = t.getAdmin_pk();
+                    }
+                    Object value = rs.getObject(kolomNaam);
+                    if (value != null) {
+                        url.append(value.toString().trim());
+                        regel.addValue(url.toString());
+                    } else {
+                        regel.addValue("");
+                    }
                 }
             } else if (td.getDataType().getId() == DataTypen.FUNCTION) {
                 String keyName = t.getAdmin_pk();
@@ -843,7 +891,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      *
      * @see Themas
      */
-    protected AdminDataRowBean getRegel(Feature f, Themas t, List thema_items) throws SQLException, UnsupportedEncodingException {
+    protected AdminDataRowBean getRegel(Feature f, Themas t, List thema_items) throws SQLException, UnsupportedEncodingException, Exception {
         AdminDataRowBean regel = new AdminDataRowBean();
 
         String adminPk = convertAttributeName(t.getAdmin_pk(), f);
@@ -927,15 +975,63 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                     url = new StringBuffer();
                 }
 
-                Object value = null;
-                if (kolomnaam != null) {
-                    value = f.getProperty(kolomnaam).getValue();
-                }
-                if (value != null) {
-                    url.append(value.toString().trim());
+                String commando = url.toString();
+                if(commando.contains("[") || commando.contains("]")){
+                    /*
+                     * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
+                     * Bijvoorbeeld:
+                     * http://plannen.kaartenbalie.nl/[planeigenaar]/[plannaam]/[planidentificyaty].html
+                     * Kan dan worden:
+                     * http://plannen.kaartenbalie.nl/gemeente/plansoen/p38.html
+                     */
+                    int begin = -1;
+                    int eind = -1;
+                    for(int i = 0; i < url.length(); i++){
+                        char c = url.charAt(i);
+                        if(c == '['){
+                            if(begin == -1){
+                                begin = i;
+                            }else{
+                                log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                                throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                            }
+                        }else if(c == ']'){
+                            eind = i;
+                            if(begin != -1 && eind != -1){
+                                String kolom = url.substring(begin+1, eind);
+                                if(kolom == null || kolom.length() == 0){
+                                    log.error("Commando \""+commando+"\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                                    throw new Exception("Commando \""+commando+"\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                                }
+                                Object value = f.getProperty(kolom).getValue();
+                                if (value == null) {
+                                    value = "";
+                                }
+                                url.replace(begin, eind+1, value.toString().trim());
+                                begin = -1;
+                                eind = -1;
+                                i = 0;
+                            }else{
+                                log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een [ .");
+                                throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een [ .");
+                            }
+                        }else if(i == url.length()-1 && begin != -1){
+                            log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                            throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                        }
+                    }
                     regel.addValue(url.toString());
-                } else {
-                    regel.addValue("");
+                }else{
+                    Object value = null;
+                    if (kolomnaam != null) {
+                        value = f.getProperty(kolomnaam).getValue();
+                    }
+                    if (value != null) {
+                        url.append(value.toString().trim());
+                        regel.addValue(url.toString());
+                    } else {
+                        regel.addValue("");
+                    }
                 }
             } else if (td.getDataType().getId() == DataTypen.FUNCTION) {
                 Object keyValue = null;
