@@ -420,13 +420,16 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     // <editor-fold defaultstate="" desc="protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request)">
     protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         String[] coordString = null;
+        String geom =  request.getParameter("geom");
         double[] coords = null;
-        if (request.getParameter("coords") != null) {
+        if (request.getParameter("coords") != null && !request.getParameter("coords").equals("")) {
             coordString = request.getParameter("coords").split(",");
             coords = new double[coordString.length];
             for (int i = 0; i < coordString.length; i++) {
                 coords[i] = Double.parseDouble(coordString[i]);
             }
+        }else{
+            coords = new double[0];
         }
         String s = request.getParameter("scale");
         double scale = 0.0;
@@ -481,9 +484,9 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             String q = null;
             if (organizationcodekey != null && organizationcodekey.length() > 0 &&
                     organizationcode != null && organizationcode.length() > 0) {
-                q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, organizationcodekey, organizationcode);
+                q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, organizationcodekey, organizationcode, geom);
             } else {
-                q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid);
+                q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, geom);
             }
 
             PreparedStatement statement = connection.prepareStatement(q);

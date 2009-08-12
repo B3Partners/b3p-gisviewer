@@ -22,6 +22,7 @@
  */
 package nl.b3p.gis.viewer.services;
 
+import com.vividsolutions.jts.geom.Polygon;
 import java.io.StringReader;
 import java.util.ArrayList;
 import javax.servlet.http.HttpServletRequest;
@@ -86,7 +87,7 @@ public class WfsUtil {
             return null;
     }
     
-    public static ArrayList getWFSObjects(Themas t, double[] coords, String srsName, double distance,HttpServletRequest request) throws Exception {
+    public static ArrayList getWFSObjects(Themas t, double[] coords, String srsName, double distance,HttpServletRequest request, String geom) throws Exception {
         Connecties conn =getWfsConnection(t,request);
         if (conn==null)
             return null;
@@ -97,28 +98,51 @@ public class WfsUtil {
         GetFeature gf = OgcWfsClient.getGetFeatureRequest(or);
         //beide nodig voor het maken van een bbox wfs query
         WFS_Capabilities cap= OgcWfsClient.getCapabilities(or);
-        FeatureType ft=OgcWfsClient.getCapabilitieFeatureType(cap,t.getAdmin_tabel()); 
-        
-        if (coords.length==2){
-            double distance2=distance/2;
-            double[] newCoords= new double[4];
-            newCoords[0]=coords[0]-distance2;
-            newCoords[1]=coords[1]-distance2;
-            newCoords[2]=coords[0]+distance2;
-            newCoords[3]=coords[1]+distance2;
-            coords=newCoords;
-        }else if(coords.length==10){
-            double[] newCoords= new double[4];
-            newCoords[0]=coords[0];
-            newCoords[1]=coords[1];
-            newCoords[2]=coords[4];
-            newCoords[3]=coords[5];
-            coords=newCoords;
+        FeatureType ft=OgcWfsClient.getCapabilitieFeatureType(cap,t.getAdmin_tabel());
+
+        if(geom == null){
+            if (coords.length==2){
+                double distance2=distance/2;
+                double[] newCoords= new double[4];
+                newCoords[0]=coords[0]-distance2;
+                newCoords[1]=coords[1]-distance2;
+                newCoords[2]=coords[0]+distance2;
+                newCoords[3]=coords[1]+distance2;
+                coords=newCoords;
+            }else if(coords.length==10){
+                double[] newCoords= new double[4];
+                newCoords[0]=coords[0];
+                newCoords[1]=coords[1];
+                newCoords[2]=coords[4];
+                newCoords[3]=coords[5];
+                coords=newCoords;
+            }
+            if (coords.length!=4) {
+                throw new Exception("Polygons not supported! If polygon got 5 xy-coords a bbox will be created with the 1st and 3th coord");
+            }
+            OgcWfsClient.addBboxFilter(gf,getGeometryAttributeName(t,request),coords,srsName, ft);
+        }else{
+            if(geom.startsWith("POINT")){
+                String point = geom.substring(6, geom.length()-1);
+                String[] coordsPoint = point.split(" ");
+
+                if (coordsPoint.length==2){
+                    double distance2=distance/2;
+                    double[] newCoords= new double[4];
+                    newCoords[0]=Double.parseDouble(coordsPoint[0])-distance2;
+                    newCoords[1]=Double.parseDouble(coordsPoint[1])-distance2;
+                    newCoords[2]=Double.parseDouble(coordsPoint[0])+distance2;
+                    newCoords[3]=Double.parseDouble(coordsPoint[1])+distance2;
+                    coords=newCoords;
+                }
+                OgcWfsClient.addBboxFilter(gf,getGeometryAttributeName(t,request),coords,srsName, ft);
+            }else if(geom.startsWith("POLYGON")){
+                String polygon = geom.substring(9, geom.length()-2);
+                OgcWfsClient.addPolygonFilter(gf, getGeometryAttributeName(t,request), polygon, srsName, ft);
+            }else{
+                /* het is een LINESTRING */
+            }
         }
-        if (coords.length!=4) {
-            throw new Exception("Polygons not supported! If polygon got 5 xy-coords a bbox will be created with the 1st and 3th coord");
-        }
-        OgcWfsClient.addBboxFilter(gf,getGeometryAttributeName(t,request),coords,srsName, ft);
         return OgcWfsClient.getFeatureElements(gf,or);
     }
     

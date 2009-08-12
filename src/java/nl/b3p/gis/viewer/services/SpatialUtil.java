@@ -450,17 +450,17 @@ public class SpatialUtil {
      */
     // <editor-fold defaultstate="" desc="static public String InfoSelectQuery(String kolom, String tabel, double x, double y, double distance, int srid)">
     // <editor-fold defaultstate="" desc="static public String InfoSelectQuery(String kolom, String tabel, double x, double y, double distance, int srid)">
-    static public String InfoSelectQuery(String kolom, String tabel, double[] coords, double distance, int srid) {
+    static public String InfoSelectQuery(String kolom, String tabel, double[] coords, double distance, int srid, String geom) {
         // Als thema punten of lijnen dan afstand
         // Als thema polygon dan Intersects
-        return InfoSelectQuery(kolom, tabel, coords, distance, srid, null, null);
+        return InfoSelectQuery(kolom, tabel, coords, distance, srid, null, null, geom);
     }
     // </editor-fold>
 
-    static public String InfoSelectQuery(String kolom, String tabel, String geomKolom, double[] coords, double distance, int srid) {
+    static public String InfoSelectQuery(String kolom, String tabel, String geomKolom, double[] coords, double distance, int srid, String geom) {
         // Als thema punten of lijnen dan afstand
         // Als thema polygon dan Intersects
-        return InfoSelectQuery(kolom, tabel, geomKolom,coords, distance, srid, null, null);
+        return InfoSelectQuery(kolom, tabel, geomKolom, coords, distance, srid, null, null, geom);
     }
 
     /**
@@ -475,8 +475,8 @@ public class SpatialUtil {
      * @return infoselect query
      * @deprecated use InfoSelectQuery(String kolom, String tabel, String geomKolom, double[] coords, double distance, int srid, String organizationcodekey, String organizationcode)
      */
-    static public String InfoSelectQuery(String kolom, String tabel, double[] coords, double distance, int srid, String organizationcodekey, String organizationcode) {
-        return InfoSelectQuery(kolom,tabel,"the_geom",coords,distance,srid,organizationcodekey,organizationcode);
+    static public String InfoSelectQuery(String kolom, String tabel, double[] coords, double distance, int srid, String organizationcodekey, String organizationcode, String geom) {
+        return InfoSelectQuery(kolom,tabel,"the_geom",coords,distance,srid,organizationcodekey,organizationcode,geom);
     }
     /**
      *
@@ -490,7 +490,7 @@ public class SpatialUtil {
      * @param organizationcode
      * @return infoselect query
      */
-    static public String InfoSelectQuery(String kolom, String tabel, String geomKolom, double[] coords, double distance, int srid, String organizationcodekey, String organizationcode) {
+    static public String InfoSelectQuery(String kolom, String tabel, String geomKolom, double[] coords, double distance, int srid, String organizationcodekey, String organizationcode, String geom) {
         StringBuffer sq = new StringBuffer();
         sq.append("select \"");
         sq.append(kolom);
@@ -504,21 +504,33 @@ public class SpatialUtil {
         }
 
         sq.append("(");
-        if (coords.length==2){
+        if (coords.length==2 || !geom.startsWith("POLYGON")){
             sq.append("(Dimension(tbl.\""+geomKolom+"\") < 2) ");
             sq.append("and ");
             sq.append("(Distance(tbl.\""+geomKolom+"\", ");
-            sq.append(createClickGeom(coords, srid));
+            if(geom == null){
+                sq.append(createClickGeom(coords, srid));
+            }else{
+                sq.append(" GeomFromText ( '" + geom + "'," + srid + ") ");
+            }
             sq.append(") < ");
             sq.append(distance);
             sq.append(")");
             sq.append(") or (");
         }
         sq.append("Intersects(");
-        sq.append(createClickGeom(coords, srid));
+        if(geom == null){
+            sq.append(createClickGeom(coords, srid));
+        }else{
+            sq.append(" GeomFromText ( '" + geom + "'," + srid + ") ");
+        }
         sq.append(", tbl.\""+geomKolom+"\") = true");
         sq.append(") order by Distance(tbl."+geomKolom+", ");
-        sq.append(createClickGeom(coords, srid));
+        if(geom == null){
+            sq.append(createClickGeom(coords, srid));
+        }else{
+            sq.append(" GeomFromText ( '" + geom + "'," + srid + ") ");
+        }
         sq.append(") LIMIT 500");
 
         log.debug("InfoSelectQuery: " + sq.toString());

@@ -738,9 +738,10 @@ public class GetViewerDataAction extends BaseGisAction {
         if (thema_items == null || thema_items.isEmpty()) {
             throw new Exception("Er is geen themadata geconfigureerd voor thema: "+t.getNaam()+" met id: "+t.getId());
         }
+        String geom = request.getParameter("geom");
         String[] coordString = null;
         double[] coords = null;
-        if (request.getParameter("coords") != null) {
+        if (request.getParameter("coords") != null && !request.getParameter("coords").equals("")) {
             coordString = request.getParameter("coords").split(",");
             coords = new double[coordString.length];
             for (int i = 0; i < coordString.length; i++) {
@@ -775,7 +776,7 @@ public class GetViewerDataAction extends BaseGisAction {
             distance = scale * (clickTolerance);
         }
         ArrayList regels = new ArrayList();
-        ArrayList features = WfsUtil.getWFSObjects(t, coords, "EPSG:28992",distance,request);
+        ArrayList features = WfsUtil.getWFSObjects(t, coords, "EPSG:28992",distance,request, geom);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             regels.add(getRegel(f, t, thema_items));
