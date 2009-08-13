@@ -187,7 +187,7 @@ public class ETLTransformAction extends BaseGisAction {
      *
      * @see Themas
      */
-    protected List getThemaObjects(Themas t, String status, List thema_items) throws SQLException, UnsupportedEncodingException, NotSupportedException {
+    protected List getThemaObjects(Themas t, String status, List thema_items) throws SQLException, UnsupportedEncodingException, NotSupportedException, Exception {
         if (t == null) {
             return null;
         }
