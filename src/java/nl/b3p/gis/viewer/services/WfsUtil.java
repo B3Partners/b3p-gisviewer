@@ -32,6 +32,7 @@ import nl.b3p.ogc.utils.OGCConstants;
 import nl.b3p.ogc.utils.OGCRequest;
 import nl.b3p.ogc.utils.OgcWfsClient;
 import nl.b3p.xml.wfs.FeatureType;
+import nl.b3p.xml.wfs.Filter;
 import nl.b3p.xml.wfs.GetFeature;
 import nl.b3p.xml.wfs.WFS_Capabilities;
 import org.apache.commons.logging.Log;
@@ -100,6 +101,13 @@ public class WfsUtil {
         WFS_Capabilities cap= OgcWfsClient.getCapabilities(or);
         FeatureType ft=OgcWfsClient.getCapabilitieFeatureType(cap,t.getAdmin_tabel());
 
+        String adminQuery = t.getAdmin_query();
+        Filter adminQueryFilter = null;
+        if(adminQuery != null && !adminQuery.equals("") && !adminQuery.startsWith("select")){
+            adminQueryFilter = OgcWfsClient.createQueryFilter(gf, adminQuery, srsName, ft);
+            //OgcWfsClient.addQueryFilter(gf, adminQuery, srsName, ft);
+        }
+
         if(geom == null){
             if (coords.length==2){
                 double distance2=distance/2;
@@ -120,7 +128,12 @@ public class WfsUtil {
             if (coords.length!=4) {
                 throw new Exception("Polygons not supported! If polygon got 5 xy-coords a bbox will be created with the 1st and 3th coord");
             }
-            OgcWfsClient.addBboxFilter(gf,getGeometryAttributeName(t,request),coords,srsName, ft);
+            if(adminQueryFilter == null){
+                OgcWfsClient.addBboxFilter(gf,getGeometryAttributeName(t,request),coords,srsName, ft);
+            }else{
+                Filter geomFilter = OgcWfsClient.createBboxFilter(getGeometryAttributeName(t,request), coords, srsName, ft);
+                OgcWfsClient.addCombinedAndFilter(gf, ft, adminQueryFilter, geomFilter);
+            }
         }else{
             if(geom.startsWith("POINT")){
                 String point = geom.substring(6, geom.length()-1);
@@ -135,10 +148,20 @@ public class WfsUtil {
                     newCoords[3]=Double.parseDouble(coordsPoint[1])+distance2;
                     coords=newCoords;
                 }
-                OgcWfsClient.addBboxFilter(gf,getGeometryAttributeName(t,request),coords,srsName, ft);
+                if(adminQueryFilter == null){
+                    OgcWfsClient.addBboxFilter(gf,getGeometryAttributeName(t,request),coords,srsName, ft);
+                }else{
+                    Filter geomFilter = OgcWfsClient.createBboxFilter(getGeometryAttributeName(t,request), coords, srsName, ft);
+                    OgcWfsClient.addCombinedAndFilter(gf, ft, adminQueryFilter, geomFilter);
+                }
             }else if(geom.startsWith("POLYGON")){
                 String polygon = geom.substring(9, geom.length()-2);
-                OgcWfsClient.addPolygonFilter(gf, getGeometryAttributeName(t,request), polygon, srsName, ft);
+                if(adminQueryFilter == null){
+                    OgcWfsClient.addPolygonFilter(gf, getGeometryAttributeName(t,request), polygon, srsName, ft);
+                }else{
+                    Filter geomFilter = OgcWfsClient.createPolygonFilter(getGeometryAttributeName(t,request), polygon, srsName, ft);
+                    OgcWfsClient.addCombinedAndFilter(gf, ft, adminQueryFilter, geomFilter);
+                }
             }else{
                 /* het is een LINESTRING */
             }

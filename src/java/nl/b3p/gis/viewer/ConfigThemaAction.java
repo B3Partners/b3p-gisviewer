@@ -251,17 +251,17 @@ public class ConfigThemaAction extends ViewerCrudAction {
         dynaForm.set("themaCode", t.getCode());
         dynaForm.set("naam", t.getNaam());
         dynaForm.set("metadatalink", t.getMetadata_link());
-        String val = "";
+        String valConnectie = "";
         if (t.getConnectie() != null) {
-            val = Integer.toString(t.getConnectie().getId());
+            valConnectie = Integer.toString(t.getConnectie().getId());
         }
-        dynaForm.set("connectie", val);
+        dynaForm.set("connectie", valConnectie);
         dynaForm.set("belangnr", FormUtils.IntToString(t.getBelangnr()));
-        val = "";
+        String valCluster = "";
         if (t.getCluster() != null) {
-            val = Integer.toString(t.getCluster().getId().intValue());
+            valCluster = Integer.toString(t.getCluster().getId().intValue());
         }
-        dynaForm.set("clusterID", val);
+        dynaForm.set("clusterID", valCluster);
         dynaForm.set("opmerkingen", t.getOpmerkingen());
         dynaForm.set("analyse_thema", new Boolean(t.isAnalyse_thema()));
         dynaForm.set("locatie_thema", new Boolean(t.isLocatie_thema()));
@@ -271,7 +271,15 @@ public class ConfigThemaAction extends ViewerCrudAction {
         dynaForm.set("admin_pk", t.getAdmin_pk());
         dynaForm.set("admin_pk_complex", new Boolean(t.isAdmin_pk_complex()));
         dynaForm.set("admin_spatial_ref", t.getAdmin_spatial_ref());
-        dynaForm.set("admin_query", t.getAdmin_query());
+        
+        if(t.getConnectie()!= null){
+            if(t.getConnectie().getType().equals("jdbc")){
+                dynaForm.set("admin_query", t.getAdmin_query());
+            }else if(t.getAdmin_query() != null && !t.getAdmin_query().startsWith("select")){
+                dynaForm.set("admin_query", t.getAdmin_query());
+            }
+        }
+        
         dynaForm.set("spatial_tabel_opmerkingen", t.getSpatial_tabel_opmerkingen());
         dynaForm.set("spatial_tabel", t.getSpatial_tabel());
         dynaForm.set("spatial_pk", t.getSpatial_pk());
