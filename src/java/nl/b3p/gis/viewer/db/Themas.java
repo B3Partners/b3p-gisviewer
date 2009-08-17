@@ -65,6 +65,7 @@ public class Themas implements Comparable {
     private Integer update_frequentie_in_dagen;
     private String view_geomtype;
     private String organizationcodekey;
+    private String maptipstring;
 
     /** Creates a new instance of Themas */
     public Themas() {
@@ -693,5 +694,13 @@ public class Themas implements Comparable {
 
     public void setOrganizationcodekey(String organizationcodekey) {
         this.organizationcodekey = organizationcodekey;
+    }
+
+    public String getMaptipstring() {
+        return maptipstring;
+    }
+
+    public void setMaptipstring(String maptipstring) {
+        this.maptipstring = maptipstring;
     }
 }

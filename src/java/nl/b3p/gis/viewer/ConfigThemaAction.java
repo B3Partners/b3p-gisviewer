@@ -292,6 +292,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
         dynaForm.set("wms_querylayers_real", t.getWms_querylayers_real());
         dynaForm.set("wms_legendlayer", t.getWms_legendlayer());
         dynaForm.set("wms_legendlayer_real", t.getWms_legendlayer_real());
+        dynaForm.set("thema_maptip", t.getMaptipstring());
         dynaForm.set("update_frequentie_in_dagen", FormUtils.IntegerToString(t.getUpdate_frequentie_in_dagen()));
         dynaForm.set("view_geomtype", t.getView_geomtype());
         dynaForm.set("visible", new Boolean(t.isVisible()));
@@ -337,6 +338,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
         b = (Boolean) dynaForm.get("spatial_pk_complex");
         t.setSpatial_pk_complex(b == null ? false : b.booleanValue());
         t.setSpatial_admin_ref(FormUtils.nullIfEmpty(dynaForm.getString("spatial_admin_ref")));
+        t.setMaptipstring(FormUtils.nullIfEmpty(dynaForm.getString("thema_maptip")));
         t.setWms_url(FormUtils.nullIfEmpty(dynaForm.getString("wms_url")));
         //komma separated layers
         t.setWms_layers(FormUtils.nullIfEmpty(dynaForm.getString("wms_layers")));

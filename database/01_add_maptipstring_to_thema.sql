@@ -1,0 +1,1 @@
+ALTER TABLE themas ADD COLUMN "maptipstring" character varying(255);
