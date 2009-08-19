@@ -404,6 +404,10 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("organizationcodekey", "");
             }
 
+            if(th.getMaptipstring() != null){
+                jsonCluster.put("maptipfield", th.getMaptipstring());
+            }
+
             if (actieveThemas != null && themaId != null && actieveThemas.contains(themaId)) {
                 jsonCluster.put("visible", "on");
                 if (th.isAnalyse_thema()) {
