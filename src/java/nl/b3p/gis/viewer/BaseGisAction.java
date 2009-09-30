@@ -469,7 +469,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             return null;
         }
 
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        //Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Connection connection = null;
         if (SpatialUtil.validJDBCConnection(t)) {
             connection = t.getConnectie().getJdbcConnection();
