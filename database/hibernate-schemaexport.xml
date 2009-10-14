@@ -5,12 +5,20 @@
 	<property file="${hibernate-schemaexport.basedir}/hibernate.properties"/>
 	<property name="output.schema" value="${hibernate-schemaexport.basedir}/schema-export.sql"/>
 	
-	<path id="hibernate.schemaexport.classpath">
+	<!-- path id="hibernate.schemaexport.classpath">
 		<fileset dir="build/web/WEB-INF/lib">
 			<include name="*.jar"/>
 		</fileset>		
 		<pathelement path="build/web/WEB-INF/classes"/>
+	</path -->
+	
+	<path id="hibernate.schemaexport.classpath">
+		<fileset dir="../gisviewer/build/web/WEB-INF/lib">
+			<include name="*.jar"/>
+		</fileset>
+		<pathelement path="../gisviewer/build/web/WEB-INF/classes"/>
 	</path>
+	
 	
 	<target name="schemaexport">
 		<taskdef name="schemaexport"
