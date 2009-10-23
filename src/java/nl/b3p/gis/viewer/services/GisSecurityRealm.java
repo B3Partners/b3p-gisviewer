@@ -58,8 +58,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         return authenticateHttp(url, username, password, code);
     }
 
-    public Principal getAuthenticatedPrincipal(String username) {
-        return null;
+    public Principal getAuthenticatedPrincipal(String username, String password) {
+        return authenticate(username, password);
     }
 
     public boolean isUserInRole(Principal principal, String rolename) {
