@@ -87,8 +87,10 @@ public class ConfigThemaAction extends ViewerCrudAction {
         return null;
     }
 
+    @Override
     protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         super.createLists(dynaForm, request);
+
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         request.setAttribute("allThemas", sess.createQuery("from Themas order by belangnr").list());
         request.setAttribute("allClusters", 
