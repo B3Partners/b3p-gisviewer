@@ -91,7 +91,9 @@ public class ConfigThemaAction extends ViewerCrudAction {
         super.createLists(dynaForm, request);
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         request.setAttribute("allThemas", sess.createQuery("from Themas order by belangnr").list());
-        request.setAttribute("allClusters", sess.createQuery("from Clusters where id<>9 order by naam").list());
+        request.setAttribute("allClusters", 
+                sess.createQuery("from Clusters where default_cluster=:defaultCluster order by naam")
+                .setBoolean("defaultCluster", false).list());
         request.setAttribute("listConnecties", sess.createQuery("from Connecties").list());
         request.setAttribute("listValidGeoms", SpatialUtil.VALID_GEOMS);
 

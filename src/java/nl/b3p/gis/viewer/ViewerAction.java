@@ -326,14 +326,14 @@ public class ViewerAction extends BaseGisAction {
     }
 
     protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas,List actieveClusters,GisPrincipal user) throws JSONException {
+        JSONObject root = new JSONObject().put("id", "root").put("type", "root").put("title", "root");
         if (rootClusterMap == null || rootClusterMap.isEmpty()) {
-            return null;
+            return root;
         }
         List clusterMaps = (List) rootClusterMap.get("subclusters");
         if (clusterMaps == null || clusterMaps.isEmpty()) {
-            return null;
+            return root;
         }
-        JSONObject root = new JSONObject().put("id", "root").put("type", "root").put("title", "root");
         root.put("children", getSubClusters(clusterMaps, null, actieveThemas,actieveClusters,user));
 
         return root;

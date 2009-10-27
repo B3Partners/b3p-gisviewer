@@ -133,4 +133,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         String url = createCapabilitiesURL(null);
         return authenticateHttp(url, username, password, null);
     }
+
+    public Principal getAuthenticatedPrincipal(String username) {
+        return null;
+    }
 }

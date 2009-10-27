@@ -68,7 +68,7 @@ public class ConfigClusterAction extends ViewerCrudAction {
     protected void createLists(DynaValidatorForm form, HttpServletRequest request) throws Exception {
         super.createLists(form, request);
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        request.setAttribute("allClusters", sess.createQuery("from Clusters where id<>9 order by naam").list());
+        request.setAttribute("allClusters", sess.createQuery("from Clusters order by naam").list());
     }
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
