@@ -435,7 +435,7 @@ public class ViewerAction extends BaseGisAction {
             if (th.getWms_layers_real() != null) {
                 jsonCluster.put("wmslayers", th.getWms_layers_real());
                 //if admintable is set then don't add the queryLayer
-                if (th.getWms_legendlayer_real()!=null && (th.getAdmin_tabel()==null || th.getAdmin_tabel().length()==0)){
+                if (th.getWms_querylayers_real()!=null && (th.getAdmin_tabel()==null || th.getAdmin_tabel().length()==0)){
                     jsonCluster.put("wmsquerylayers", th.getWms_querylayers_real());
                 }
                 if (th.getWms_legendlayer_real()!=null){

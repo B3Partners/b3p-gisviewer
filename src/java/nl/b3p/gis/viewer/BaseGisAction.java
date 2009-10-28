@@ -186,17 +186,13 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      */
     protected List getValidThemas(boolean locatie, List ctl, HttpServletRequest request) {
         List configuredThemasList = SpatialUtil.getValidThemas(locatie);
-        // Als geen check via kaartenbalie dan alle layers doorgeven
-        if (!HibernateUtil.isCheckLoginKaartenbalie()) {
-            return configuredThemasList;
-        }
 
+        List layersFromRoles = null;
         // Zoek layers die via principal binnen komen
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        if (user == null) {
-            return null;
+        if (user != null) {
+            layersFromRoles = user.getLayerNames(false);
         }
-        List layersFromRoles = user.getLayerNames(false);
         if (layersFromRoles == null) {
             return null;
         }
@@ -209,16 +205,13 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             Iterator it2 = configuredThemasList.iterator();
             while (it2.hasNext()) {
                 Themas t = (Themas) it2.next();
-                if (checkThemaLayers(t, layersFromRoles)) {
+                // Als geen check via kaartenbalie dan alle layers doorgeven
+                if (checkThemaLayers(t, layersFromRoles) ||
+                        !HibernateUtil.isCheckLoginKaartenbalie()) {
                     checkedThemaList.add(t);
                     layersFound.add(t.getWms_layers_real());
                 }
             }
-        }
-
-        // Als geen cluster dan hier stoppen.
-        if (ctl == null) {
-            return checkedThemaList;
         }
 
         // als alleen configureerde layers getoond mogen worden,
@@ -265,6 +258,9 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             }
         }
         if (extraThemaList.size() > 0) {
+            if (ctl==null) {
+                ctl = new ArrayList();
+            }
             ctl.add(c);
             for (int i = 0; i < extraThemaList.size(); i++) {
                 checkedThemaList.add(extraThemaList.get(i));
