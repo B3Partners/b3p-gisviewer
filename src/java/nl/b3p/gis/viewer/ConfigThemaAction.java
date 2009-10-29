@@ -93,32 +93,38 @@ public class ConfigThemaAction extends ViewerCrudAction {
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         request.setAttribute("allThemas", sess.createQuery("from Themas order by belangnr").list());
-        request.setAttribute("allClusters", 
-                sess.createQuery("from Clusters where default_cluster=:defaultCluster order by naam")
-                .setBoolean("defaultCluster", false).list());
+        request.setAttribute("allClusters",
+                sess.createQuery("from Clusters where default_cluster=:defaultCluster order by naam").setBoolean("defaultCluster", false).list());
         request.setAttribute("listConnecties", sess.createQuery("from Connecties").list());
         request.setAttribute("listValidGeoms", SpatialUtil.VALID_GEOMS);
 
         Themas t = getThema(dynaForm, false);
         Connecties c = null;
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        if (FormUtils.nullIfEmpty(dynaForm.getString("connectie")) != null) {
-            c = (Connecties) sess.get(Connecties.class, Integer.parseInt(dynaForm.getString("connectie")));
+
+        int cId = -1;
+        try {
+            cId = Integer.parseInt(dynaForm.getString("connectie"));
+        } catch (NumberFormatException nfe) {
+            log.debug("No connection id found in form, input: " + dynaForm.getString("connectie"));
         }
-        if (c==null){
-            c= user.getKbWfsConnectie();
+        if (cId >= 0) {
+            c = (Connecties) sess.get(Connecties.class, cId);
+        }
+        if (c == null) {
+            c = user.getKbWfsConnectie();
         }
         //maak lijsten die iets te maken hebben met de admin/spatial_data
         List tns = ConfigListsUtil.getPossibleFeatures(c);
         /*if (t != null) {
-            String sptn = t.getAdmin_tabel();
-            if (sptn != null && !tns.contains(sptn)) {
-                tns.add(sptn);
-            }
-            String atn = t.getSpatial_tabel();
-            if (atn != null && !tns.contains(atn)) {
-                tns.add(atn);
-            }
+        String sptn = t.getAdmin_tabel();
+        if (sptn != null && !tns.contains(sptn)) {
+        tns.add(sptn);
+        }
+        String atn = t.getSpatial_tabel();
+        if (atn != null && !tns.contains(atn)) {
+        tns.add(atn);
+        }
         }*/
         request.setAttribute("listTables", tns);
 
@@ -129,39 +135,39 @@ public class ConfigThemaAction extends ViewerCrudAction {
         if (adminTable == null && t != null) {
             adminTable = t.getAdmin_tabel();
         }
-        if (spatialTable==null && t!=null){
+        if (spatialTable == null && t != null) {
             spatialTable = t.getSpatial_tabel();
         }
         if (adminTable != null) {
-            List atc = ConfigListsUtil.getPossibleAttributes(c,adminTable);
+            List atc = ConfigListsUtil.getPossibleAttributes(c, adminTable);
             request.setAttribute("listAdminTableColumns", atc);
         }
         if (spatialTable != null) {
-            List stc = ConfigListsUtil.getPossibleAttributes(c,spatialTable);
+            List stc = ConfigListsUtil.getPossibleAttributes(c, spatialTable);
             request.setAttribute("listSpatialTableColumns", stc);
         }
         if (user != null) {
-            List lns = user.getLayers(false,true);
+            List lns = user.getLayers(false, true);
             /*if (t != null) {
-                String wlr = t.getWms_layers_real();
-                if (wlr != null && !lns.contains(wlr)) {
-                    lns.add(wlr);
-                }
-                String wqr = t.getWms_querylayers_real();
-                if (wqr != null && !lns.contains(wqr)) {
-                    lns.add(wqr);
-                }
+            String wlr = t.getWms_layers_real();
+            if (wlr != null && !lns.contains(wlr)) {
+            lns.add(wlr);
+            }
+            String wqr = t.getWms_querylayers_real();
+            if (wqr != null && !lns.contains(wqr)) {
+            lns.add(wqr);
+            }
             }*/
             request.setAttribute("listLayers", lns);
-            List llns = user.getLayers(true,true);
+            List llns = user.getLayers(true, true);
             /*if (t != null) {
-                String wllr = t.getWms_legendlayer_real();
-                if (wllr != null && !lns.contains(wllr)) {
-                    lns.add(wllr);
-                }
+            String wllr = t.getWms_legendlayer_real();
+            if (wllr != null && !lns.contains(wllr)) {
+            lns.add(wllr);
+            }
             }*/
             request.setAttribute("listLegendLayers", llns);
-        }        
+        }
     }
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -255,7 +261,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
         dynaForm.set("themaCode", t.getCode());
         dynaForm.set("naam", t.getNaam());
         dynaForm.set("metadatalink", t.getMetadata_link());
-        String valConnectie = "";
+        String valConnectie = "kb";
         if (t.getConnectie() != null) {
             valConnectie = Integer.toString(t.getConnectie().getId());
         }
@@ -275,15 +281,16 @@ public class ConfigThemaAction extends ViewerCrudAction {
         dynaForm.set("admin_pk", t.getAdmin_pk());
         dynaForm.set("admin_pk_complex", new Boolean(t.isAdmin_pk_complex()));
         dynaForm.set("admin_spatial_ref", t.getAdmin_spatial_ref());
-        
-        if(t.getConnectie()!= null){
-            if(t.getConnectie().getType().equals("jdbc")){
+
+        dynaForm.set("admin_query", "");
+        if (t.getConnectie() != null) {
+            if (t.getConnectie().getType().equals("jdbc")) {
                 dynaForm.set("admin_query", t.getAdmin_query());
-            }else if(t.getAdmin_query() != null && !t.getAdmin_query().startsWith("select")){
+            } else if (t.getAdmin_query() != null && !t.getAdmin_query().startsWith("select")) {
                 dynaForm.set("admin_query", t.getAdmin_query());
             }
         }
-        
+
         dynaForm.set("spatial_tabel_opmerkingen", t.getSpatial_tabel_opmerkingen());
         dynaForm.set("spatial_tabel", t.getSpatial_tabel());
         dynaForm.set("spatial_pk", t.getSpatial_pk());
@@ -311,16 +318,17 @@ public class ConfigThemaAction extends ViewerCrudAction {
         t.setCode(FormUtils.nullIfEmpty(dynaForm.getString("themaCode")));
         t.setNaam(FormUtils.nullIfEmpty(dynaForm.getString("naam")));
         t.setMetadata_link(FormUtils.nullIfEmpty(dynaForm.getString("metadatalink")));
-        if (FormUtils.nullIfEmpty(dynaForm.getString("connectie")) != null) {
-            try{
-                Integer conId = Integer.parseInt(dynaForm.getString("connectie"));
-                Connecties c = (Connecties) sess.get(Connecties.class, conId);
-                t.setConnectie(c);
-            }catch(NumberFormatException nfe){
-                //no connection.
-            }
-            
+        Connecties conn = null;
+        int connId = -1;
+        try {
+            connId = Integer.parseInt(dynaForm.getString("connectie"));
+        } catch (NumberFormatException nfe) {
+            log.debug("No connection id found in form, input: " + dynaForm.getString("connectie"));
         }
+        if (connId >= 0) {
+            conn = (Connecties) sess.get(Connecties.class, connId);
+        }
+        t.setConnectie(conn);
         if (dynaForm.getString("belangnr") != null && dynaForm.getString("belangnr").length() > 0) {
             t.setBelangnr(Integer.parseInt(dynaForm.getString("belangnr")));
         }
@@ -358,7 +366,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
         b = (Boolean) dynaForm.get("visible");
         t.setVisible(b == null ? false : b.booleanValue());
 
-        int cId = 0;
+        int cId = -1;
         try {
             cId = Integer.parseInt(dynaForm.getString("clusterID"));
         } catch (NumberFormatException ex) {
