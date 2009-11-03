@@ -206,8 +206,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             while (it2.hasNext()) {
                 Themas t = (Themas) it2.next();
                 // Als geen check via kaartenbalie dan alle layers doorgeven
-                if (checkThemaLayers(t, layersFromRoles) ||
-                        !HibernateUtil.isCheckLoginKaartenbalie()) {
+                if (checkThemaLayers(t, layersFromRoles)
+                        || !HibernateUtil.isCheckLoginKaartenbalie()) {
                     checkedThemaList.add(t);
                     layersFound.add(t.getWms_layers_real());
                 }
@@ -240,15 +240,15 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             }
 
             // Layer bestaat nog niet dus aanmaken
-            Layer l= user.getLayer(layer);
-            if (l!=null){
+            Layer l = user.getLayer(layer);
+            if (l != null) {
                 Themas t = new Themas();
                 t.setNaam(l.getTitle());
                 t.setId(new Integer(tid++));
-                if(user.hasLegendGraphic(l)){
+                if (user.hasLegendGraphic(l)) {
                     t.setWms_legendlayer_real(layer);
                 }
-                if ("1".equalsIgnoreCase(l.getQueryable())){
+                if ("1".equalsIgnoreCase(l.getQueryable())) {
                     t.setWms_querylayers_real(layer);
                 }
                 t.setWms_layers_real(layer);
@@ -258,7 +258,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             }
         }
         if (extraThemaList.size() > 0) {
-            if (ctl==null) {
+            if (ctl == null) {
                 ctl = new ArrayList();
             }
             ctl.add(c);
@@ -302,13 +302,15 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         }
         return true;
     }
+
     /**
      * Om getPks backwardcompatable te maken
      */
-    @Deprecated 
+    @Deprecated
     protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request) throws SQLException, NotSupportedException {
-        return getPks(t,dynaForm,request,null);
+        return getPks(t, dynaForm, request, null);
     }
+
     /**
      * DOCUMENT ME!!!
      *
@@ -334,16 +336,16 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         Connection connection = null;
         if (SpatialUtil.validJDBCConnection(t)) {
             connection = t.getConnectie().getJdbcConnection();
-        }else{
-            log.error("Thema heeft geen JDBC connectie: "+t.getNaam(),new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
+        } else {
+            log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
             return null;
         }
         int dt = SpatialUtil.getPkDataType(t, connection);
         String adminPk = t.getAdmin_pk();
-        String adminIds=null;
-        if (pksField==null){
+        String adminIds = null;
+        if (pksField == null) {
             adminIds = request.getParameter(adminPk);
-        }else{
+        } else {
             adminIds = request.getParameter(pksField);
         }
 
@@ -416,7 +418,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     // <editor-fold defaultstate="" desc="protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request)">
     protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         String[] coordString = null;
-        String geom =  request.getParameter("geom");
+        String geom = request.getParameter("geom");
         double[] coords = null;
         if (request.getParameter("coords") != null && !request.getParameter("coords").equals("")) {
             coordString = request.getParameter("coords").split(",");
@@ -424,7 +426,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             for (int i = 0; i < coordString.length; i++) {
                 coords[i] = Double.parseDouble(coordString[i]);
             }
-        }else{
+        } else {
             coords = new double[0];
         }
         String s = request.getParameter("scale");
@@ -432,12 +434,12 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         try {
             if (s != null) {
                 scale = Double.parseDouble(s);
-            //af ronden op 1 decimaal
+                //af ronden op 1 decimaal
 
             }
         } catch (NumberFormatException nfe) {
             scale = 0.0;
-            log.info("Scale is geen double dus wordt genegeerd");
+            log.debug("Scale is geen double dus wordt genegeerd");
         }
         double distance = 10.0;
         if (scale > 0.0) {
@@ -461,7 +463,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         if (sptn == null || sptn.length() == 0) {
             sptn = t.getAdmin_tabel();
         }
-        if (sptn==null || saf==null || sptn.length()==0 || saf.length()==0){
+        if (sptn == null || saf == null || sptn.length() == 0 || saf.length() == 0) {
             return null;
         }
 
@@ -469,8 +471,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         Connection connection = null;
         if (SpatialUtil.validJDBCConnection(t)) {
             connection = t.getConnectie().getJdbcConnection();
-        }else{
-            log.error("Thema heeft geen JDBC connectie: "+t.getNaam(),new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
+        } else {
+            log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
             return null;
         }
         try {
@@ -478,8 +480,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             String organizationcode = getOrganizationCode(request);
             String geomColumnName = SpatialUtil.getTableGeomName(t, connection);
             String q = null;
-            if (organizationcodekey != null && organizationcodekey.length() > 0 &&
-                    organizationcode != null && organizationcode.length() > 0) {
+            if (organizationcodekey != null && organizationcodekey.length() > 0
+                    && organizationcode != null && organizationcode.length() > 0) {
                 q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, organizationcodekey, organizationcode, geom);
             } else {
                 q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, geom);
@@ -541,8 +543,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         Connection connection = null;
         if (SpatialUtil.validJDBCConnection(thema)) {
             connection = thema.getConnectie().getJdbcConnection();
-        }else{
-            log.error("Thema heeft geen JDBC connectie: "+thema.getNaam(),new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
+        } else {
+            log.error("Thema heeft geen JDBC connectie: " + thema.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
             return null;
         }
         return SpatialUtil.getThemaGeomType(thema, connection);
@@ -570,13 +572,13 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         Connection connection = null;
         if (SpatialUtil.validJDBCConnection(t)) {
             connection = t.getConnectie().getJdbcConnection();
-        }else{
-            log.error("Thema heeft geen JDBC connectie: "+t.getNaam(),new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
+        } else {
+            log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
             return null;
         }
         try {
-            String statementString = "select * from \"" + analyseGeomTabel +
-                    "\" where " + analyseGeomIdColumn + " = ";
+            String statementString = "select * from \"" + analyseGeomTabel
+                    + "\" where " + analyseGeomIdColumn + " = ";
             String newAnalyseGeomId = "\'" + analyseGeomId + "\'";
             try {
                 int intGeomId = Integer.parseInt(analyseGeomId);
@@ -588,8 +590,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             PreparedStatement statement =
                     connection.prepareStatement(statementString);
             PreparedStatement statement2 =
-                    connection.prepareStatement("select kolomnaam from thema_data where thema = " +
-                    themaid + " order by dataorder");
+                    connection.prepareStatement("select kolomnaam from thema_data where thema = "
+                    + themaid + " order by dataorder");
 
             try {
                 ResultSet rs = statement.executeQuery();
@@ -700,11 +702,11 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             if (td.getDataType().getId() == DataTypen.DATA && td.getKolomnaam() != null && !td.getKolomnaam().equals("")) {
                 regel.addValue(rs.getObject(td.getKolomnaam()));
 
-            /*
-             * In het tweede geval dient de informatie in de thema data als link naar een andere
-             * informatiebron. Deze link zal enigszins aangepast moeten worden om tot vollende
-             * werkende link te dienen.
-             */
+                /*
+                 * In het tweede geval dient de informatie in de thema data als link naar een andere
+                 * informatiebron. Deze link zal enigszins aangepast moeten worden om tot vollende
+                 * werkende link te dienen.
+                 */
             } else if (td.getDataType().getId() == DataTypen.URL && td.getCommando() != null) {
                 StringBuffer url = new StringBuffer(td.getCommando());
                 url.append(Themas.THEMAID);
@@ -733,14 +735,14 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
                 regel.addValue(url.toString());
 
-            /*
-             * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu een
-             * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
-             */
+                /*
+                 * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu een
+                 * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
+                 */
             } else if (td.getDataType().getId() == DataTypen.QUERY) {
                 StringBuffer url = new StringBuffer(td.getCommando());
                 String commando = url.toString();
-                if(commando.contains("[") || commando.contains("]")){
+                if (commando.contains("[") || commando.contains("]")) {
                     /*
                      * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
                      * Bijvoorbeeld:
@@ -750,42 +752,42 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                      */
                     int begin = -1;
                     int eind = -1;
-                    for(int i = 0; i < url.length(); i++){
+                    for (int i = 0; i < url.length(); i++) {
                         char c = url.charAt(i);
-                        if(c == '['){
-                            if(begin == -1){
+                        if (c == '[') {
+                            if (begin == -1) {
                                 begin = i;
-                            }else{
-                                log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
-                                throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                            } else {
+                                log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
+                                throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
                             }
-                        }else if(c == ']'){
+                        } else if (c == ']') {
                             eind = i;
-                            if(begin != -1 && eind != -1){
-                                String kolomnaam = url.substring(begin+1, eind);
-                                if(kolomnaam == null || kolomnaam.length() == 0){
-                                    log.error("Commando \""+commando+"\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
-                                    throw new Exception("Commando \""+commando+"\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                            if (begin != -1 && eind != -1) {
+                                String kolomnaam = url.substring(begin + 1, eind);
+                                if (kolomnaam == null || kolomnaam.length() == 0) {
+                                    log.error("Commando \"" + commando + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                                    throw new Exception("Commando \"" + commando + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
                                 }
                                 Object value = rs.getObject(kolomnaam);
                                 if (value == null) {
                                     value = "";
                                 }
-                                url.replace(begin, eind+1, value.toString().trim());
+                                url.replace(begin, eind + 1, value.toString().trim());
                                 begin = -1;
                                 eind = -1;
                                 i = 0;
-                            }else{
-                                log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een [ .");
-                                throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een [ .");
+                            } else {
+                                log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een [ .");
+                                throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een [ .");
                             }
-                        }else if(i == url.length()-1 && begin != -1){
-                            log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
-                            throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                        } else if (i == url.length() - 1 && begin != -1) {
+                            log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
+                            throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
                         }
                     }
                     regel.addValue(url.toString());
-                }else{
+                } else {
                     String kolomNaam = td.getKolomnaam();
                     if (kolomNaam == null || kolomNaam.length() == 0) {
                         kolomNaam = t.getAdmin_pk();
@@ -850,23 +852,24 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             return null;
         }
         String attName = rawName.trim();
-        if (f.getProperty(attName)!=null) {
+        if (f.getProperty(attName) != null) {
             return attName;
         }
-        attName=removeNamespace(attName);
-        if (f.getProperty(attName)!=null) {
+        attName = removeNamespace(attName);
+        if (f.getProperty(attName) != null) {
             return attName;
         }
         return null;
     }
 
-    public static String removeNamespace(String rawName){
-        if (rawName==null){
+    public static String removeNamespace(String rawName) {
+        if (rawName == null) {
             return rawName;
         }
-        String returnValue= new String(rawName);
-        if (returnValue.indexOf("{")>=0 && returnValue.indexOf("}") >=0 )
-            returnValue= returnValue.substring(returnValue.indexOf("}")+1);
+        String returnValue = new String(rawName);
+        if (returnValue.indexOf("{") >= 0 && returnValue.indexOf("}") >= 0) {
+            returnValue = returnValue.substring(returnValue.indexOf("}") + 1);
+        }
         if (returnValue.split(":").length > 1) {
             returnValue = returnValue.split(":")[1];
         }
@@ -915,16 +918,16 @@ public abstract class BaseGisAction extends BaseHibernateAction {
              * en aan de arraylist regel toegevoegd te worden.
              */
             if (td.getDataType().getId() == DataTypen.DATA && kolomnaam != null) {
-                if (f.getProperty(kolomnaam).getValue()==null){
+                if (f.getProperty(kolomnaam).getValue() == null) {
                     regel.addValue(null);
-                }else{
+                } else {
                     regel.addValue(f.getProperty(kolomnaam).getValue().toString());
                 }
-            /*
-             * In het tweede geval dient de informatie in de thema data als link naar een andere
-             * informatiebron. Deze link zal enigszins aangepast moeten worden om tot vollende
-             * werkende link te dienen.
-             */
+                /*
+                 * In het tweede geval dient de informatie in de thema data als link naar een andere
+                 * informatiebron. Deze link zal enigszins aangepast moeten worden om tot vollende
+                 * werkende link te dienen.
+                 */
             } else if (td.getDataType().getId() == DataTypen.URL) {
                 StringBuffer url;
                 if (td.getCommando() != null) {
@@ -959,10 +962,10 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
                 regel.addValue(url.toString());
 
-            /*
-             * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu een
-             * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
-             */
+                /*
+                 * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu een
+                 * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
+                 */
             } else if (td.getDataType().getId() == DataTypen.QUERY) {
                 StringBuffer url;
                 if (td.getCommando() != null) {
@@ -972,7 +975,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 }
 
                 String commando = url.toString();
-                if(commando.contains("[") || commando.contains("]")){
+                if (commando.contains("[") || commando.contains("]")) {
                     /*
                      * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
                      * Bijvoorbeeld:
@@ -982,42 +985,42 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                      */
                     int begin = -1;
                     int eind = -1;
-                    for(int i = 0; i < url.length(); i++){
+                    for (int i = 0; i < url.length(); i++) {
                         char c = url.charAt(i);
-                        if(c == '['){
-                            if(begin == -1){
+                        if (c == '[') {
+                            if (begin == -1) {
                                 begin = i;
-                            }else{
-                                log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
-                                throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                            } else {
+                                log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
+                                throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
                             }
-                        }else if(c == ']'){
+                        } else if (c == ']') {
                             eind = i;
-                            if(begin != -1 && eind != -1){
-                                String kolom = url.substring(begin+1, eind);
-                                if(kolom == null || kolom.length() == 0){
-                                    log.error("Commando \""+commando+"\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
-                                    throw new Exception("Commando \""+commando+"\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                            if (begin != -1 && eind != -1) {
+                                String kolom = url.substring(begin + 1, eind);
+                                if (kolom == null || kolom.length() == 0) {
+                                    log.error("Commando \"" + commando + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                                    throw new Exception("Commando \"" + commando + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
                                 }
                                 Object value = f.getProperty(kolom).getValue();
                                 if (value == null) {
                                     value = "";
                                 }
-                                url.replace(begin, eind+1, value.toString().trim());
+                                url.replace(begin, eind + 1, value.toString().trim());
                                 begin = -1;
                                 eind = -1;
                                 i = 0;
-                            }else{
-                                log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een [ .");
-                                throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een [ .");
+                            } else {
+                                log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een [ .");
+                                throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een [ .");
                             }
-                        }else if(i == url.length()-1 && begin != -1){
-                            log.error("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
-                            throw new Exception("Commando \""+commando+"\" is niet correct. Er ontbreekt een ] .");
+                        } else if (i == url.length() - 1 && begin != -1) {
+                            log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
+                            throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
                         }
                     }
                     regel.addValue(url.toString());
-                }else{
+                } else {
                     Object value = null;
                     if (kolomnaam != null) {
                         value = f.getProperty(kolomnaam).getValue();
