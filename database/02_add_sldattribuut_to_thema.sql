@@ -1,0 +1,1 @@
+ALTER TABLE themas ADD COLUMN "sldattribuut" character varying(255);

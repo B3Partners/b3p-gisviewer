@@ -66,6 +66,7 @@ public class Themas implements Comparable {
     private String view_geomtype;
     private String organizationcodekey;
     private String maptipstring;
+    private String sldattribuut;
 
     /** Creates a new instance of Themas */
     public Themas() {
@@ -702,5 +703,13 @@ public class Themas implements Comparable {
 
     public void setMaptipstring(String maptipstring) {
         this.maptipstring = maptipstring;
+    }
+
+    public String getSldattribuut() {
+        return sldattribuut;
+    }
+
+    public void setSldattribuut(String sldattribuut) {
+        this.sldattribuut = sldattribuut;
     }
 }
