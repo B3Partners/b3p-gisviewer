@@ -610,7 +610,6 @@ public class GetViewerDataAction extends BaseGisAction {
         if (columnName == null || columnName.length() <= 0) {
             columnName = "id";
         }
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Connection connection = t.getConnectie().getJdbcConnection();
 
         String geom1 = SpatialUtil.getTableGeomName(t, connection);
