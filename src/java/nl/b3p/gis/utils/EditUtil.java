@@ -13,6 +13,8 @@ import com.vividsolutions.jts.operation.buffer.BufferOp;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  *
@@ -20,6 +22,7 @@ import java.util.List;
  */
 public class EditUtil {
 
+    private static final Log log = LogFactory.getLog(EditUtil.class);
     private static final int QUAD_SEGS = 16;
 
     /**
@@ -30,7 +33,6 @@ public class EditUtil {
 
     public String buffer(String wkt, double bufferafstand) throws Exception {
 
-        //TODO waarde kan null zijn
         if ( (wkt == null) || (wkt.length() < 1) ) {
             throw new Exception("Kan niet bufferen. Er is nog geen handeling geselecteerd.");
         }
@@ -40,43 +42,23 @@ public class EditUtil {
         }
 
         String buffer = "";
-
         Geometry geom = createGeomFromWKTString(wkt);
 
         if (geom == null) {
-            throw new Exception("Kan niet bufferen. Geometrie is leeg.");
+            throw new Exception("Kan niet bufferen. Geometrie is incorrect.");
         }
  
         Geometry result = geom.buffer(bufferafstand, QUAD_SEGS, BufferOp.CAP_BUTT);
 
         if (result == null)
-            throw new Exception("Bufferfout bij bufferen geometrie.");
+            throw new Exception("Resultaat buffer geeft incorrecte geometrie.");
+   
+        Geometry poly = getLargestPolygonFromMultiPolygon(result);
 
-        String testwkt = result.toText();
-        Geometry g = null;
-        
-        if (testwkt.indexOf("MULTI") != -1)
-        {
-            g = getLargestPolygonFromMultiPolygon(result);
+        if (poly == null)
+            throw new Exception("Bufferfout bij omzetten MultiPolygon naar grootste Polygon.");
 
-            if (g == null)
-                throw new Exception("Bufferfout bij parsen MultiPolygon.");
-
-            buffer = g.toText();
-        } else {
-            buffer = result.toText();
-        }
-        
-        if ( (buffer.indexOf("POINT") != -1) || (buffer.indexOf("MULTI") != -1) )
-            throw new Exception("Het resultaat van de buffer kan niet worden getekend.");
-
-        /*
-        if (buffer.indexOf("LINE") == -1)
-        {
-            if (getNumInteriorRings(geom) > 0)
-                throw new Exception("Kan geen donut bufferen.");
-        }
-        */
+        buffer = poly.toText();
         
         return buffer;
     }
