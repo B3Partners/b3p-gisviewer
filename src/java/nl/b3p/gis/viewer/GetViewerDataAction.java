@@ -158,8 +158,8 @@ public class GetViewerDataAction extends BaseGisAction {
         if (themas != null) {
             for (int i = 0; i < themas.size(); i++) {
                 Themas t = (Themas) themas.get(i);
-                if (t.getAdmin_tabel()!=null){
-                    try{
+                if (t.getAdmin_tabel() != null) {
+                    try {
                         List thema_items = SpatialUtil.getThemaData(t, true);
                         int themadatanummer = 0;
                         if (ti != null) {
@@ -200,9 +200,9 @@ public class GetViewerDataAction extends BaseGisAction {
                                 ti.add(thema_items);
                             }
                         }
-                    }catch(Exception e){
-                        log.error("Fout bij laden admindata voor thema: ",e);
-                        addAlternateMessage(mapping, request, "",e.getMessage());
+                    } catch (Exception e) {
+                        log.error("Fout bij laden admindata voor thema: ", e);
+                        addAlternateMessage(mapping, request, "", e.getMessage());
                     }
                 }
             }
@@ -236,10 +236,10 @@ public class GetViewerDataAction extends BaseGisAction {
         List thema_items = SpatialUtil.getThemaData(t, false);
         request.setAttribute("thema_items", thema_items);
         if (SpatialUtil.validJDBCConnection(t)) {
-            List pks = getPks(t, dynaForm, request,request.getParameter(PK_FIELDNAME_PARAM));
+            List pks = getPks(t, dynaForm, request, request.getParameter(PK_FIELDNAME_PARAM));
             request.setAttribute("regels", getThemaObjects(t, pks, thema_items));
             if (addKaart) {
-                request.setAttribute("envelops",getThemaEnvelops(t,pks));
+                request.setAttribute("envelops", getThemaEnvelops(t, pks));
             }
         }//Haal op met WFS
         else if (WfsUtil.validWfsConnection(t)) {
@@ -250,7 +250,6 @@ public class GetViewerDataAction extends BaseGisAction {
         }
         return mapping.findForward("aanvullendeinfo");
     }
-
 
     /**
      * Methode is attributen ophaalt welke nodig zijn voor het tonen van de
@@ -288,9 +287,14 @@ public class GetViewerDataAction extends BaseGisAction {
      *
      */
     public ActionForward objectdata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        List tol = createThemaObjectsList(mapping, dynaForm, request);
-        request.setAttribute("object_data", tol);
 
+        Themas t = getThema(mapping, dynaForm, request, true);
+        if (SpatialUtil.validJDBCConnection(t)) {
+            List tol = createThemaObjectsList(mapping, dynaForm, request);
+            request.setAttribute("object_data", tol);
+        } else {
+            throw new NotSupportedException("Gebieden bij een WFS thema wordt nog niet ondersteund");
+        }
         return mapping.findForward("objectdata");
     }
 
@@ -313,9 +317,13 @@ public class GetViewerDataAction extends BaseGisAction {
      */
     public ActionForward analysedata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        List tol = createThemaObjectsList(mapping, dynaForm, request);
-        request.setAttribute("object_data", tol);
-
+        Themas t = getThema(mapping, dynaForm, request, true);
+        if (SpatialUtil.validJDBCConnection(t)) {
+            List tol = createThemaObjectsList(mapping, dynaForm, request);
+            request.setAttribute("object_data", tol);
+        } else {
+            throw new NotSupportedException("Analyse bij een WFS thema wordt nog niet ondersteund");
+        }
         return mapping.findForward("analysedata");
     }
 
@@ -336,7 +344,7 @@ public class GetViewerDataAction extends BaseGisAction {
     public ActionForward analysewaarde(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         // Maakt nu gebruik van het activeanalysethema property door true mee te geven
         Themas t = getThema(mapping, dynaForm, request, true);
-        if (!SpatialUtil.validJDBCConnection(t)){
+        if (!SpatialUtil.validJDBCConnection(t)) {
             log.error("Thema heeft geen JDBC connectie. Andere connecties worden niet ondersteund");
             request.setAttribute("waarde", "Thema heeft geen JDBC connectie. Andere connecties worden niet ondersteund");
             return mapping.findForward("analyseobject");
@@ -553,7 +561,7 @@ public class GetViewerDataAction extends BaseGisAction {
      */
     public ActionForward analyseobject(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         Themas t = getThema(mapping, dynaForm, request, true);
-        if (!SpatialUtil.validJDBCConnection(t)){
+        if (!SpatialUtil.validJDBCConnection(t)) {
             log.error("Thema heeft geen JDBC connectie. Andere connecties worden niet ondersteund");
             request.setAttribute("waarde", "Thema heeft geen JDBC connectie. Andere connecties worden niet ondersteund");
             return mapping.findForward("analyseobject");
@@ -664,8 +672,8 @@ public class GetViewerDataAction extends BaseGisAction {
             String organizationcodekey, String organizationcode, String tableAlias) {
         StringBuffer extraWhere = new StringBuffer();
 
-        if (thema_items != null && thema_items.size() > 0 &&
-                extraCriterium != null && extraCriterium.length() > 0) {
+        if (thema_items != null && thema_items.size() > 0
+                && extraCriterium != null && extraCriterium.length() > 0) {
             extraCriterium = extraCriterium.replaceAll("\\'", "''");
             Iterator it = thema_items.iterator();
             while (it.hasNext()) {
@@ -688,8 +696,8 @@ public class GetViewerDataAction extends BaseGisAction {
             }
         }
 
-        if (organizationcode != null && organizationcode.length() > 0 &&
-                organizationcodekey != null && organizationcodekey.length() > 0) {
+        if (organizationcode != null && organizationcode.length() > 0
+                && organizationcodekey != null && organizationcodekey.length() > 0) {
             extraWhere.append(" and ");
             extraWhere.append(tableAlias);
             extraWhere.append(".");
@@ -735,7 +743,7 @@ public class GetViewerDataAction extends BaseGisAction {
             return null;
         }
         if (thema_items == null || thema_items.isEmpty()) {
-            throw new Exception("Er is geen themadata geconfigureerd voor thema: "+t.getNaam()+" met id: "+t.getId());
+            throw new Exception("Er is geen themadata geconfigureerd voor thema: " + t.getNaam() + " met id: " + t.getId());
         }
         String geom = request.getParameter("geom");
         String[] coordString = null;
@@ -754,28 +762,28 @@ public class GetViewerDataAction extends BaseGisAction {
                 scale = Double.parseDouble(s);
                 //af ronden op 6 decimalen
                 scale = Math.round((scale * 1000000));
-                scale = scale/1000000;
+                scale = scale / 1000000;
             }
         } catch (NumberFormatException nfe) {
             scale = 0.0;
             log.debug("Scale is geen double dus wordt genegeerd");
         }
-        String tolerance= request.getParameter("tolerance");
-        double clickTolerance=DEFAULTTOLERANCE;
-        try{
-            if (tolerance!=null){
-                clickTolerance=Double.parseDouble(tolerance);
+        String tolerance = request.getParameter("tolerance");
+        double clickTolerance = DEFAULTTOLERANCE;
+        try {
+            if (tolerance != null) {
+                clickTolerance = Double.parseDouble(tolerance);
             }
-        }catch (NumberFormatException nfe) {
-            clickTolerance=DEFAULTTOLERANCE;
-            log.debug("Tolerance is geen double dus de default wordt gebruikt: "+DEFAULTTOLERANCE+" pixels");
+        } catch (NumberFormatException nfe) {
+            clickTolerance = DEFAULTTOLERANCE;
+            log.debug("Tolerance is geen double dus de default wordt gebruikt: " + DEFAULTTOLERANCE + " pixels");
         }
         double distance = clickTolerance;
         if (scale > 0.0) {
             distance = scale * (clickTolerance);
         }
         ArrayList regels = new ArrayList();
-        ArrayList features = WfsUtil.getWFSObjects(t, coords, "EPSG:28992",distance,request, geom);
+        ArrayList features = WfsUtil.getWFSObjects(t, coords, "EPSG:28992", distance, request, geom);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             regels.add(getRegel(f, t, thema_items));
@@ -791,14 +799,14 @@ public class GetViewerDataAction extends BaseGisAction {
             return null;
         }
         String adminPk = t.getAdmin_pk();
-        adminPk=removeNamespace(adminPk);
-        String id = request.getParameter(adminPk);       
-        
+        adminPk = removeNamespace(adminPk);
+        String id = request.getParameter(adminPk);
+
         if (id == null) {
             return null;
         }
         ArrayList regels = new ArrayList();
-        ArrayList features = WfsUtil.getWFSObjects(t, adminPk, id,request);
+        ArrayList features = WfsUtil.getWFSObjects(t, adminPk, id, request);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             regels.add(getRegel(f, t, thema_items));
@@ -828,14 +836,14 @@ public class GetViewerDataAction extends BaseGisAction {
         if (thema_items == null || thema_items.isEmpty()) {
             return null;
         }
-        if (!SpatialUtil.validJDBCConnection(t)){
+        if (!SpatialUtil.validJDBCConnection(t)) {
             log.error("Deze functie kan je alleen aanroepen met JDBC connecties");
             return null;
         }
         ArrayList regels = new ArrayList();
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Connection connection = t.getConnectie().getJdbcConnection();        
+        Connection connection = t.getConnectie().getJdbcConnection();
         try {
             int dt = SpatialUtil.getPkDataType(t, connection);
             String taq = t.getAdmin_query();
@@ -905,19 +913,21 @@ public class GetViewerDataAction extends BaseGisAction {
         }
         return regels;
     }
+
     /**
      * Haalt een lijst met bbox/envelops op van een thema waarvan de feature ids in de lijst met pks voor komen. 
      * @param t Thema
      * @param pks Lijst met primary keys
      * @return lijst met envelops in strings. 
      */
-    public List getThemaEnvelops(Themas t,List pks){
-        ArrayList envelops=new ArrayList();
-        for (int i=0; i< pks.size(); i++){
-            envelops.add(getThemaEnvelope(t,t.getAdmin_pk(),pks.get(i).toString()));
+    public List getThemaEnvelops(Themas t, List pks) {
+        ArrayList envelops = new ArrayList();
+        for (int i = 0; i < pks.size(); i++) {
+            envelops.add(getThemaEnvelope(t, t.getAdmin_pk(), pks.get(i).toString()));
         }
         return envelops;
     }
+
     /**
      * Haalt een envelop op van een bepaalde feature(s) aangegeven.
      * @param t Thema
@@ -926,14 +936,14 @@ public class GetViewerDataAction extends BaseGisAction {
      * @return de envelop van alle gevonden features bij elkaar
      */
     public double[] getThemaEnvelope(Themas t, String attributeName, String attributeValue) {
-        if (!SpatialUtil.validJDBCConnection(t)){
+        if (!SpatialUtil.validJDBCConnection(t)) {
             log.error("Deze functie kan je alleen aanroepen met themas die een JDBC connectie hebben");
             return null;
         }
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         String envelope = null;
         try {
-            Connection conn = t.getConnectie().getJdbcConnection();            
+            Connection conn = t.getConnectie().getJdbcConnection();
             String geomColumn = SpatialUtil.getTableGeomName(t, conn);
             String tableName = t.getSpatial_tabel();
             if (tableName == null) {
@@ -952,10 +962,7 @@ public class GetViewerDataAction extends BaseGisAction {
             }
         } catch (SQLException se) {
             log.error("getFeatureEnvelope error ", se);
-        } 
-        return SpatialUtil.wktEnvelope2bbox(envelope,28992);
+        }
+        return SpatialUtil.wktEnvelope2bbox(envelope, 28992);
     }
-
-
-
 }
