@@ -15,10 +15,14 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 /**
@@ -51,20 +55,6 @@ public class SldServlet extends HttpServlet {
             throws ServletException, IOException {
         OutputStream out = response.getOutputStream();
         try {
-            String style = null;
-            if (request.getParameter("style") != null) {
-                style = request.getParameter("style");
-            } else {
-                style = "NO";
-            }
-
-            String not = null;
-            if (request.getParameter("notinfilter") != null) {
-                not = request.getParameter("notinfilter");
-            } else {
-                not = "NO";
-            }
-
             String visibleValue[] = null;
             if (request.getParameter("visibleValue") != null) {
                 visibleValue = request.getParameter("visibleValue").split(",");
@@ -83,7 +73,7 @@ public class SldServlet extends HttpServlet {
 
             Document doc = getDefaultSld();
             Node root = doc.getDocumentElement();
-            Themas th = SpatialUtil.getThema(id);
+            Themas th = getThemas(id);
             if (th == null) {
                 throw new Exception("geen thema gevonden");
             }
@@ -98,8 +88,15 @@ public class SldServlet extends HttpServlet {
             if (featureType == null || featureType.length() == 0) {
                 throw new Exception("thema heeft geen featuretype");
             }
-
-            Node child = createNamedLayerConstraint(doc, featureType, sldattribuut, visibleValue, style, not);
+            
+            featureType = featureType.substring(featureType.indexOf("_")+1);
+            String geometryType=null;
+            try{
+                geometryType=getGeomtryType(th);
+            }catch(Exception e){
+                log.error("Error getting geometry type: ",e);
+            }
+            Node child = createNamedLayerConstraint(doc, featureType, sldattribuut, visibleValue,geometryType);
             root.appendChild(child);
 
             DOMSource domSource = new DOMSource(doc);
@@ -117,6 +114,47 @@ public class SldServlet extends HttpServlet {
         }
     }
 
+	private Themas getThemas(String id) throws Exception {
+		Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Transaction tx = sess.beginTransaction();
+        Themas t = null;
+		try {
+			t = SpatialUtil.getThema(id);
+
+            tx.commit();
+		} catch(Exception e) {
+            if(tx.isActive()) {
+				tx.rollback();
+			}
+            log.error("Exception occured, rollback", e);
+
+            throw e;
+		}
+		return t;
+	}
+
+    private String getGeomtryType(Themas t) throws Exception {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Transaction tx = sess.beginTransaction();
+        String geometryType=null;
+        try {
+            if (Connecties.TYPE_JDBC.equals(t.getConnectie().getType())) {
+                geometryType=SpatialUtil.getThemaGeomType(t, t.getConnectie().getJdbcConnection());
+            }else{
+                throw new UnsupportedOperationException("Not supported for other then JDBC themas");
+            }
+            tx.commit();
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            log.error("Exception occured, rollback", e);
+
+            throw e;
+        }
+        return geometryType;
+    }
+
     public Document getDefaultSld() throws Exception {
         DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         FileInputStream fi = new FileInputStream(defaultSldPath);
@@ -124,49 +162,37 @@ public class SldServlet extends HttpServlet {
         return doc;
     }
 
-    public Node createNamedLayerConstraint(Document doc, String featureName, String attribute, String[] value, String style, String not) {
-        Node featureTypeConstraint = createFeatureTypeConstraint(doc, attribute, value, not);
+    public Node createNamedLayerConstraint(Document doc, String featureName, String attribute, String[] value, String geometryType) {
+        Node featureTypeConstraint = createFeatureTypeConstraint(doc, attribute, value,geometryType);
 
-        Node layerFeatureConstraints = doc.createElementNS(SLDNS, "LayerFeatureConstraints");
-        layerFeatureConstraints.appendChild(featureTypeConstraint);
+        Node userStyle = doc.createElementNS(SLDNS, "UserStyle");
+        userStyle.appendChild(featureTypeConstraint);
 
         Node name = doc.createElementNS(SLDNS, "Name");
         name.appendChild(doc.createTextNode(featureName));
 
         Node namedLayer = doc.createElementNS(SLDNS, "NamedLayer");
         namedLayer.appendChild(name);
-        namedLayer.appendChild(layerFeatureConstraints);
-        if (!style.equalsIgnoreCase("NO")) {
-            Node namedStyle = doc.createElementNS(SLDNS, "NamedStyle");
-            Node namedStyleName = doc.createElementNS(SLDNS, "Name");
-            namedStyleName.appendChild(doc.createTextNode(style));
-            namedStyle.appendChild(namedStyleName);
-            namedLayer.appendChild(namedStyle);
-        }
+        namedLayer.appendChild(userStyle);
+
         return namedLayer;
     }
 
-    public Node createFeatureTypeConstraint(Document doc, String attribute, String[] value, String not) {
+    public Node createFeatureTypeConstraint(Document doc, String attribute, String[] value,String geometryType) {
 
-        Node featureTypeConstraint = doc.createElementNS(SLDNS, "FeatureTypeConstraint");
+        Node featureTypeStyle = doc.createElementNS(SLDNS, "FeatureTypeStyle");
+        Node rule = doc.createElement( "Rule");
+
 
         Node filter = doc.createElementNS(OGCNS, "Filter");
-        Node temp2;
-        if ("true".equals(not)) {
-            Node notNode = doc.createElement("Not");
-            filter.appendChild(notNode);
-            temp2 = notNode;
-        } else {
-            temp2 = filter;
-        }
 
         Node temp;
 
         if (value.length == 1) {
-            temp = temp2;
+            temp = filter;
         } else {
             Node oRFilter = doc.createElementNS(OGCNS, "Or");
-            temp2.appendChild(oRFilter);
+            filter.appendChild(oRFilter);
             temp = oRFilter;
 
         }
@@ -184,8 +210,105 @@ public class SldServlet extends HttpServlet {
             temp.appendChild(propertyIsEqualTo);
         }
 
-        featureTypeConstraint.appendChild(filter);
-        return featureTypeConstraint;
+        rule.appendChild(filter);
+        if (geometryType==null || geometryType.toLowerCase().indexOf("polygon")>=0)
+            rule.appendChild(createStylePolygon(doc, attribute));
+        else if (geometryType==null || geometryType.toLowerCase().indexOf("line")>=0)
+            rule.appendChild(createStyleLine(doc, attribute));
+        else if (geometryType==null || geometryType.toLowerCase().indexOf("point")>=0)
+            rule.appendChild(createStylePoint(doc, attribute));
+                
+        featureTypeStyle.appendChild(rule);
+        return featureTypeStyle;
+    }
+
+    private Node createStylePoint(Document doc, String geoProperty){
+
+
+        Node pointSymbolizer = doc.createElement("PointSymbolizer");
+        Node geo = doc.createElement("Geometry");
+        Node propName = doc.createElementNS(OGCNS, "PropertyName");
+        propName.appendChild(doc.createTextNode(geoProperty));
+        geo.appendChild(propName);
+        Node graphic = doc.createElement("Graphic");
+        Node mark = doc.createElement("Mark");
+        Node wkn = doc.createElement("WellKnownName");
+        wkn.appendChild(doc.createTextNode("circle"));
+        Node fill = doc.createElement("Fill");
+        Element cssParam = doc.createElement("CssParameter");
+        cssParam.setAttribute("name", "fill");
+        cssParam.appendChild(doc.createTextNode("#ff0000"));
+        Node size = doc.createElement("Size");
+        size.appendChild(doc.createTextNode("10.0"));
+        
+        fill.appendChild(cssParam);
+        mark.appendChild(wkn);
+        mark.appendChild(fill);
+
+        graphic.appendChild(mark);
+        graphic.appendChild(size);
+
+        pointSymbolizer.appendChild(geo);
+        pointSymbolizer.appendChild(graphic);
+
+        return pointSymbolizer;
+    }
+
+    private Node createStylePolygon(Document doc, String geoProperty){
+
+
+        Node polygonSymbolizer = doc.createElement("PolygonSymbolizer");
+        Node geo = doc.createElement("Geometry");
+        Node propName = doc.createElementNS(OGCNS, "PropertyName");
+        propName.appendChild(doc.createTextNode(geoProperty));
+        geo.appendChild(propName);
+
+        Node fill = doc.createElement("Fill");
+        Element cssParam2 = doc.createElement("CssParameter");
+        cssParam2.setAttribute("name", "fill");
+        cssParam2.appendChild(doc.createTextNode("#ff0000"));
+        fill.appendChild(cssParam2);
+
+        Node stroke = doc.createElement("Stroke");
+        Element cssParam = doc.createElement("CssParameter");
+        cssParam.setAttribute("name", "stroke");
+        cssParam.appendChild(doc.createTextNode("#ff00ff"));
+        stroke.appendChild(cssParam);
+         
+        polygonSymbolizer.appendChild(geo);
+        polygonSymbolizer.appendChild(stroke);
+        polygonSymbolizer.appendChild(fill);
+
+        return polygonSymbolizer;
+    }
+
+    private Node createStyleLine(Document doc, String geoProperty){
+   
+
+        Node lineSymbolizer = doc.createElement("LineSymbolizer");
+        Node geo = doc.createElement("Geometry");
+        Node propName = doc.createElementNS(OGCNS, "PropertyName");
+        propName.appendChild(doc.createTextNode(geoProperty));
+        geo.appendChild(propName);
+
+        Node stroke = doc.createElement("Stroke");
+
+        Element cssStroke = doc.createElement("CssParameter");
+        cssStroke.setAttribute("name", "stroke");
+        cssStroke.appendChild(doc.createTextNode("#ff00ff"));
+        stroke.appendChild(cssStroke);
+
+        Element cssDash = doc.createElement("CssParameter");
+        cssDash.setAttribute("name", "stroke-dasharray");
+        cssDash.appendChild(doc.createTextNode("10.0 5 5 10"));
+        stroke.appendChild(cssDash);
+
+       // Node graphicFill = doc.createElement("GraphicFill");
+        //graphicFill.appendChild(graphic);
+        lineSymbolizer.appendChild(geo);
+        lineSymbolizer.appendChild(stroke);
+
+        return lineSymbolizer;
     }
 
     public void init(ServletConfig config) throws ServletException {
@@ -200,7 +323,7 @@ public class SldServlet extends HttpServlet {
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /** 
+    /**
      * Handles the HTTP <code>GET</code> method.
      * @param request servlet request
      * @param response servlet response
@@ -213,7 +336,7 @@ public class SldServlet extends HttpServlet {
         processRequest(request, response);
     }
 
-    /** 
+    /**
      * Handles the HTTP <code>POST</code> method.
      * @param request servlet request
      * @param response servlet response
@@ -226,7 +349,7 @@ public class SldServlet extends HttpServlet {
         processRequest(request, response);
     }
 
-    /** 
+    /**
      * Returns a short description of the servlet.
      * @return a String containing servlet description
      */

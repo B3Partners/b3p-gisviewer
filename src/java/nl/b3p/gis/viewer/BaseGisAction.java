@@ -24,6 +24,7 @@ package nl.b3p.gis.viewer;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -88,6 +89,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         if (organizationcode != null && organizationcode.length() > 0) {
             request.setAttribute("organizationcode", getOrganizationCode(request));
         }
+        
     }
 
     /**
