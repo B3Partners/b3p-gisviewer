@@ -146,9 +146,7 @@ public class SpatialUtil {
             dt = rs.getInt("DATA_TYPE");
         }
         if (dt == java.sql.Types.NULL) {
-            log.debug("java.sql.Types.NULL voor tabelnaam: " + dbtn
-                    + ", pknaam: " + column
-                    + ", SQL_DATA_TYPE:" + dt);
+            log.debug("java.sql.Types.NULL voor tabelnaam: " + dbtn + ", pknaam: " + column + ", SQL_DATA_TYPE:" + dt);
         }
         return dt;
     }
@@ -515,13 +513,14 @@ public class SpatialUtil {
         }
 
         sq.append("(");
-        if (coords.length == 2 || !geom.startsWith("POLYGON")) {
+        if ((coords.length == 2 && geom == null) ||
+                (geom != null && !geom.startsWith("POLYGON"))) {
             sq.append("(Dimension(tbl.\"" + geomKolom + "\") < 2) ");
             sq.append("and ");
             sq.append("(Distance(tbl.\"" + geomKolom + "\", ");
-            if (geom == null) {
+            if (coords.length == 2 && geom == null) {
                 sq.append(createClickGeom(coords, srid));
-            } else {
+            } else if (geom != null && !geom.startsWith("POLYGON")) {
                 sq.append(" GeomFromText ( '" + geom + "'," + srid + ") ");
             }
             sq.append(") < ");
@@ -628,8 +627,7 @@ public class SpatialUtil {
      * @return
      */
     static public String postalcodeRDCoordinates(String tabel, String geomKolom, String searchparam, String param) {
-        return "select distinct " + searchparam + " as naam, astext(tbl." + geomKolom + ") as pointsresult from "
-                + tabel + " tbl where lower(tbl." + searchparam + ") = lower('" + param + "')";
+        return "select distinct " + searchparam + " as naam, astext(tbl." + geomKolom + ") as pointsresult from " + tabel + " tbl where lower(tbl." + searchparam + ") = lower('" + param + "')";
     }
 
     /**
@@ -656,8 +654,7 @@ public class SpatialUtil {
      * @return
      */
     static public String cityRDCoordinates(String tabel, String geomKolom, String searchparam, String param) {
-        return "select distinct " + searchparam + " as naam, astext(centroid(tbl." + geomKolom + ")) as pointsresult from "
-                + tabel + " tbl where lower(tbl." + searchparam + ") like lower('%" + param + "%')";
+        return "select distinct " + searchparam + " as naam, astext(centroid(tbl." + geomKolom + ")) as pointsresult from " + tabel + " tbl where lower(tbl." + searchparam + ") like lower('%" + param + "%')";
     }
 
     /**
@@ -686,14 +683,7 @@ public class SpatialUtil {
      * @return
      */
     static public String wolHMRDCoordinates(String tabel, String geomKolom, String searchparam, String hm, String n_nr) {
-        return "select " + searchparam + " as naam, astext(hecto." + geomKolom + ") as pointsresult from " + tabel + " hecto where ("
-                + "(CAST(hecto." + searchparam + " AS FLOAT) - " + hm + ")*"
-                + "(CAST(hecto." + searchparam + " AS FLOAT) - " + hm + ")) = "
-                + "(select min("
-                + "(CAST(hecto." + searchparam + " AS FLOAT) - " + hm + ")*"
-                + "(CAST(hecto." + searchparam + " AS FLOAT) - " + hm + ")) "
-                + "from " + tabel + " hecto where lower(hecto.n_nr) = lower('" + n_nr + "') ) "
-                + "AND lower(hecto.n_nr) = lower('" + n_nr + "')";
+        return "select " + searchparam + " as naam, astext(hecto." + geomKolom + ") as pointsresult from " + tabel + " hecto where (" + "(CAST(hecto." + searchparam + " AS FLOAT) - " + hm + ")*" + "(CAST(hecto." + searchparam + " AS FLOAT) - " + hm + ")) = " + "(select min(" + "(CAST(hecto." + searchparam + " AS FLOAT) - " + hm + ")*" + "(CAST(hecto." + searchparam + " AS FLOAT) - " + hm + ")) " + "from " + tabel + " hecto where lower(hecto.n_nr) = lower('" + n_nr + "') ) " + "AND lower(hecto.n_nr) = lower('" + n_nr + "')";
 
         /* Example query:
          * select astext(hecto.the_geom) from verv_nwb_hmn_p hecto where

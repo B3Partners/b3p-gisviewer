@@ -81,6 +81,7 @@
         view_geomtype varchar(255),
         organizationcodekey varchar(255),
         maptipstring varchar(255),
+        sldattribuut varchar(255),
         primary key (id)
     );
 
