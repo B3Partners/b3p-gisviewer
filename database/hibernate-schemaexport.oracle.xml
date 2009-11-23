@@ -6,10 +6,10 @@
 	<property name="output.schema" value="${hibernate-schemaexport.basedir}/schema-export.sql"/>
 	
 	<path id="hibernate.schemaexport.classpath">
-		<fileset dir="build/web/WEB-INF/lib">
+		<fileset dir="dist/lib">
 			<include name="*.jar"/>
-		</fileset>		
-		<pathelement path="build/web/WEB-INF/classes"/>
+		</fileset>
+		<pathelement path="build/classes"/>
 	</path>
 	
 	<target name="schemaexport">
@@ -40,16 +40,16 @@
 		     kolom 'serial' wordt en daarmee automatisch de sequence wordt aan-
 		     gemaakt.
 
-             Niet voor oracle
+		Niet voor oracle
 		-->
-        <!--
+		<!--
 		<replaceregexp
 			file="${output.schema}"
 			match="^\s*(create sequence.*)$"
 			replace="- \1" (removed one - for xml comment)
 			flags="gm"
 		/>
-        -->
+		-->
 		<fixcrlf srcDir="." includes="${output.schema}"/>
 	</target>
 </project>
