@@ -2,7 +2,6 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package nl.b3p.gis.viewer;
 
 import java.sql.Connection;
@@ -27,129 +26,135 @@ import org.directwebremoting.WebContextFactory;
  * @author Roy
  */
 public class ConfigListsUtil {
+
     private static final Log log = LogFactory.getLog(ConfigListsUtil.class);
 
-    public static List getPossibleFeaturesById(Integer connId){
+    private static Connecties getConnectie(Session sess, Integer connId) {
+        Connecties c = null;
+        if (connId == null || connId.intValue() == 0) {
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+            c = user.getKbWfsConnectie();
+        } else if (connId.intValue() > 0) {
+            c = (Connecties) sess.get(Connecties.class, connId);
+        }
+        return c;
+    }
+
+    public static List getPossibleFeaturesById(Integer connId) {
         List returnValue = null;
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        try{
+        try {
             sess.beginTransaction();
-            Connecties c=null;
-            if (connId!=null){
-                c = (Connecties) sess.get(Connecties.class, connId);
-            }else{
-                WebContext ctx = WebContextFactory.get();
-                HttpServletRequest request = ctx.getHttpServletRequest();
-                GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-                c= user.getKbWfsConnectie();
+            Connecties c = getConnectie(sess, connId);
+            if (c != null) {
+                returnValue = getPossibleFeatures(c);
             }
-            if (c!=null)
-                returnValue= getPossibleFeatures(c);
-        }catch (Exception e){
-            log.error("getPossibleFeaturesById error: ",e);
-        }finally{
+        } catch (Exception e) {
+            log.error("getPossibleFeaturesById error: ", e);
+        } finally {
             sess.close();
         }
         return returnValue;
     }
 
-    public static List getPossibleAttributesById(Integer connId, String feature){
+    public static List getPossibleAttributesById(Integer connId, String feature) {
         List returnValue = null;
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        try{
+        try {
             sess.beginTransaction();
-            Connecties c=null;
-            if (connId!=null){
-                c = (Connecties) sess.get(Connecties.class, connId);
-            }else{
-                WebContext ctx = WebContextFactory.get();
-                HttpServletRequest request = ctx.getHttpServletRequest();
-                GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-                c= user.getKbWfsConnectie();
+            Connecties c = getConnectie(sess, connId);
+            if (c != null) {
+                returnValue = getPossibleAttributes(c, feature);
             }
-            if (c!=null)
-                returnValue= getPossibleAttributes(c,feature);
-        }catch (Exception e){
-            log.error("getPossibleAttributesById error: ",e);
-        }finally{
+        } catch (Exception e) {
+            log.error("getPossibleAttributesById error: ", e);
+        } finally {
             sess.close();
         }
         return returnValue;
     }
+
     /**
      * Maakt een lijst met mogelijke features voor de gegeven connectie en gebruiker
      * Zowel jdbc en wfs
      */
-    public static List getPossibleFeatures(Connecties c) throws Exception{
-        ArrayList returnValue=null;
+    public static List getPossibleFeatures(Connecties c) throws Exception {
+        ArrayList returnValue = null;
         if (SpatialUtil.validJDBCConnection(c)) {
-            Connection conn=null;           
-            try{
+            Connection conn = null;
+            try {
                 conn = c.getJdbcConnection();
-                List features=SpatialUtil.getTableNames(conn);
-                if (features!=null)
-                    returnValue=new ArrayList();
-                for (int i=0; i < features.size(); i++){
+                List features = SpatialUtil.getTableNames(conn);
+                if (features != null) {
+                    returnValue = new ArrayList();
+                }
+                for (int i = 0; i < features.size(); i++) {
                     String[] s = new String[2];
-                    s[0]=(String)features.get(i);
-                    s[1]=BaseGisAction.removeNamespace((String)features.get(i));
+                    s[0] = (String) features.get(i);
+                    s[1] = BaseGisAction.removeNamespace((String) features.get(i));
                     returnValue.add(s);
                 }
-            }finally{
-                if (conn!=null)
+            } finally {
+                if (conn != null) {
                     conn.close();
+                }
             }
             return returnValue;
-        }else if (WfsUtil.validWfsConnection(c)) {
-            WFS_Capabilities cap=null;
-            try{
+        } else if (WfsUtil.validWfsConnection(c)) {
+            WFS_Capabilities cap = null;
+            try {
                 cap = WfsUtil.getCapabilities(c);
-            }catch(Exception e){
-                log.error("fout bij ophalen capabilities",e);
+            } catch (Exception e) {
+                log.error("fout bij ophalen capabilities", e);
             }
-            List features= WfsUtil.getFeatureNameList(cap);
-            if (features!=null){
-                returnValue=new ArrayList();
-                for (int i=0; i < features.size(); i++){
+            List features = WfsUtil.getFeatureNameList(cap);
+            if (features != null) {
+                returnValue = new ArrayList();
+                for (int i = 0; i < features.size(); i++) {
                     String[] s = new String[2];
-                    s[0]=(String)features.get(i);
-                    s[1]=BaseGisAction.removeNamespace((String)features.get(i));
+                    s[0] = (String) features.get(i);
+                    s[1] = BaseGisAction.removeNamespace((String) features.get(i));
                     returnValue.add(s);
                 }
             }
             return returnValue;
-        }else{
+        } else {
             return null;
         }
     }
+
     /**
      * Maakt een lijst met mogelijke attributen van een meegegeven feature.
      * Zowel jdbc en wfs
      */
     public static List getPossibleAttributes(Connecties c, String feature) throws Exception {
-        ArrayList returnValue=null;
+        ArrayList returnValue = null;
         if (feature == null) {
             return null;
-        }else if (SpatialUtil.validJDBCConnection(c)) {
-            Connection conn=null;            
-            try{
+        } else if (SpatialUtil.validJDBCConnection(c)) {
+            Connection conn = null;
+            try {
                 conn = c.getJdbcConnection();
-                List columns=SpatialUtil.getColumnNames(feature, conn);
-                if (columns==null)
+                List columns = SpatialUtil.getColumnNames(feature, conn);
+                if (columns == null) {
                     return null;
-                returnValue=new ArrayList();
-                for (int i=0; i < columns.size(); i++){
+                }
+                returnValue = new ArrayList();
+                for (int i = 0; i < columns.size(); i++) {
                     String[] s = new String[2];
-                    s[0]=(String)columns.get(i);
-                    s[1]=BaseGisAction.removeNamespace((String)columns.get(i));
+                    s[0] = (String) columns.get(i);
+                    s[1] = BaseGisAction.removeNamespace((String) columns.get(i));
                     returnValue.add(s);
                 }
-            }finally{
-                if (conn!=null)
+            } finally {
+                if (conn != null) {
                     conn.close();
+                }
             }
             return returnValue;
-        }else if (WfsUtil.validWfsConnection(c)) {
+        } else if (WfsUtil.validWfsConnection(c)) {
             List elements = WfsUtil.getFeatureElements(c, feature);
             if (elements == null) {
                 return null;
@@ -157,17 +162,15 @@ public class ConfigListsUtil {
             returnValue = new ArrayList();
             for (int i = 0; i < elements.size(); i++) {
                 Element e = (Element) elements.get(i);
-                String name=e.getAttribute("name");
-                String[] s=new String[2];
-                s[0]=name;
-                s[1]=BaseGisAction.removeNamespace(name);
+                String name = e.getAttribute("name");
+                String[] s = new String[2];
+                s[0] = name;
+                s[1] = BaseGisAction.removeNamespace(name);
                 returnValue.add(s);
             }
             return returnValue;
-        }else{
+        } else {
             return null;
         }
     }
-
-
 }

@@ -46,185 +46,195 @@ import org.w3c.dom.Element;
  * @author Roy Braam
  */
 public class WfsUtil {
+
     private static final Log log = LogFactory.getLog(WfsUtil.class);
+
     /** Creates a new instance of WfsUtil */
     public WfsUtil() {
     }
-    public static ArrayList getFeatureNameList(WFS_Capabilities cap){
-        if (cap==null)
+
+    public static ArrayList getFeatureNameList(WFS_Capabilities cap) {
+        if (cap == null) {
             return null;
+        }
         nl.b3p.xml.wfs.FeatureTypeList ftl = cap.getFeatureTypeList();
         ArrayList tns = null;
         if (ftl != null) {
             tns = new ArrayList();
             for (int i = 0; i < ftl.getFeatureTypeCount(); i++) {
                 nl.b3p.xml.wfs.FeatureType ft = ftl.getFeatureType(i);
-                if(ft.getName()!=null && ft.getName().length()>0){
+                if (ft.getName() != null && ft.getName().length() > 0) {
                     tns.add(ft.getName());
                 }
             }
         }
         return tns;
     }
-    
-   static public ArrayList getFeatureElements(Connecties c,String adminTable) throws Exception{
-        if (c!=null && c.getType().equalsIgnoreCase(Connecties.TYPE_WFS)){
+
+    static public ArrayList getFeatureElements(Connecties c, String adminTable) throws Exception {
+        if (c != null && c.getType().equalsIgnoreCase(Connecties.TYPE_WFS)) {
             OGCRequest or = createOGCRequest(c);
-            if (adminTable==null || adminTable.length()<1)
+            if (adminTable == null || adminTable.length() < 1) {
                 return null;
-            or.addOrReplaceParameter(OGCRequest.WFS_PARAM_TYPENAME,adminTable);
-            ArrayList nl= OgcWfsClient.getDescribeFeatureElements(OgcWfsClient.getDescribeFeatureType(or));
+            }
+            or.addOrReplaceParameter(OGCRequest.WFS_PARAM_TYPENAME, adminTable);
+            ArrayList nl = OgcWfsClient.getDescribeFeatureElements(OgcWfsClient.getDescribeFeatureType(or));
             return nl;
-        } else{
+        } else {
             return null;
         }
     }
-    
-    static public WFS_Capabilities getCapabilities(Connecties c) throws Exception{
-        if (c != null && c.getType().equalsIgnoreCase(Connecties.TYPE_WFS)){
+
+    static public WFS_Capabilities getCapabilities(Connecties c) throws Exception {
+        if (c != null && c.getType().equalsIgnoreCase(Connecties.TYPE_WFS)) {
             OGCRequest or = createOGCRequest(c);
             return OgcWfsClient.getCapabilities(or);
-        }else
+        } else {
             return null;
+        }
     }
-    
-    public static ArrayList getWFSObjects(Themas t, double[] coords, String srsName, double distance,HttpServletRequest request, String geom) throws Exception {
-        Connecties conn =getWfsConnection(t,request);
-        if (conn==null)
+
+    public static ArrayList getWFSObjects(Themas t, double[] coords, String srsName, double distance, HttpServletRequest request, String geom) throws Exception {
+        Connecties conn = getWfsConnection(t, request);
+        if (conn == null) {
             return null;
+        }
         OGCRequest or = createOGCRequest(conn);
-        or.addOrReplaceParameter(OGCRequest.WFS_PARAM_TYPENAME,t.getAdmin_tabel());
+        or.addOrReplaceParameter(OGCRequest.WFS_PARAM_TYPENAME, t.getAdmin_tabel());
         //er wordt alleen nog maar 1.0.0 ondersteund door jump
-        or.addOrReplaceParameter(OGCRequest.VERSION,OGCConstants.WFS_VERSION_100);
+        or.addOrReplaceParameter(OGCRequest.VERSION, OGCConstants.WFS_VERSION_100);
         GetFeature gf = OgcWfsClient.getGetFeatureRequest(or);
         //beide nodig voor het maken van een bbox wfs query
-        WFS_Capabilities cap= OgcWfsClient.getCapabilities(or);
-        FeatureType ft=OgcWfsClient.getCapabilitieFeatureType(cap,t.getAdmin_tabel());
+        WFS_Capabilities cap = OgcWfsClient.getCapabilities(or);
+        FeatureType ft = OgcWfsClient.getCapabilitieFeatureType(cap, t.getAdmin_tabel());
 
         String adminQuery = t.getAdmin_query();
         Filter adminQueryFilter = null;
-        if(adminQuery != null && !adminQuery.equals("") && !adminQuery.startsWith("select")){
+        if (adminQuery != null && !adminQuery.equals("") && !adminQuery.startsWith("select")) {
             adminQueryFilter = OgcWfsClient.createQueryFilter(gf, adminQuery, srsName, ft);
             //OgcWfsClient.addQueryFilter(gf, adminQuery, srsName, ft);
         }
 
-        if(geom == null){
-            if (coords.length==2){
-                double distance2=distance/2;
-                double[] newCoords= new double[4];
-                newCoords[0]=coords[0]-distance2;
-                newCoords[1]=coords[1]-distance2;
-                newCoords[2]=coords[0]+distance2;
-                newCoords[3]=coords[1]+distance2;
-                coords=newCoords;
-            }else if(coords.length==10){
-                double[] newCoords= new double[4];
-                newCoords[0]=coords[0];
-                newCoords[1]=coords[1];
-                newCoords[2]=coords[4];
-                newCoords[3]=coords[5];
-                coords=newCoords;
+        if (geom == null) {
+            if (coords.length == 2) {
+                double distance2 = distance / 2;
+                double[] newCoords = new double[4];
+                newCoords[0] = coords[0] - distance2;
+                newCoords[1] = coords[1] - distance2;
+                newCoords[2] = coords[0] + distance2;
+                newCoords[3] = coords[1] + distance2;
+                coords = newCoords;
+            } else if (coords.length == 10) {
+                double[] newCoords = new double[4];
+                newCoords[0] = coords[0];
+                newCoords[1] = coords[1];
+                newCoords[2] = coords[4];
+                newCoords[3] = coords[5];
+                coords = newCoords;
             }
-            if (coords.length!=4) {
+            if (coords.length != 4) {
                 throw new Exception("Polygons not supported! If polygon got 5 xy-coords a bbox will be created with the 1st and 3th coord");
             }
-            if(adminQueryFilter == null){
-                OgcWfsClient.addBboxFilter(gf,getGeometryAttributeName(t,request),coords,srsName, ft);
-            }else{
-                Filter geomFilter = OgcWfsClient.createBboxFilter(getGeometryAttributeName(t,request), coords, srsName, ft);
+            if (adminQueryFilter == null) {
+                OgcWfsClient.addBboxFilter(gf, getGeometryAttributeName(t, request), coords, srsName, ft);
+            } else {
+                Filter geomFilter = OgcWfsClient.createBboxFilter(getGeometryAttributeName(t, request), coords, srsName, ft);
                 OgcWfsClient.addCombinedAndFilter(gf, ft, adminQueryFilter, geomFilter);
             }
-        }else{
-            if(geom.startsWith("POINT")){
-                String point = geom.substring(6, geom.length()-1);
+        } else {
+            if (geom.startsWith("POINT")) {
+                String point = geom.substring(6, geom.length() - 1);
                 String[] coordsPoint = point.split(" ");
 
-                if (coordsPoint.length==2){
-                    double distance2=distance/2;
-                    double[] newCoords= new double[4];
-                    newCoords[0]=Double.parseDouble(coordsPoint[0])-distance2;
-                    newCoords[1]=Double.parseDouble(coordsPoint[1])-distance2;
-                    newCoords[2]=Double.parseDouble(coordsPoint[0])+distance2;
-                    newCoords[3]=Double.parseDouble(coordsPoint[1])+distance2;
-                    coords=newCoords;
+                if (coordsPoint.length == 2) {
+                    double distance2 = distance / 2;
+                    double[] newCoords = new double[4];
+                    newCoords[0] = Double.parseDouble(coordsPoint[0]) - distance2;
+                    newCoords[1] = Double.parseDouble(coordsPoint[1]) - distance2;
+                    newCoords[2] = Double.parseDouble(coordsPoint[0]) + distance2;
+                    newCoords[3] = Double.parseDouble(coordsPoint[1]) + distance2;
+                    coords = newCoords;
                 }
-                if(adminQueryFilter == null){
-                    OgcWfsClient.addBboxFilter(gf,getGeometryAttributeName(t,request),coords,srsName, ft);
-                }else{
-                    Filter geomFilter = OgcWfsClient.createBboxFilter(getGeometryAttributeName(t,request), coords, srsName, ft);
+                if (adminQueryFilter == null) {
+                    OgcWfsClient.addBboxFilter(gf, getGeometryAttributeName(t, request), coords, srsName, ft);
+                } else {
+                    Filter geomFilter = OgcWfsClient.createBboxFilter(getGeometryAttributeName(t, request), coords, srsName, ft);
                     OgcWfsClient.addCombinedAndFilter(gf, ft, adminQueryFilter, geomFilter);
                 }
-            }else if(geom.startsWith("POLYGON")){
-                String polygon = geom.substring(9, geom.length()-2);
-                if(adminQueryFilter == null){
-                    OgcWfsClient.addPolygonFilter(gf, getGeometryAttributeName(t,request), polygon, srsName, ft);
-                }else{
-                    Filter geomFilter = OgcWfsClient.createPolygonFilter(getGeometryAttributeName(t,request), polygon, srsName, ft);
+            } else if (geom.startsWith("POLYGON")) {
+                String polygon = geom.substring(9, geom.length() - 2);
+                if (adminQueryFilter == null) {
+                    OgcWfsClient.addPolygonFilter(gf, getGeometryAttributeName(t, request), polygon, srsName, ft);
+                } else {
+                    Filter geomFilter = OgcWfsClient.createPolygonFilter(getGeometryAttributeName(t, request), polygon, srsName, ft);
                     OgcWfsClient.addCombinedAndFilter(gf, ft, adminQueryFilter, geomFilter);
                 }
-            }else{
+            } else {
                 /* het is een LINESTRING */
             }
         }
-        return OgcWfsClient.getFeatureElements(gf,or);
+        return OgcWfsClient.getFeatureElements(gf, or);
     }
-    
-    public static ArrayList getWFSObjects(Themas t, String key, String value,HttpServletRequest request) throws Exception {
-        Connecties conn =getWfsConnection(t,request);
-        if (conn==null)
+
+    public static ArrayList getWFSObjects(Themas t, String key, String value, HttpServletRequest request) throws Exception {
+        Connecties conn = getWfsConnection(t, request);
+        if (conn == null) {
             return null;
+        }
         OGCRequest or = createOGCRequest(conn);
-        or.addOrReplaceParameter(OGCRequest.WFS_PARAM_TYPENAME,t.getAdmin_tabel());
+        or.addOrReplaceParameter(OGCRequest.WFS_PARAM_TYPENAME, t.getAdmin_tabel());
         //er wordt alleen nog maar 1.0.0 ondersteund door jump
-        or.addOrReplaceParameter(OGCRequest.VERSION,OGCConstants.WFS_VERSION_100);
-        GetFeature gf = OgcWfsClient.getGetFeatureRequest(or);        
-        OgcWfsClient.addPropertyIsEqualToFilter(gf,key,value);        
-        return OgcWfsClient.getFeatureElements(gf,or);
+        or.addOrReplaceParameter(OGCRequest.VERSION, OGCConstants.WFS_VERSION_100);
+        GetFeature gf = OgcWfsClient.getGetFeatureRequest(or);
+        OgcWfsClient.addPropertyIsEqualToFilter(gf, key, value);
+        return OgcWfsClient.getFeatureElements(gf, or);
     }
-    
-    public static Feature getWfsObject(Themas t, String attributeName, String compareValue,HttpServletRequest request) throws Exception{
-        Connecties conn =getWfsConnection(t,request);
-        if (conn==null)
+
+    public static Feature getWfsObject(Themas t, String attributeName, String compareValue, HttpServletRequest request) throws Exception {
+        Connecties conn = getWfsConnection(t, request);
+        if (conn == null) {
             return null;
+        }
         OGCRequest or = createOGCRequest(conn);
-        or.addOrReplaceParameter(OGCRequest.WFS_PARAM_TYPENAME,t.getAdmin_tabel());
-        GetFeature gf = OgcWfsClient.getGetFeatureRequest(or);        
-        OgcWfsClient.addPropertyIsEqualToFilter(gf,attributeName,compareValue);
-        ArrayList features=OgcWfsClient.getFeatureElements(gf,or);
-        if (features==null || features.size()!=1){
+        or.addOrReplaceParameter(OGCRequest.WFS_PARAM_TYPENAME, t.getAdmin_tabel());
+        GetFeature gf = OgcWfsClient.getGetFeatureRequest(or);
+        OgcWfsClient.addPropertyIsEqualToFilter(gf, attributeName, compareValue);
+        ArrayList features = OgcWfsClient.getFeatureElements(gf, or);
+        if (features == null || features.size() != 1) {
             throw new Exception("De gegeven id is niet uniek. Query geeft meerdere objecten");
         }
-        return (Feature)features.get(0);
-        
+        return (Feature) features.get(0);
+
     }
-    
-    public static String getGeometryAttributeName(Themas t,HttpServletRequest request) throws Exception{
-        Connecties conn =getWfsConnection(t,request);
-        if (conn==null)
+
+    public static String getGeometryAttributeName(Themas t, HttpServletRequest request) throws Exception {
+        Connecties conn = getWfsConnection(t, request);
+        if (conn == null) {
             return null;
-        ArrayList elements = getFeatureElements(conn,t.getAdmin_tabel());
-        if (elements!=null){
-            for (int i=0; i < elements.size(); i++){
-                Element e = (Element)elements.get(i);
-                String type=e.getAttribute("type");
-                if (type!=null && type.toLowerCase().startsWith("gml:")){
+        }
+        ArrayList elements = getFeatureElements(conn, t.getAdmin_tabel());
+        if (elements != null) {
+            for (int i = 0; i < elements.size(); i++) {
+                Element e = (Element) elements.get(i);
+                String type = e.getAttribute("type");
+                if (type != null && type.toLowerCase().startsWith("gml:")) {
                     return e.getAttribute("name");
                 }
             }
         }
         return null;
     }
-    
-    public static nl.b3p.xml.ogc.v100.Filter createFilterV100(Themas t, double x, double y, double distance, nl.b3p.xml.wfs.v100.capabilities.FeatureType feature,HttpServletRequest request) throws Exception{
-        double lowerX,lowerY,upperX,upperY;
-        double distance2=distance/2;
-        lowerX=x-distance2;
-        lowerY=y-distance2;
-        upperX=x+distance2;
-        upperY=y+distance2; 
+
+    public static nl.b3p.xml.ogc.v100.Filter createFilterV100(Themas t, double x, double y, double distance, nl.b3p.xml.wfs.v100.capabilities.FeatureType feature, HttpServletRequest request) throws Exception {
+        double lowerX, lowerY, upperX, upperY;
+        double distance2 = distance / 2;
+        lowerX = x - distance2;
+        lowerY = y - distance2;
+        upperX = x + distance2;
+        upperY = y + distance2;
         StringBuffer sb = new StringBuffer();
         sb.append("<Filter><BBOX><PropertyName>");
-        sb.append(getGeometryAttributeName(t,request));
+        sb.append(getGeometryAttributeName(t, request));
         sb.append("</PropertyName>");
         sb.append("<gml:Box srsName=\"http://www.opengis.net/gml/srs/epsg.xml#");
         sb.append(28992);
@@ -234,19 +244,20 @@ public class WfsUtil {
         sb.append(upperX).append(",").append(upperY);
         sb.append("</gml:coordinates></gml:Box>");
         sb.append("</BBOX></Filter>");
-        return (nl.b3p.xml.ogc.v100.Filter)Unmarshaller.unmarshal(nl.b3p.xml.ogc.v100.Filter.class, new StringReader(sb.toString()));
-        
+        return (nl.b3p.xml.ogc.v100.Filter) Unmarshaller.unmarshal(nl.b3p.xml.ogc.v100.Filter.class, new StringReader(sb.toString()));
+
     }
-    public static nl.b3p.xml.ogc.v110.Filter createFilterV110(Themas t, double x, double y, double distance, nl.b3p.xml.wfs.v110.FeatureType feature,HttpServletRequest request) throws Exception{
-        double lowerX,lowerY,upperX,upperY;
-        double distance2=distance/2;
-        lowerX=x-distance2;
-        lowerY=y-distance2;
-        upperX=x+distance2;
-        upperY=y+distance2; 
+
+    public static nl.b3p.xml.ogc.v110.Filter createFilterV110(Themas t, double x, double y, double distance, nl.b3p.xml.wfs.v110.FeatureType feature, HttpServletRequest request) throws Exception {
+        double lowerX, lowerY, upperX, upperY;
+        double distance2 = distance / 2;
+        lowerX = x - distance2;
+        lowerY = y - distance2;
+        upperX = x + distance2;
+        upperY = y + distance2;
         StringBuffer sb = new StringBuffer();
         sb.append("<Filter><Within><PropertyName>");
-        sb.append(getGeometryAttributeName(t,request));
+        sb.append(getGeometryAttributeName(t, request));
         //sb.append("app:geom");
         sb.append("</PropertyName>");
         sb.append("<gml:Envelope srsName=\"http://www.opengis.net/gml/srs/epsg.xml#");
@@ -257,44 +268,48 @@ public class WfsUtil {
         sb.append(upperX).append(" ").append(upperY);
         sb.append("</gml:upperCorner></gml:Envelope>");
         sb.append("</Within></Filter>");
-        return (nl.b3p.xml.ogc.v110.Filter)Unmarshaller.unmarshal(nl.b3p.xml.ogc.v110.Filter.class, new StringReader(sb.toString()));
+        return (nl.b3p.xml.ogc.v110.Filter) Unmarshaller.unmarshal(nl.b3p.xml.ogc.v110.Filter.class, new StringReader(sb.toString()));
     }
 
-    public static OGCRequest createOGCRequest(Connecties conn){
+    public static OGCRequest createOGCRequest(Connecties conn) {
         OGCRequest or = new OGCRequest(conn.getConnectie_url());
         or.setUsername(conn.getGebruikersnaam());
         or.setPassword(conn.getWachtwoord());
         return or;
     }
 
-    public static boolean validWfsConnection(Themas t){
-        if (t==null)
+    public static boolean validWfsConnection(Themas t) {
+        if (t == null) {
             return false;
+        }
         return validWfsConnection(t.getConnectie());
     }
-    public static Connecties getWfsConnection(Themas t,HttpServletRequest request){
-        Connecties c=null;
-        if (t!=null){
-            c=t.getConnectie();
+
+    public static Connecties getWfsConnection(Themas t, HttpServletRequest request) {
+        Connecties c = null;
+        if (t != null) {
+            c = t.getConnectie();
         }
         return getWfsConnection(c, request);
     }
-    public static boolean validWfsConnection(Connecties c){
-        if(c!=null && !c.getType().equalsIgnoreCase(Connecties.TYPE_WFS))
-            return false;
-        else
+
+    public static boolean validWfsConnection(Connecties c) {
+        if (c != null && c.getType().equalsIgnoreCase(Connecties.TYPE_WFS)) {
             return true;
+        }
+        return false;
     }
-    public static Connecties getWfsConnection(Connecties c,HttpServletRequest request){
-        if (!validWfsConnection(c))
+
+    public static Connecties getWfsConnection(Connecties c, HttpServletRequest request) {
+        if (!validWfsConnection(c)) {
             return null;
-        if (c==null){
-            GisPrincipal gp =GisPrincipal.getGisPrincipal(request);
-            if (gp!=null) {
-                c= gp.getKbWfsConnectie();
+        }
+        if (c == null) {
+            GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
+            if (gp != null) {
+                c = gp.getKbWfsConnectie();
             }
         }
         return c;
     }
-
 }
