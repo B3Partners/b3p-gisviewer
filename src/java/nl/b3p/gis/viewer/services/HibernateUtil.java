@@ -59,13 +59,12 @@ public class HibernateUtil extends HttpServlet {
     }
 
     /**
-     * http://www.kaartenbalie.nl/kaartenbalie/wms/0c462abe62b69b2f05d1e72862f251f6
-     * kburl: http://www.kaartenbalie.nl/kaartenbalie/wms/
+     * http://www.kaartenbalie.nl/kaartenbalie/service/0c462abe62b69b2f05d1e72862f251f6
+     * kburl: http://www.kaartenbalie.nl/kaartenbalie/service/
      * code:  0c462abe62b69b2f05d1e72862f251f6
      *
      * Code kan alleen worden toegevoegd indien de kaartenbalie url eindigt
-     * op een /. In alle andere gevallen wordt aangenomen dat er geen personal
-     * url van gemaakt kan worden.
+     * op een /. Er wordt een / toegevoegd indien dit niet het geval is.
      *
      * @param code
      * @return
