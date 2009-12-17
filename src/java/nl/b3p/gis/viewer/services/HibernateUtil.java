@@ -45,7 +45,7 @@ public class HibernateUtil extends HttpServlet {
     private static boolean checkLoginKaartenbalie = true;
     private static String kaartenbalieCluster = "Extra";
     private static boolean useKaartenbalieCluster = true;
-    public static String kbWfsConnectieNaam="Kaartenbalie WFS";
+    public static String kbWfsConnectieNaam = "Kaartenbalie WFS";
 
     static {
         try {
@@ -71,13 +71,17 @@ public class HibernateUtil extends HttpServlet {
      * @return
      */
     public static String createPersonalKbUrl(String code) {
-        if (code!=null && code.startsWith("http://")) {
+        if (code != null && code.startsWith("http://")) {
             return code;
         }
         String url = getKbUrl();
         url = url.trim();
-        if ((code != null) && (url.lastIndexOf('/') == url.length() - 1)) {
-            url += code;
+        if (code != null && code.length()>0) {
+            if (url.lastIndexOf('/') == url.length() - 1) {
+                url += code;
+            } else {
+                url += '/' + code;
+            }
         }
         return url;
     }
@@ -113,6 +117,7 @@ public class HibernateUtil extends HttpServlet {
     public static void setUseKaartenbalieCluster(boolean aUseKaartenbalieCluster) {
         useKaartenbalieCluster = aUseKaartenbalieCluster;
     }
+
     /** Initializes the servlet.
      */
     public void init(ServletConfig config) throws ServletException {
@@ -121,7 +126,7 @@ public class HibernateUtil extends HttpServlet {
         try {
             String value = config.getInitParameter("kburl");
             if (value != null && value.length() > 0) {
-                kburl = value;                
+                kburl = value;
             }
             value = config.getInitParameter("check_login_kaartenbalie");
             if (value != null && value.equalsIgnoreCase("false")) {
