@@ -76,14 +76,16 @@ public class SpatialUtil {
 
     public static List getValidClusters() {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        String hquery = "FROM Clusters WHERE default_cluster = false";
+        String hquery = "FROM Clusters WHERE default_cluster = false ";
+        hquery += "ORDER BY belangnr DESC";
         Query q = sess.createQuery(hquery);
         return q.list();
     }
 
     public static Clusters getDefaultCluster() {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        String hquery = "FROM Clusters WHERE default_cluster = true";
+        String hquery = "FROM Clusters WHERE default_cluster = true ";
+        hquery += "ORDER BY belangnr DESC";
         Query q = sess.createQuery(hquery);
         List cl = q.list();
         if (cl != null && cl.size() > 0) {

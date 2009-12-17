@@ -31,6 +31,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         </id>
         <property name="naam"/>
         <property name="omschrijving"/>
+        <property name="belangnr" not-null="true"/>
         <property name="metadatalink"/>
         <property name="default_cluster" not-null="true"/>
         <property name="hide_legend" not-null="true"/>

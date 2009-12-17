@@ -325,7 +325,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
         } catch (NumberFormatException nfe) {
             log.debug("No connection id found in form, input: " + dynaForm.getString("connectie"));
         }
-        if (connId >= 0) {
+        if (connId > 0) {
             conn = (Connecties) sess.get(Connecties.class, connId);
         }
         t.setConnectie(conn);

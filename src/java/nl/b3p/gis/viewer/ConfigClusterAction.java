@@ -160,6 +160,7 @@ public class ConfigClusterAction extends ViewerCrudAction {
         dynaForm.set("clusterID", Integer.toString(c.getId().intValue()));
         dynaForm.set("naam", c.getNaam());
         dynaForm.set("omschrijving", c.getOmschrijving());
+        dynaForm.set("belangnr", FormUtils.IntToString(c.getBelangnr()));
         dynaForm.set("metadatalink",c.getMetadatalink());
         dynaForm.set("default_cluster", new Boolean(c.isDefault_cluster()));
         dynaForm.set("hide_legend", new Boolean(c.isHide_legend()));
@@ -179,6 +180,9 @@ public class ConfigClusterAction extends ViewerCrudAction {
 
         c.setNaam(FormUtils.nullIfEmpty(dynaForm.getString("naam")));
         c.setOmschrijving(FormUtils.nullIfEmpty(dynaForm.getString("omschrijving")));
+        if (dynaForm.getString("belangnr") != null && dynaForm.getString("belangnr").length() > 0) {
+            c.setBelangnr(Integer.parseInt(dynaForm.getString("belangnr")));
+        }
         c.setMetadatalink(FormUtils.nullIfEmpty(dynaForm.getString("metadatalink")));
         Boolean b = (Boolean) dynaForm.get("default_cluster");
         c.setDefault_cluster(b == null ? false : b.booleanValue());
