@@ -261,9 +261,15 @@ public class ConfigThemaAction extends ViewerCrudAction {
         dynaForm.set("themaCode", t.getCode());
         dynaForm.set("naam", t.getNaam());
         dynaForm.set("metadatalink", t.getMetadata_link());
-        String valConnectie = "kb";
-        if (t.getConnectie() != null) {
-            valConnectie = Integer.toString(t.getConnectie().getId());
+
+        String valConnectie = "-1";
+        String adminTable = t.getAdmin_tabel();
+        if (adminTable != null && adminTable.length() > 0) {
+            // adminTable kan alleen een waarde hebben, als er een connectie is.
+            valConnectie = "0";
+            if (t.getConnectie() != null) {
+                valConnectie = Integer.toString(t.getConnectie().getId());
+            }
         }
         dynaForm.set("connectie", valConnectie);
         dynaForm.set("belangnr", FormUtils.IntToString(t.getBelangnr()));
