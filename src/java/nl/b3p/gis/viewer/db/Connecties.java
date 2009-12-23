@@ -23,6 +23,7 @@
 package nl.b3p.gis.viewer.db;
 
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -38,9 +39,11 @@ import org.geotools.data.wfs.WFSDataStoreFactory;
  * @author Roy Braam
  */
 public class Connecties {
+
     private static final Log log = LogFactory.getLog(Connecties.class);
     public static final String TYPE_JDBC = "jdbc";
     public static final String TYPE_WFS = "wfs";
+    public static final String TYPE_EMPTY = "empty";
     public static final String DIALECT_POSTGRESQL = "postgresql";
     public static final String DIALECT_MYSQL = "mysql";
     private Integer id;
@@ -127,38 +130,36 @@ public class Connecties {
         this.dialect = dialect;
     }
 
-    public java.sql.Connection getJdbcConnection() throws SQLException {
-        if (getType().equalsIgnoreCase(TYPE_JDBC)) {
-            try{
-                if (getDialect().equalsIgnoreCase(DIALECT_POSTGRESQL)) {
-                    Class.forName("org.postgresql.Driver");
-                } else if (getDialect().equalsIgnoreCase(DIALECT_MYSQL)) {
-                    Class.forName("com.mysql.jdbc.Driver");
-                } else {
-                    return null;
-                }
-            }
-            catch(ClassNotFoundException cfe){
-                log.error("Kan db driver niet laden ",cfe);
-            }
-            return DriverManager.getConnection(this.getConnectie_url(), getGebruikersnaam(), getWachtwoord());
-        } else {
+    public Connection getJdbcConnection() throws SQLException {
+        if (!TYPE_JDBC.equalsIgnoreCase(getType())) {
             return null;
         }
-    }
-    public WFSDataStore getDatastore() throws IOException{
-        Map params = new HashMap();
-        if (getType().equalsIgnoreCase(TYPE_WFS)){
-            params.put(WFSDataStoreFactory.URL.key, getConnectie_url()+"?Request=GetCapabilities&Service=WFS");
-
-            if (getGebruikersnaam()!=null){
-                params.put(WFSDataStoreFactory.URL.key,getGebruikersnaam());
+        try {
+            if (DIALECT_POSTGRESQL.equalsIgnoreCase(getDialect())) {
+                Class.forName("org.postgresql.Driver");
+            } else if (DIALECT_MYSQL.equalsIgnoreCase(getDialect())) {
+                Class.forName("com.mysql.jdbc.Driver");
+            } else {
+                return null;
             }
-            if (getWachtwoord()!=null){
-                params.put(WFSDataStoreFactory.PASSWORD.key,getWachtwoord());
-            }
-            return (WFSDataStore) DataStoreFinder.getDataStore(params);
+        } catch (ClassNotFoundException cfe) {
+            log.error("Kan db driver niet laden ", cfe);
         }
-        return null;
+        return DriverManager.getConnection(this.getConnectie_url(), getGebruikersnaam(), getWachtwoord());
+    }
+
+    public WFSDataStore getDatastore() throws IOException {
+        if (!TYPE_WFS.equalsIgnoreCase(getType())) {
+            return null;
+        }
+        Map params = new HashMap();
+        params.put(WFSDataStoreFactory.URL.key, getConnectie_url() + "?Request=GetCapabilities&Service=WFS");
+        if (getGebruikersnaam() != null) {
+            params.put(WFSDataStoreFactory.URL.key, getGebruikersnaam());
+        }
+        if (getWachtwoord() != null) {
+            params.put(WFSDataStoreFactory.PASSWORD.key, getWachtwoord());
+        }
+        return (WFSDataStore) DataStoreFinder.getDataStore(params);
     }
 }

@@ -35,6 +35,7 @@ import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.db.WaardeTypen;
+import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.gis.viewer.services.WfsUtil;
@@ -145,20 +146,16 @@ public class ConfigThemaDataAction extends ViewerCrudAction {
         Query q = sess.createQuery("from ThemaData where thema.id = :themaID order by dataorder, label");
         request.setAttribute("listThemaData", q.setParameter("themaID", t.getId()).list());
 
-        String connectieType = Connecties.TYPE_JDBC;
-        if (SpatialUtil.validJDBCConnection(t)) {
-            Connection conn =SpatialUtil.getJDBCConnection(t);
-            request.setAttribute("listAdminTableColumns", SpatialUtil.getColumnNames(t.getAdmin_tabel(), conn));
-        } else if (WfsUtil.validWfsConnection(t)) {
-            connectieType = Connecties.TYPE_WFS;
-            Connecties conn = WfsUtil.getWfsConnection(t,request);
-            List elements = WfsUtil.getFeatureElements(conn, t.getAdmin_tabel());
-            if (elements != null) {
-                ArrayList elementsNames = new ArrayList();
-                for (int i = 0; i < elements.size(); i++) {
-                    Element e = (Element) elements.get(i);
-                    elementsNames.add(e.getAttribute("name"));
-                }
+        Connecties c = t.getConnectie(request);
+        String connectieType = Connecties.TYPE_EMPTY;
+        if (c != null) {
+            connectieType = c.getType();
+            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
+                Connection conn = t.getJDBCConnection();
+                List columnNames = SpatialUtil.getColumnNames(t.getAdmin_tabel(), conn);
+                request.setAttribute("listAdminTableColumns", columnNames);
+            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
+                List elementsNames = WfsUtil.getFeatureElementNames(c, t.getAdmin_tabel(), true);
                 request.setAttribute("listAdminTableColumns", elementsNames);
             }
         }
@@ -261,37 +258,30 @@ public class ConfigThemaDataAction extends ViewerCrudAction {
         Themas t = getThema(dynaForm, false);
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List attributes = null;
-        if (SpatialUtil.validJDBCConnection(t)){
-            Connection conn = SpatialUtil.getJDBCConnection(t);
-            attributes = SpatialUtil.getColumnNames(t.getAdmin_tabel(), conn);
-            if (attributes != null && attributes.size() != 0) {
-                //als het attribuut van het type geometry is moet hij niet worden gebruikt
-                for (int i = 0; i < attributes.size(); i++) {
-                    String attr = (String) attributes.get(i);
-                    int type = SpatialUtil.getColumnDatatype(t, attr, conn);
-                    if (type == java.sql.Types.OTHER) {
-                        /*if (attributes==null){
-                        attributes=new ArrayList();
-                        attributes.add(attr);
-                        }*/
-                        attributes.remove(attr);
-                    }
-                }
-            }
 
-        } else if (WfsUtil.validWfsConnection(t)) {
-            //connectieType=Connecties.TYPE_WFS;
-            Connecties conn = WfsUtil.getWfsConnection(t,request);
-            List elements = WfsUtil.getFeatureElements(conn, t.getAdmin_tabel());
-            if (elements != null) {
-                ArrayList elementsNames = new ArrayList();
-                for (int i = 0; i < elements.size(); i++) {
-                    Element e = (Element) elements.get(i);
-                    if (e.getAttribute("type") == null || !e.getAttribute("type").equalsIgnoreCase(OGCConstants.WFS_OBJECT_GEOMETRYTYPE)) {
-                        elementsNames.add(e.getAttribute("name"));
+        Connecties c = t.getConnectie(request);
+        String connectieType = Connecties.TYPE_EMPTY;
+        if (c != null) {
+            connectieType = c.getType();
+            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
+                Connection conn = t.getJDBCConnection();
+                attributes = SpatialUtil.getColumnNames(t.getAdmin_tabel(), conn);
+                if (attributes != null && attributes.size() != 0) {
+                    //als het attribuut van het type geometry is moet hij niet worden gebruikt
+                    for (int i = 0; i < attributes.size(); i++) {
+                        String attr = (String) attributes.get(i);
+                        int type = SpatialUtil.getColumnDatatype(t, attr, conn);
+                        if (type == java.sql.Types.OTHER) {
+                            /*if (attributes==null){
+                            attributes=new ArrayList();
+                            attributes.add(attr);
+                            }*/
+                            attributes.remove(attr);
+                        }
                     }
                 }
-                attributes = elementsNames;
+            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
+                attributes = WfsUtil.getFeatureElementNames(c, t.getAdmin_tabel(), false);
             }
         }
         if (attributes != null) {
@@ -307,17 +297,18 @@ public class ConfigThemaDataAction extends ViewerCrudAction {
                 }
                 if (!bestaatAl) {
                     ThemaData td = new ThemaData();
-                    if (attributes.size() <= DEFAULTBASISCOLUMNS)
+                    if (attributes.size() <= DEFAULTBASISCOLUMNS) {
                         td.setBasisregel(true);
-                    else
+                    } else {
                         td.setBasisregel(false);
+                    }
                     td.setDataType((DataTypen) sess.get(DataTypen.class, DataTypen.DATA));
-                    String netteNaam=themadataobject;
-                    if (netteNaam.indexOf("{")>=0 && netteNaam.indexOf("}")>=0){
-                        netteNaam=netteNaam.substring(netteNaam.indexOf("}")+1);
+                    String netteNaam = themadataobject;
+                    if (netteNaam.indexOf("{") >= 0 && netteNaam.indexOf("}") >= 0) {
+                        netteNaam = netteNaam.substring(netteNaam.indexOf("}") + 1);
                     }
                     td.setLabel(netteNaam);
-                    td.setKolomnaam(themadataobject);                    
+                    td.setKolomnaam(themadataobject);
                     td.setThema(t);
                     td.setWaardeType((WaardeTypen) sess.get(WaardeTypen.class, WaardeTypen.STRING));
                     sess.saveOrUpdate(td);
@@ -327,7 +318,7 @@ public class ConfigThemaDataAction extends ViewerCrudAction {
             }
         }
         //haal opnieuw de ThemaData objecten op om te kijken of er een Extra data veld is of nog moet aangemaakt worden.
-        if (attributes!=null && attributes.size() > DEFAULTBASISCOLUMNS){
+        if (attributes != null && attributes.size() > DEFAULTBASISCOLUMNS) {
             List bestaandeObjecten = SpatialUtil.getThemaData(t, false);
             boolean extraBestaat = false;
             boolean nietBasisregels = false;

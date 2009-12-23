@@ -102,30 +102,16 @@ public class ConfigThemaAction extends ViewerCrudAction {
         Connecties c = null;
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
 
-        int cId = -1;
+        Integer cId = new Integer(-1);
         try {
-            cId = Integer.parseInt(dynaForm.getString("connectie"));
+            cId = new Integer(dynaForm.getString("connectie"));
         } catch (NumberFormatException nfe) {
             log.debug("No connection id found in form, input: " + dynaForm.getString("connectie"));
         }
-        if (cId >= 0) {
-            c = (Connecties) sess.get(Connecties.class, cId);
-        }
-        if (c == null) {
-            c = user.getKbWfsConnectie();
-        }
+
+        c = ConfigListsUtil.getConnectie(sess, user, cId);
         //maak lijsten die iets te maken hebben met de admin/spatial_data
         List tns = ConfigListsUtil.getPossibleFeatures(c);
-        /*if (t != null) {
-        String sptn = t.getAdmin_tabel();
-        if (sptn != null && !tns.contains(sptn)) {
-        tns.add(sptn);
-        }
-        String atn = t.getSpatial_tabel();
-        if (atn != null && !tns.contains(atn)) {
-        tns.add(atn);
-        }
-        }*/
         request.setAttribute("listTables", tns);
 
         String adminTable = null;

@@ -6,7 +6,6 @@
  */
 package nl.b3p.gis.utils;
 
-import com.Ostermiller.util.Base64;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -27,6 +26,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -65,7 +65,8 @@ public class CycloramaFetcherServlet extends HttpServlet {
         provBC = Security.getProvider("BC");
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("RSA", provBC);
-            EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.decode(privateBase64Key.getBytes()));
+            Base64 b64 = new Base64();
+            EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(b64.decode(privateBase64Key.getBytes()));
             key = keyFactory.generatePrivate(privateKeySpec);
         } catch (Exception e) {
             log.error("error initializing cyclomedia client: ", e);

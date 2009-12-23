@@ -337,10 +337,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         ArrayList pks = new ArrayList();
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Connection connection = null;
-        if (SpatialUtil.validJDBCConnection(t)) {
-            connection = t.getConnectie().getJdbcConnection();
-        } else {
+        Connection connection = t.getJDBCConnection();
+        if (connection == null) {
             log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
             return null;
         }
@@ -472,10 +470,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         }
 
         //Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Connection connection = null;
-        if (SpatialUtil.validJDBCConnection(t)) {
-            connection = t.getConnectie().getJdbcConnection();
-        } else {
+        Connection connection = t.getJDBCConnection();
+        if (connection == null) {
             log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
             return null;
         }
@@ -537,21 +533,18 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      * @return a String with the Geometry type.
      *
      */
-    protected String getThemaGeomType(Themas thema) throws Exception {
-        String themaGeomType = thema.getView_geomtype();
+    protected String getThemaGeomType(Themas t) throws Exception {
+        String themaGeomType = t.getView_geomtype();
         if (themaGeomType != null) {
             return themaGeomType;
         }
 
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Connection connection = null;
-        if (SpatialUtil.validJDBCConnection(thema)) {
-            connection = thema.getConnectie().getJdbcConnection();
-        } else {
-            log.error("Thema heeft geen JDBC connectie: " + thema.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
+        Connection connection = t.getJDBCConnection();
+        if (connection == null) {
+            log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
             return null;
         }
-        return SpatialUtil.getThemaGeomType(thema, connection);
+        return SpatialUtil.getThemaGeomType(t, connection);
     }
 
     /**
@@ -572,11 +565,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         int themaid = t.getId().intValue();
 
         String analyseNaam = t.getNaam();
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Connection connection = null;
-        if (SpatialUtil.validJDBCConnection(t)) {
-            connection = t.getConnectie().getJdbcConnection();
-        } else {
+        Connection connection = t.getJDBCConnection();
+        if (connection == null) {
             log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
             return null;
         }

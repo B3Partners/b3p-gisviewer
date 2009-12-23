@@ -30,11 +30,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.geotools.filter.FilterFactoryImpl2;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.gis.viewer.services.WfsUtil;
@@ -66,17 +69,26 @@ public class GetLocationData {
         Session sess = null;
         double area = 0.0;
         String[] returnValue = new String[2];
+        returnValue[0] = elementId;
+        returnValue[1] = "Fout (zie log)";
         try {
             sess = HibernateUtil.getSessionFactory().openSession();
             sess.beginTransaction();
             Themas t = (Themas) sess.get(Themas.class, new Integer(themaId));
+            if (t == null) {
+                return returnValue;
+            }
 
-            returnValue[0] = elementId;
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+            Connecties c = t.getConnectie(request);
+            if (c == null) {
+                return returnValue;
+            }
 
-            //Haal op met jdbc connectie
-
-            if (SpatialUtil.validJDBCConnection(t)) {
-                Connection conn = t.getConnectie().getJdbcConnection();
+            String connectieType = c.getType();
+            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
+                Connection conn = t.getJDBCConnection();
                 if (conn == null) {
                     return null;
                 }
@@ -95,20 +107,13 @@ public class GetLocationData {
                 } finally {
                     statement.close();
                 }
-
-
-            }//Haal op met WFS
-            else if (WfsUtil.validWfsConnection(t)) {
-                WebContext ctx = WebContextFactory.get();
-                HttpServletRequest request = ctx.getHttpServletRequest();
-                Feature f = WfsUtil.getWfsObject(t, attributeName, compareValue, request);
+            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
+                Feature f = WfsUtil.getWfsObject(t, attributeName, compareValue, c);
                 area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
-
-
             }
         } catch (Exception ex) {
             log.error("", ex);
-            returnValue[1] = "Fout (zie log)";
+            return returnValue;
         } finally {
             sess.close();
         }
@@ -123,23 +128,22 @@ public class GetLocationData {
                 divide = 10000;
             }
         }
-        if (returnValue[1] == null) {
-            if (area > 0.0) {
-                if (divide > 0) {
-                    area /= divide;
-                }
-                area *= 100;
-                area = Math.round(area);
-                area /= 100;
+        if (area > 0.0) {
+            if (divide > 0) {
+                area /= divide;
             }
-            String value = new String("" + area);
-            if (eenheid != null) {
-                value += " " + eenheid;
-            } else {
-                value += " m";
-            }
-            returnValue[1] = value;
+            area *= 100;
+            area = Math.round(area);
+            area /= 100;
         }
+        String value = new String("" + area);
+        if (eenheid != null) {
+            value += " " + eenheid;
+        } else {
+            value += " m";
+        }
+        returnValue[1] = value;
+
         return returnValue;
     }
 
@@ -169,28 +173,21 @@ public class GetLocationData {
             Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
             transaction = sess.beginTransaction();
             Themas t = (Themas) sess.get(Themas.class, id);
-
-            String connectionType = null;
-            Connection conn = null;
-            if (SpatialUtil.validJDBCConnection(t)) {
-                try {
-                    conn = t.getConnectie().getJdbcConnection();
-                    connectionType = Connecties.TYPE_JDBC;
-                } catch (SQLException ex) {
-                    log.error("Invalid jdbc connection in thema: ", ex);
-                }
-            } else {
-                log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Function only supports jdbc connections"));
-                connectionType = Connecties.TYPE_WFS;
-            }
-            if (conn == null || connectionType == null) {
+            if (t == null) {
                 return returnValue;
             }
 
-            //Schrijf met jdbc connectie
-            if (connectionType.equalsIgnoreCase(Connecties.TYPE_JDBC)) {
-                String tableName = t.getSpatial_tabel();
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+            Connecties c = t.getConnectie(request);
+            if (c == null) {
+                return returnValue;
+            }
 
+            String connectieType = c.getType();
+            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
+                Connection conn = t.getJDBCConnection();
+                String tableName = t.getSpatial_tabel();
                 try {
                     String retVal = SpatialUtil.setAttributeValue(conn, tableName, keyName, keyValueInt, attributeName, newValue);
                     returnValue[1] = retVal;
@@ -205,9 +202,12 @@ public class GetLocationData {
                         }
                     }
                 }
-            } else if (connectionType.equalsIgnoreCase(Connecties.TYPE_WFS)) {
+            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
                 // TODO WFS
                 //Feature f=WfsUtil.getWfsObject(t,attributeName,oldValue);
+                log.error("Thema heeft een WFS connectie: " + t.getNaam(), new UnsupportedOperationException("Function only supports jdbc connections"));
+            } else {
+                log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Function only supports jdbc connections"));
             }
         } catch (Exception e) {
             log.error("", e);
@@ -244,9 +244,6 @@ public class GetLocationData {
             if (cols == null || cols.length == 0) {
                 return new String[]{rdx, rdy, "No cols"};
             }
-            /*if (sptn == null || sptn.length() == 0) {
-            return new String[]{rdx, rdy, "No sptn"};
-            }*/
             if (srid == 0) {
                 srid = 28992; // RD-new
             }
@@ -261,43 +258,53 @@ public class GetLocationData {
 
             Session sess = HibernateUtil.getSessionFactory().openSession();
             Themas t = (Themas) sess.get(Themas.class, new Integer(themaId));
-            Connection connection = null;
-            if (SpatialUtil.validJDBCConnection(t)) {
-                connection = t.getConnectie().getJdbcConnection();
-            } else {
-                if (t != null) {
-                    log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Only JDBC connection are supported by this method."));
-                }
+            if (t == null) {
                 return results;
             }
-            try {
-                String geomColumn = SpatialUtil.getTableGeomName(t, connection);
-                String sptn = t.getSpatial_tabel();
-                if (sptn == null) {
-                    sptn = t.getAdmin_tabel();
-                }
-                String q = SpatialUtil.closestSelectQuery(columns, sptn, geomColumn, x, y, distance, srid);
-                PreparedStatement statement = connection.prepareStatement(q);
+
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+            Connecties c = t.getConnectie(request);
+            if (c == null) {
+                return results;
+            }
+
+            String connectieType = c.getType();
+            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
+                Connection conn = t.getJDBCConnection();
                 try {
-                    ResultSet rs = statement.executeQuery();
-                    if (rs.next()) {
-                        results[2] = rs.getString("dist");
-                        for (int i = 0; i < cols.length; i++) {
-                            results[i + 3] = rs.getString(cols[i]);
-                        }
+                    String geomColumn = SpatialUtil.getTableGeomName(t, conn);
+                    String sptn = t.getSpatial_tabel();
+                    if (sptn == null) {
+                        sptn = t.getAdmin_tabel();
                     }
+                    String q = SpatialUtil.closestSelectQuery(columns, sptn, geomColumn, x, y, distance, srid);
+                    PreparedStatement statement = conn.prepareStatement(q);
+                    try {
+                        ResultSet rs = statement.executeQuery();
+                        if (rs.next()) {
+                            results[2] = rs.getString("dist");
+                            for (int i = 0; i < cols.length; i++) {
+                                results[i + 3] = rs.getString(cols[i]);
+                            }
+                        }
+                    } finally {
+                        statement.close();
+                    }
+                } catch (SQLException ex) {
+                    log.error("", ex);
                 } finally {
-                    statement.close();
+                    sess.close();
                 }
-            } catch (SQLException ex) {
-                log.error("", ex);
-            } finally {
-                sess.close();
+            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
+                log.error("Thema heeft een WFS connectie: " + t.getNaam(), new UnsupportedOperationException("Only JDBC connection are supported by this method."));
             }
         } catch (Exception e) {
             log.error("", e);
         }
         return results;
+
+
     }
 
     /**
@@ -313,6 +320,7 @@ public class GetLocationData {
             distance2 = distance / 2;
         }
         ArrayList allcoords = new ArrayList();
+
         if (colomns.length != themaIds.length) {
             log.error("Aantal kolommen en themas is niet gelijk");
             MapCoordsBean mbc = new MapCoordsBean();
@@ -356,12 +364,21 @@ public class GetLocationData {
                     maxResults = maxSearchResults;
                 }
                 //maak thema connectie
-                if (SpatialUtil.validJDBCConnection(t)) {
+                WebContext ctx = WebContextFactory.get();
+                HttpServletRequest request = ctx.getHttpServletRequest();
+                Connecties c = t.getConnectie(request);
+                if (c == null) {
+                    MapCoordsBean mbc = new MapCoordsBean();
+                    mbc.setNaam("Ongeldig thema met id: " + themaIds[ti] + " geconfigureerd");
+                    allcoords.add(mbc);
+                    return allcoords;
+                }
+                String connectieType = c.getType();
+                if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
                     allcoords.addAll(getMapCoordsJdbcThema(t, sess, cols, waarden, distance2, maxResults));
-                } else if (WfsUtil.validWfsConnection(t)) {
+                } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
                     allcoords.addAll(getMapCoordsWfsThema(t, sess, cols, waarden, distance2, maxResults));
                 }
-
             }
         } finally {
             if (sess != null) {
@@ -373,28 +390,29 @@ public class GetLocationData {
         }
         return null;
     }
-    //}catch(Exception )
 
     private ArrayList getMapCoordsJdbcThema(Themas t, Session sess, String[] cols, String[] waarden, double distance2, int maxResults) {
-        if (!SpatialUtil.validJDBCConnection(t)) {
+        if (t == null) {
             return null;
         }
-        ArrayList coords = new ArrayList();
         Connection connection = null;
 
+        ArrayList coords = new ArrayList();
         try {
-            if (t.getConnectie() != null) {
-                connection = t.getConnectie().getJdbcConnection();
+            connection = t.getJDBCConnection();
+            if (connection == null) {
+                return null;
             }
+
             String sptn = t.getSpatial_tabel();
             String geomcolomn = SpatialUtil.getTableGeomName(t, connection);
+
             if (sptn == null || sptn.length() == 0) {
                 sptn = t.getAdmin_tabel();
             }
             //maak de query voor het ophalen van de objecten die voldoen aan de zoekopdracht
             StringBuffer q = new StringBuffer();
             q.append("select ");
-
             for (int i = 0; i < cols.length; i++) {
                 if (cols[i] != null && cols[i].length() > 0) {
                     if (i != 0) {
@@ -409,7 +427,9 @@ public class GetLocationData {
             q.append(sptn);
             q.append("\" tbl where (");
             StringBuffer whereS = new StringBuffer();
-            for (int i = 0; i < cols.length; i++) {
+
+            for (int i = 0; i
+                    < cols.length; i++) {
                 //als er maar 1 waarde is dan op alle thema attributen de zelfde criteria los laten met een OR er tussen
                 if (waarden.length == 1) {
                     if (i != 0) {
@@ -436,7 +456,9 @@ public class GetLocationData {
             q.append(whereS.toString());
             q.append(")");
             StringBuffer qc = new StringBuffer();
-            for (int i = 0; i < cols.length; i++) {
+
+            for (int i = 0; i
+                    < cols.length; i++) {
                 if (cols[i] != null && cols[i].length() > 0) {
                     if (i != 0) {
                         qc.append(",");
@@ -455,6 +477,7 @@ public class GetLocationData {
             }
             log.debug(q.toString());
             PreparedStatement statement = connection.prepareStatement(q.toString());
+
             try {
                 ResultSet rs = statement.executeQuery();
                 //int loopnum = 0;
@@ -465,7 +488,8 @@ public class GetLocationData {
                     if (bbox == null) {
                         StringBuffer errorMessage = new StringBuffer();
                         errorMessage.append("Er wordt geen BBOX gegeven door de database voor record met ");
-                        for (int i = 0; i < cols.length; i++) {
+                        for (int i = 0; i
+                                < cols.length; i++) {
                             if (rs.getString(cols[i]) != null) {
                                 if (i != 0) {
                                     errorMessage.append(",");
@@ -525,16 +549,9 @@ public class GetLocationData {
             }
         }
         return coords;
-
     }
 
     private ArrayList getMapCoordsWfsThema(Themas t, Session sess, String[] cols, String[] waarden, double distance2, int maxResults) {
-        WebContext ctx = WebContextFactory.get();
-        HttpServletRequest request = ctx.getHttpServletRequest();
-        Connecties conn = WfsUtil.getWfsConnection(t, request);
-        if (conn == null) {
-            return null;
-        }
         ArrayList coords = new ArrayList();
         WFSDataStore ds = null;
         FeatureSource fs = null;
@@ -542,27 +559,35 @@ public class GetLocationData {
         FeatureIterator fi = null;
         try {
             String ft = null;
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+            Connecties c = t.getWFSConnectie(request);
+            if (c == null) {
+                 throw new IOException("Kan geen WFS connectie worden gevonden");
+           }
 
-            if (conn != null) {
-                ds = conn.getDatastore();
-                if (ds != null) {
-                    ds.setMaxFeatures(maxResults);
-                    String version = ds.getServiceVersion();
-                    ft = "app:" + t.getAdmin_tabel().substring(t.getAdmin_tabel().indexOf("}") + 1, t.getAdmin_tabel().length());
-                    if (version.equals("1.0.0")) {
-                        fs = (org.geotools.data.wfs.v1_0_0.WFSFeatureSource) ds.getFeatureSource(ft);
-                    } else {
-                        fs = (org.geotools.data.wfs.v1_1_0.WFSFeatureSource) ds.getFeatureSource(ft);
-                    }
-                }
+            ds = c.getDatastore();
+            if (ds == null) {
+                throw new IOException("Kan geen Datastore worden gemaakt");
+            }
+            ds.setMaxFeatures(maxResults);
+            String version = ds.getServiceVersion();
+            ft = "app:" + t.getAdmin_tabel().substring(t.getAdmin_tabel().indexOf("}") + 1, t.getAdmin_tabel().length());
+            if (version.equals("1.0.0")) {
+                fs = (org.geotools.data.wfs.v1_0_0.WFSFeatureSource) ds.getFeatureSource(ft);
+            } else {
+                fs = (org.geotools.data.wfs.v1_1_0.WFSFeatureSource) ds.getFeatureSource(ft);
             }
             if (fs == null) {
                 throw new IOException("Kan geen FeatureSource worden gemaakt");
             }
+
             FilterFactoryImpl2 ff2 = new FilterFactoryImpl2(null);
             List orFilters = new ArrayList();
             List andFilters = new ArrayList();
-            for (int i = 0; i < cols.length; i++) {
+
+            for (int i = 0; i
+                    < cols.length; i++) {
                 if (waarden.length == 1) {
                     Filter colFilter = ff2.like(ff2.property(cols[i]), ff2.literal("*" + waarden[0] + "*"), false);//(ff.property(cols[i]), ff.literal(waarden[0]),false);
                     orFilters.add(colFilter);
@@ -572,6 +597,7 @@ public class GetLocationData {
                 }
             }
             Filter mainFilter = null;
+
             if (orFilters.size() > 0) {
                 if (orFilters.size() == 1) {
                     mainFilter = (Filter) orFilters.get(0);
@@ -591,11 +617,13 @@ public class GetLocationData {
                 fc = fs.getFeatures();
             }
             fi = fc.features();
+
             while (fi.hasNext()) {
                 org.opengis.feature.simple.SimpleFeature feature = (SimpleFeature) fi.next();
                 if (feature.getDefaultGeometryProperty() != null) {
                     StringBuffer naam = new StringBuffer();
-                    for (int i = 0; i < cols.length; i++) {
+                    for (int i = 0; i
+                            < cols.length; i++) {
                         if (feature.getProperty(cols[i]) != null && feature.getProperty(cols[i]).getValue() != null) {
                             if (i != 0) {
                                 naam.append(" ");
@@ -614,11 +642,10 @@ public class GetLocationData {
                 }
             }
 
-        } catch (IOException ioe) {
-            ds = null;
-            log.error("Fout bij maken DataStore", ioe);
+        } catch (Exception ioe) {
+            log.error("Fout bij maken WFS connectie:", ioe);
             MapCoordsBean mbc = new MapCoordsBean();
-            mbc.setNaam("Fout bij ophalen van WFSthema: " + t.getId() + ") " + t.getNaam());
+            mbc.setNaam("Fout bij ophalen van WFS thema: " + t.getId() + ") " + t.getNaam());
             coords.add(mbc);
         } finally {
             if (fc != null && fi != null) {

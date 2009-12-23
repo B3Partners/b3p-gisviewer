@@ -1014,34 +1014,5 @@ public class SpatialUtil {
         return null;
     }
 
-    public static boolean validJDBCConnection(Themas t) {
-        if (t == null) {
-            return false;
-        }
-        return validJDBCConnection(t.getConnectie());
-    }
 
-    public static Connection getJDBCConnection(Themas t) {
-        if (t == null) {
-            return null;
-        }
-        return getJDBCConnection(t.getConnectie());
-    }
-
-    public static boolean validJDBCConnection(Connecties c) {
-        return c != null && c.getType().equalsIgnoreCase(Connecties.TYPE_JDBC);
-    }
-
-    public static Connection getJDBCConnection(Connecties c) {
-        if (!validJDBCConnection(c)) {
-            return null;
-        }
-        try {
-            return c.getJdbcConnection();
-        } catch (Exception e) {
-            log.error("Error creating jdbc connection", e);
-            return null;
-        }
-
-    }
 }
