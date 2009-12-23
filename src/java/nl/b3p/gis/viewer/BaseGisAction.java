@@ -89,7 +89,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         if (organizationcode != null && organizationcode.length() > 0) {
             request.setAttribute("organizationcode", getOrganizationCode(request));
         }
-        
+
     }
 
     /**
@@ -1097,6 +1097,12 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      *Compare 2 thema datalists voor het tonen in de admindata. (dus niet volledige vergelijking maar alleen op label en basisregel)
      */
     public boolean compareThemaDataLists(List list1, List list2) {
+        if (list1 == null || list2 == null) {
+            return false;
+        }
+        if (list1.size() != list2.size()) {
+            return false;
+        }
         int basisRegelTeller1 = 0;
         int basisRegelTeller2 = 0;
         for (int i1 = 0; i1 < list1.size(); i1++) {

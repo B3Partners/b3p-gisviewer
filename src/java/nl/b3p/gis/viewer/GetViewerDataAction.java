@@ -811,11 +811,7 @@ public class GetViewerDataAction extends BaseGisAction {
         if (thema_items == null || thema_items.isEmpty()) {
             throw new Exception("Er is geen themadata geconfigureerd voor thema: " + t.getNaam() + " met id: " + t.getId());
         }
-        Connecties c = t.getConnectie();
-        if (c == null && t.getAdmin_tabel() != null && t.getAdmin_tabel().length() > 0) {
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            c = user.getKbWfsConnectie();
-        }
+        Connecties c = t.getWFSConnectie(request);
 
         String geom = request.getParameter("geom");
         String[] coordString = null;
@@ -870,11 +866,7 @@ public class GetViewerDataAction extends BaseGisAction {
         if (thema_items == null || thema_items.isEmpty()) {
             return null;
         }
-        Connecties c = t.getConnectie();
-        if (c == null && t.getAdmin_tabel() != null && t.getAdmin_tabel().length() > 0) {
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            c = user.getKbWfsConnectie();
-        }
+        Connecties c = t.getWFSConnectie(request);
 
         String adminPk = t.getAdmin_pk();
         adminPk = removeNamespace(adminPk);
