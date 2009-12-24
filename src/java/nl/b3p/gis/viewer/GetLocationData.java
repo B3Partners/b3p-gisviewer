@@ -30,14 +30,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.geotools.filter.FilterFactoryImpl2;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
-import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.gis.viewer.services.WfsUtil;
@@ -325,6 +322,7 @@ public class GetLocationData {
             log.error("Aantal kolommen en themas is niet gelijk");
             MapCoordsBean mbc = new MapCoordsBean();
             mbc.setNaam("Zoeker is verkeerd geconfigureerd");
+            mbc.setValid(false);
             allcoords.add(mbc);
             return allcoords;
         }
@@ -339,6 +337,7 @@ public class GetLocationData {
                 if (cols == null || cols.length == 0) {
                     MapCoordsBean mbc = new MapCoordsBean();
                     mbc.setNaam("No cols");
+                    mbc.setValid(false);
                     allcoords.add(mbc);
                     return allcoords;
                 }
@@ -347,6 +346,7 @@ public class GetLocationData {
                     if (waarden.length != cols.length) {
                         MapCoordsBean mbc = new MapCoordsBean();
                         mbc.setNaam("Number of values missing!");
+                        mbc.setValid(false);
                         allcoords.add(mbc);
                         return allcoords;
                     }
@@ -356,6 +356,7 @@ public class GetLocationData {
                 if (t == null) {
                     MapCoordsBean mbc = new MapCoordsBean();
                     mbc.setNaam("Ongeldig thema met id: " + themaIds[ti] + " geconfigureerd");
+                    mbc.setValid(false);
                     allcoords.add(mbc);
                     return allcoords;
                 }
@@ -370,6 +371,7 @@ public class GetLocationData {
                 if (c == null) {
                     MapCoordsBean mbc = new MapCoordsBean();
                     mbc.setNaam("Ongeldig thema met id: " + themaIds[ti] + " geconfigureerd");
+                    mbc.setValid(false);
                     allcoords.add(mbc);
                     return allcoords;
                 }
@@ -646,6 +648,7 @@ public class GetLocationData {
             log.error("Fout bij maken WFS connectie:", ioe);
             MapCoordsBean mbc = new MapCoordsBean();
             mbc.setNaam("Fout bij ophalen van WFS thema: " + t.getId() + ") " + t.getNaam());
+            mbc.setValid(false);
             coords.add(mbc);
         } finally {
             if (fc != null && fi != null) {

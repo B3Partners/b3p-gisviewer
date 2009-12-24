@@ -44,7 +44,6 @@ import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
-import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.gis.viewer.services.WfsUtil;
@@ -181,11 +180,7 @@ public class GetViewerDataAction extends BaseGisAction {
                         }
                     }
 
-                    Connecties c = t.getConnectie();
-                    if (c == null && t.getAdmin_tabel() != null && t.getAdmin_tabel().length() > 0) {
-                        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-                        c = user.getKbWfsConnectie();
-                    }
+                    Connecties c = t.getConnectie(request);
                     String connectieType = Connecties.TYPE_EMPTY;
                     List l = null;
                     if (c != null) {
@@ -253,11 +248,7 @@ public class GetViewerDataAction extends BaseGisAction {
         List thema_items = SpatialUtil.getThemaData(t, false);
         request.setAttribute("thema_items", thema_items);
 
-        Connecties c = t.getConnectie();
-        if (c == null && t.getAdmin_tabel() != null && t.getAdmin_tabel().length() > 0) {
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            c = user.getKbWfsConnectie();
-        }
+        Connecties c = t.getConnectie(request);
         String connectieType = Connecties.TYPE_EMPTY;
         if (c != null) {
             connectieType = c.getType();
@@ -315,11 +306,7 @@ public class GetViewerDataAction extends BaseGisAction {
         if (t == null) {
             return mapping.findForward("objectdata");
         }
-        Connecties c = t.getConnectie();
-        if (c == null && t.getAdmin_tabel() != null && t.getAdmin_tabel().length() > 0) {
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            c = user.getKbWfsConnectie();
-        }
+        Connecties c = t.getConnectie(request);
         String connectieType = Connecties.TYPE_EMPTY;
         if (c != null) {
             connectieType = c.getType();
@@ -356,11 +343,7 @@ public class GetViewerDataAction extends BaseGisAction {
         if (t == null) {
             return mapping.findForward("analysedata");
         }
-        Connecties c = t.getConnectie();
-        if (c == null && t.getAdmin_tabel() != null && t.getAdmin_tabel().length() > 0) {
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            c = user.getKbWfsConnectie();
-        }
+        Connecties c = t.getConnectie(request);
         String connectieType = Connecties.TYPE_EMPTY;
         if (c != null) {
             connectieType = c.getType();
@@ -396,11 +379,7 @@ public class GetViewerDataAction extends BaseGisAction {
             return mapping.findForward("analyseobject");
         }
 
-        Connecties c = t.getConnectie();
-        if (c == null && t.getAdmin_tabel() != null && t.getAdmin_tabel().length() > 0) {
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            c = user.getKbWfsConnectie();
-        }
+        Connecties c = t.getConnectie(request);
         if (c == null || !Connecties.TYPE_JDBC.equalsIgnoreCase(c.getType())) {
             log.error("Thema heeft geen JDBC connectie. Andere connecties worden niet ondersteund");
             request.setAttribute("waarde", "Thema heeft geen JDBC connectie. Andere connecties worden niet ondersteund");
@@ -622,11 +601,7 @@ public class GetViewerDataAction extends BaseGisAction {
         if (t == null) {
             return mapping.findForward("analyseobject");
         }
-        Connecties c = t.getConnectie();
-        if (c == null && t.getAdmin_tabel() != null && t.getAdmin_tabel().length() > 0) {
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            c = user.getKbWfsConnectie();
-        }
+        Connecties c = t.getConnectie(request);
         if (c == null || !Connecties.TYPE_JDBC.equalsIgnoreCase(c.getType())) {
             log.error("Thema heeft geen JDBC connectie. Andere connecties worden niet ondersteund");
             request.setAttribute("waarde", "Thema heeft geen JDBC connectie. Andere connecties worden niet ondersteund");
