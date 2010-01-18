@@ -59,6 +59,8 @@ public class ViewerAction extends BaseGisAction {
     private static final Log log = LogFactory.getLog(ViewerAction.class);
     protected static final String LIST = "list";
     protected static final String LOGIN = "login";
+    public static final String SEARCHCONFIGID ="searchConfigId";
+    public static final String SEARCH ="search";
 
     /**
      * Return een hashmap die een property koppelt aan een Action.
@@ -259,6 +261,14 @@ public class ViewerAction extends BaseGisAction {
             request.setAttribute("extent", extent);
         }
 
+        if(FormUtils.nullIfEmpty(request.getParameter(SEARCHCONFIGID))!=null && FormUtils.nullIfEmpty(request.getParameter(SEARCH))!=null){
+            try{
+                request.setAttribute(SEARCHCONFIGID, new Integer(request.getParameter(SEARCHCONFIGID)));
+                request.setAttribute(SEARCH, request.getParameter(SEARCH));
+            }catch(NumberFormatException nfe){
+                log.error(SEARCHCONFIGID+" = NAN: "+request.getParameter(SEARCHCONFIGID));
+            }
+        }
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
