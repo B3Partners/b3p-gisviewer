@@ -299,6 +299,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
         dynaForm.set("update_frequentie_in_dagen", FormUtils.IntegerToString(t.getUpdate_frequentie_in_dagen()));
         dynaForm.set("view_geomtype", t.getView_geomtype());
         dynaForm.set("visible", new Boolean(t.isVisible()));
+        dynaForm.set("sldattribuut",t.getSldattribuut());
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List themadataobjecten = sess.createQuery("select kolomnaam from ThemaData where thema = :thema").setEntity("thema", t).list();
@@ -357,6 +358,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
         t.setView_geomtype(FormUtils.nullIfEmpty(dynaForm.getString("view_geomtype")));
         b = (Boolean) dynaForm.get("visible");
         t.setVisible(b == null ? false : b.booleanValue());
+        t.setSldattribuut(FormUtils.nullIfEmpty(dynaForm.getString("sldattribuut")));
 
         int cId = -1;
         try {
