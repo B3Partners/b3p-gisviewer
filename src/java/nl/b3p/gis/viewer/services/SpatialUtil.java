@@ -537,7 +537,7 @@ public class SpatialUtil {
             sq.append(" GeomFromText ( '" + geom + "'," + srid + ") ");
         }
         sq.append(", tbl.\"" + geomKolom + "\") = true");
-        sq.append(") order by Distance(tbl." + geomKolom + ", ");
+        sq.append(") order by Distance(tbl.\"" + geomKolom + "\", ");
         if (geom == null) {
             sq.append(createClickGeom(coords, srid));
         } else {
