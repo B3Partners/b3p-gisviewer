@@ -61,6 +61,10 @@ public class ViewerAction extends BaseGisAction {
     protected static final String LOGIN = "login";
     public static final String SEARCHCONFIGID ="searchConfigId";
     public static final String SEARCH ="search";
+    public static final String SEARCHACTION ="searchAction";
+    public static final String SEARCHSLDTHEMAID ="searchSldThemaId";
+    public static final String SEARCHSLDCLUSTERID ="searchSldClusterId";
+    public static final String SEARCHSLDVISIBLEVALUE="searchSldVisibleValue";
 
     /**
      * Return een hashmap die een property koppelt aan een Action.
@@ -260,15 +264,29 @@ public class ViewerAction extends BaseGisAction {
             }
             request.setAttribute("extent", extent);
         }
-
+        //set search params
         if(FormUtils.nullIfEmpty(request.getParameter(SEARCHCONFIGID))!=null && FormUtils.nullIfEmpty(request.getParameter(SEARCH))!=null){
             try{
                 request.setAttribute(SEARCHCONFIGID, new Integer(request.getParameter(SEARCHCONFIGID)));
                 request.setAttribute(SEARCH, request.getParameter(SEARCH));
+                //searchAction: Wat te doen met het gevonden initZoek resultaat.
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHACTION))!=null){
+                    request.setAttribute(SEARCHACTION,request.getParameter(SEARCHACTION));
+                }
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDTHEMAID))!=null){
+                    request.setAttribute(SEARCHSLDTHEMAID,request.getParameter(SEARCHSLDTHEMAID));
+                }
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDCLUSTERID))!=null){
+                    request.setAttribute(SEARCHSLDCLUSTERID,request.getParameter(SEARCHSLDCLUSTERID));
+                }
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDVISIBLEVALUE))!=null){
+                    request.setAttribute(SEARCHSLDVISIBLEVALUE,request.getParameter(SEARCHSLDVISIBLEVALUE));
+                }
             }catch(NumberFormatException nfe){
                 log.error(SEARCHCONFIGID+" = NAN: "+request.getParameter(SEARCHCONFIGID));
             }
         }
+
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
