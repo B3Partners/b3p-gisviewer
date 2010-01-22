@@ -38,8 +38,9 @@ public class SldServlet extends HttpServlet {
     public static final String OGCNS = "http://www.opengis.net/ogc";
     public static final String SLDNS = "http://www.opengis.net/sld";
     public static final String SENS = "http://www.opengis.net/se";
-    public static final String SLDTYPE_LAYERFEATURECONSTRAINT = "LayerFeatureConstraint";
+    public static final String SLDTYPE_NAMEDSTYLE= "NamedStyle";
     public static final String SLDTYPE_USERSTYLE = "UserStyle";
+    public static final String DEFAULT_STYLE= "default";
     private String defaultSldPath;
 
     /**
@@ -143,6 +144,10 @@ public class SldServlet extends HttpServlet {
                 }
                 Node child = createNamedLayer(doc, featureType, sldattribuut, visibleValue, geometryType, sldType);
                 root.appendChild(child);
+                if (SLDTYPE_USERSTYLE.equalsIgnoreCase(sldType)){
+                    Node child2= createNamedLayer(doc, featureType, sldattribuut, visibleValue, geometryType, SLDTYPE_NAMEDSTYLE,true);
+                    root.appendChild(child2);
+                }
             }
             DOMSource domSource = new DOMSource(doc);
             Transformer t = TransformerFactory.newInstance().newTransformer();
@@ -186,27 +191,32 @@ public class SldServlet extends HttpServlet {
         Document doc = db.parse(fi);
         return doc;
     }
-
     public Node createNamedLayer(Document doc, String featureName, String attribute, String[] value, String geometryType, String sldType) {
+        return createNamedLayer(doc,featureName,attribute,value,geometryType,sldType,false);
+    }
+    public Node createNamedLayer(Document doc, String featureName, String attribute, String[] value, String geometryType, String sldType,boolean not) {
         Node name = doc.createElementNS(SLDNS, "Name");
         name.appendChild(doc.createTextNode(featureName));
         Node namedLayer = doc.createElementNS(SLDNS, "NamedLayer");
         namedLayer.appendChild(name);
 
         if (sldType.equalsIgnoreCase(SLDTYPE_USERSTYLE)) {
-            Node featureTypeConstraint = createFeatureTypeStyle(doc, attribute, value, geometryType);
+            Node featureTypeStyle = createFeatureTypeStyle(doc, attribute, value, geometryType);
             Node userStyle = doc.createElementNS(SLDNS, "UserStyle");
-            userStyle.appendChild(featureTypeConstraint);
+            userStyle.appendChild(featureTypeStyle);
             namedLayer.appendChild(userStyle);
-        } else if (sldType.equalsIgnoreCase(SLDTYPE_LAYERFEATURECONSTRAINT)) {
+        } else if (sldType.equalsIgnoreCase(SLDTYPE_NAMEDSTYLE)) {
             //Node layerFeatureConstraints = createLayerFeatureConstraints(doc, attribute, value, geometryType);
             Node layerFeatureConstraints = doc.createElementNS(SLDNS, "LayerFeatureConstraints");
-            Node featureTypeConstraints = createFeatureTypeConstraint(doc, attribute, value);
+            Node featureTypeConstraints = createFeatureTypeConstraint(doc, attribute, value,not);
+
             layerFeatureConstraints.appendChild(featureTypeConstraints);
             namedLayer.appendChild(layerFeatureConstraints);
 
             Node namedStyle=doc.createElementNS(SLDNS,"NamedStyle");
-            namedStyle.appendChild(doc.createElementNS(SLDNS, "Name"));
+            Node styleName=doc.createElementNS(SLDNS, "Name");
+            styleName.appendChild(doc.createTextNode(DEFAULT_STYLE));
+            namedStyle.appendChild(styleName);
             namedLayer.appendChild(namedStyle);
         }
         return namedLayer;
@@ -217,7 +227,7 @@ public class SldServlet extends HttpServlet {
         Node featureTypeStyle = doc.createElementNS(SLDNS, "FeatureTypeStyle");
         Node rule = doc.createElement("Rule");
 
-        Node filter = createFilter(doc, attribute, value);
+        Node filter = createFilter(doc, attribute, value,false);
 
         rule.appendChild(filter);
         if (geometryType == null || geometryType.toLowerCase().indexOf("polygon") >= 0) {
@@ -321,18 +331,19 @@ public class SldServlet extends HttpServlet {
         return lineSymbolizer;
     }
 
-    private Node createFilter(Document doc, String attribute, String[] value) {
+    private Node createFilter(Document doc, String attribute, String[] value,boolean not) {
         Node filter = doc.createElementNS(OGCNS, "Filter");
 
-        Node temp;
-
-        if (value.length == 1) {
-            temp = filter;
-        } else {
-            Node oRFilter = doc.createElementNS(OGCNS, "Or");
-            filter.appendChild(oRFilter);
-            temp = oRFilter;
-
+        Node nodeToUse=filter;
+        if (not){
+            Node notFilter = doc.createElementNS(OGCNS,"Not");
+            filter.appendChild(notFilter);
+            nodeToUse=notFilter;
+        }
+        if (value.length > 1) {
+            Node orFilter = doc.createElementNS(OGCNS, "Or");
+            nodeToUse.appendChild(orFilter);
+            nodeToUse=orFilter;
         }
 
         for (int i = 0; i < value.length; i++) {
@@ -345,14 +356,14 @@ public class SldServlet extends HttpServlet {
             propertyIsEqualTo.appendChild(propertyName);
             propertyIsEqualTo.appendChild(literal);
 
-            temp.appendChild(propertyIsEqualTo);
+            nodeToUse.appendChild(propertyIsEqualTo);
         }
         return filter;
     }
 
-    private Node createFeatureTypeConstraint(Document doc, String attribute, String[] value) {
+    private Node createFeatureTypeConstraint(Document doc, String attribute, String[] value,boolean not) {
         Node featureTypeConstraint = doc.createElementNS(SLDNS, "FeatureTypeConstraint");
-        Node filter = createFilter(doc, attribute, value);
+        Node filter = createFilter(doc, attribute, value,not);
         featureTypeConstraint.appendChild(filter);
         return featureTypeConstraint;
     }
