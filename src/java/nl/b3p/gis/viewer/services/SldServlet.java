@@ -144,10 +144,6 @@ public class SldServlet extends HttpServlet {
                 }
                 Node child = createNamedLayer(doc, featureType, sldattribuut, visibleValue, geometryType, sldType);
                 root.appendChild(child);
-                if (SLDTYPE_USERSTYLE.equalsIgnoreCase(sldType)){
-                    Node child2= createNamedLayer(doc, featureType, sldattribuut, visibleValue, geometryType, SLDTYPE_NAMEDSTYLE,true);
-                    root.appendChild(child2);
-                }
             }
             DOMSource domSource = new DOMSource(doc);
             Transformer t = TransformerFactory.newInstance().newTransformer();
