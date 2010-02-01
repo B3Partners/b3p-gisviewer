@@ -42,14 +42,18 @@ import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
+import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.wms.capabilities.Layer;
 import nl.b3p.wms.capabilities.SrsBoundingBox;
+import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
+import nl.b3p.zoeker.services.Zoeker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
+import org.hibernate.Session;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -286,7 +290,17 @@ public class ViewerAction extends BaseGisAction {
                 log.error(SEARCHCONFIGID+" = NAN: "+request.getParameter(SEARCHCONFIGID));
             }
         }
-
+        //zoekconfiguraties inlezen.
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        List zoekconfiguraties = Zoeker.getZoekConfiguraties();
+        List zoekconfiguratiesJson= new ArrayList();
+        for (int i=0; i < zoekconfiguraties.size(); i++){
+            ZoekConfiguratie zc = (ZoekConfiguratie) zoekconfiguraties.get(i);
+            zoekconfiguratiesJson.add(zc.toJSON());
+        }
+        if (zoekconfiguraties!=null){
+            request.setAttribute("zoekconfiguraties", zoekconfiguratiesJson);
+        }
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
