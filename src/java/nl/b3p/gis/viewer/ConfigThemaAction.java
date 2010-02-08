@@ -300,6 +300,7 @@ public class ConfigThemaAction extends ViewerCrudAction {
         dynaForm.set("view_geomtype", t.getView_geomtype());
         dynaForm.set("visible", new Boolean(t.isVisible()));
         dynaForm.set("sldattribuut",t.getSldattribuut());
+        dynaForm.set("uitgebreid", new Boolean(t.isUitgebreid()));
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List themadataobjecten = sess.createQuery("select kolomnaam from ThemaData where thema = :thema").setEntity("thema", t).list();
@@ -359,6 +360,8 @@ public class ConfigThemaAction extends ViewerCrudAction {
         b = (Boolean) dynaForm.get("visible");
         t.setVisible(b == null ? false : b.booleanValue());
         t.setSldattribuut(FormUtils.nullIfEmpty(dynaForm.getString("sldattribuut")));
+        b = (Boolean) dynaForm.get("uitgebreid");
+        t.setUitgebreid(b == null ? false : b.booleanValue());
 
         int cId = -1;
         try {

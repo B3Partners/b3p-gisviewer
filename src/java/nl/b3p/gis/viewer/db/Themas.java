@@ -76,6 +76,7 @@ public class Themas implements Comparable {
     private String organizationcodekey;
     private String maptipstring;
     private String sldattribuut;
+    private boolean uitgebreid;
 
     /** Creates a new instance of Themas */
     public Themas() {
@@ -802,5 +803,13 @@ public class Themas implements Comparable {
 
     public void setSldattribuut(String sldattribuut) {
         this.sldattribuut = sldattribuut;
+    }
+
+    public boolean isUitgebreid() {
+        return uitgebreid;
+    }
+
+    public void setUitgebreid(boolean uitgebreid) {
+        this.uitgebreid = uitgebreid;
     }
 }
