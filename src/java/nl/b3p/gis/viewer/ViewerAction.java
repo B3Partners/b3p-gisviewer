@@ -294,9 +294,11 @@ public class ViewerAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List zoekconfiguraties = Zoeker.getZoekConfiguraties();
         List zoekconfiguratiesJson= new ArrayList();
-        for (int i=0; i < zoekconfiguraties.size(); i++){
-            ZoekConfiguratie zc = (ZoekConfiguratie) zoekconfiguraties.get(i);
-            zoekconfiguratiesJson.add(zc.toJSON());
+        if (zoekconfiguraties!=null){
+            for (int i=0; i < zoekconfiguraties.size(); i++){
+                ZoekConfiguratie zc = (ZoekConfiguratie) zoekconfiguraties.get(i);
+                zoekconfiguratiesJson.add(zc.toJSON());
+            }
         }
         if (zoekconfiguraties!=null){
             request.setAttribute("zoekconfiguraties", zoekconfiguratiesJson);
