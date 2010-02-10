@@ -29,9 +29,11 @@ import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +55,9 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.hibernate.Session;
 import org.opengis.feature.Feature;
+import org.opengis.feature.type.FeatureType;
+import org.opengis.feature.type.FeatureType;
+import org.opengis.feature.type.PropertyDescriptor;
 
 public abstract class BaseGisAction extends BaseHibernateAction {
 
@@ -733,66 +738,41 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                  * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
                  */
             } else if (td.getDataType().getId() == DataTypen.QUERY) {
-                StringBuffer url = new StringBuffer(td.getCommando());
+                StringBuffer url;
+                if (td.getCommando() != null) {
+                    url = new StringBuffer(td.getCommando());
+                } else {
+                    url = new StringBuffer();
+                }
+                String kolomnaam = td.getKolomnaam();
+                if (kolomnaam == null || kolomnaam.length() == 0) {
+                    kolomnaam = t.getAdmin_pk();
+                }
                 String commando = url.toString();
-                if (commando.contains("[") || commando.contains("]")) {
-                    /*
-                     * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
-                     * Bijvoorbeeld:
-                     * http://plannen.kaartenbalie.nl/[planeigenaar]/[plannaam]/[planidentificyaty].html
-                     * Kan dan worden:
-                     * http://plannen.kaartenbalie.nl/gemeente/plansoen/p38.html
-                     */
-                    int begin = -1;
-                    int eind = -1;
-                    for (int i = 0; i < url.length(); i++) {
-                        char c = url.charAt(i);
-                        if (c == '[') {
-                            if (begin == -1) {
-                                begin = i;
-                            } else {
-                                log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
-                                throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
-                            }
-                        } else if (c == ']') {
-                            eind = i;
-                            if (begin != -1 && eind != -1) {
-                                String kolomnaam = url.substring(begin + 1, eind);
-                                if (kolomnaam == null || kolomnaam.length() == 0) {
-                                    log.error("Commando \"" + commando + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
-                                    throw new Exception("Commando \"" + commando + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
-                                }
-                                Object value = rs.getObject(kolomnaam);
-                                if (value == null) {
-                                    value = "";
-                                }
-                                url.replace(begin, eind + 1, value.toString().trim());
-                                begin = -1;
-                                eind = -1;
-                                i = 0;
-                            } else {
-                                log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een [ .");
-                                throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een [ .");
-                            }
-                        } else if (i == url.length() - 1 && begin != -1) {
-                            log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
-                            throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
+                //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
+                Object valueToSplit = rs.getObject(kolomnaam);
+                List values= splitObject(valueToSplit, ",");
+                HashMap fhm=toHashMap(rs);
+                List regelValues= new ArrayList();
+                for (int i=0; i < values.size(); i++){
+                    Object value=values.get(i);
+                    if (commando.contains("[") || commando.contains("]")) {
+                        //vervang de eventuele csv in 1 waarde van die csv
+                        if (kolomnaam!=null){
+                            fhm.put(removeNamespace(kolomnaam),value);
+                        }
+                        String newCommando=replaceValuesInString(commando, fhm);
+                        regelValues.add(newCommando);
+                    } else {
+                        if (value != null) {
+                            url.append(value.toString().trim());
+                            regelValues.add(url.toString());
+                        } else {
+                            regelValues.add("");
                         }
                     }
-                    regel.addValue(url.toString());
-                } else {
-                    String kolomNaam = td.getKolomnaam();
-                    if (kolomNaam == null || kolomNaam.length() == 0) {
-                        kolomNaam = t.getAdmin_pk();
-                    }
-                    Object value = rs.getObject(kolomNaam);
-                    if (value != null) {
-                        url.append(value.toString().trim());
-                        regel.addValue(url.toString());
-                    } else {
-                        regel.addValue("");
-                    }
                 }
+                regel.addValue(regelValues);
             } else if (td.getDataType().getId() == DataTypen.FUNCTION) {
                 String keyName = t.getAdmin_pk();
                 Object keyValue = rs.getObject(keyName);
@@ -966,65 +946,34 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 } else {
                     url = new StringBuffer();
                 }
-
                 String commando = url.toString();
-                if (commando.contains("[") || commando.contains("]")) {
-                    /*
-                     * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
-                     * Bijvoorbeeld:
-                     * http://plannen.kaartenbalie.nl/[planeigenaar]/[plannaam]/[planidentificyaty].html
-                     * Kan dan worden:
-                     * http://plannen.kaartenbalie.nl/gemeente/plansoen/p38.html
-                     */
-                    int begin = -1;
-                    int eind = -1;
-                    for (int i = 0; i < url.length(); i++) {
-                        char c = url.charAt(i);
-                        if (c == '[') {
-                            if (begin == -1) {
-                                begin = i;
-                            } else {
-                                log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
-                                throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
-                            }
-                        } else if (c == ']') {
-                            eind = i;
-                            if (begin != -1 && eind != -1) {
-                                String kolom = url.substring(begin + 1, eind);
-                                if (kolom == null || kolom.length() == 0) {
-                                    log.error("Commando \"" + commando + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
-                                    throw new Exception("Commando \"" + commando + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
-                                }
-                                Object value = f.getProperty(kolom).getValue();
-                                if (value == null) {
-                                    value = "";
-                                }
-                                url.replace(begin, eind + 1, value.toString().trim());
-                                begin = -1;
-                                eind = -1;
-                                i = 0;
-                            } else {
-                                log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een [ .");
-                                throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een [ .");
-                            }
-                        } else if (i == url.length() - 1 && begin != -1) {
-                            log.error("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
-                            throw new Exception("Commando \"" + commando + "\" is niet correct. Er ontbreekt een ] .");
-                        }
-                    }
-                    regel.addValue(url.toString());
-                } else {
-                    Object value = null;
-                    if (kolomnaam != null) {
-                        value = f.getProperty(kolomnaam).getValue();
-                    }
-                    if (value != null) {
-                        url.append(value.toString().trim());
-                        regel.addValue(url.toString());
-                    } else {
-                        regel.addValue("");
-                    }
+                //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
+                Object valueToSplit = null;
+                if (kolomnaam != null && f.getProperty(kolomnaam)!=null) {
+                    valueToSplit = f.getProperty(kolomnaam).getValue();
                 }
+                HashMap fhm=toHashMap(f);
+                List values= splitObject(valueToSplit, ",");
+                List regelValues= new ArrayList();
+                for (int i=0; i < values.size(); i++){
+                    Object value=values.get(i);
+                    if (commando.contains("[") || commando.contains("]")) {
+                        //vervang de eventuele csv in 1 waarde van die csv
+                        if (kolomnaam!=null){
+                            fhm.put(removeNamespace(kolomnaam),value);
+                        }
+                        String newCommando=replaceValuesInString(commando, fhm);
+                        regelValues.add(newCommando);
+                    } else {                    
+                        if (value != null) {
+                            url.append(value.toString().trim());
+                            regelValues.add(url.toString());
+                        } else {
+                            regelValues.add("");
+                        }
+                    }                    
+                }
+                regel.addValue(regelValues);
             } else if (td.getDataType().getId() == DataTypen.FUNCTION) {
                 Object keyValue = null;
                 if (adminPk != null) {
@@ -1131,5 +1080,99 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         } else {
             return false;
         }
+    }
+
+    public HashMap toHashMap(Feature f) throws Exception{
+        HashMap result = new HashMap();
+        FeatureType ft=f.getType();
+        Iterator it=ft.getDescriptors().iterator();
+        while (it.hasNext()){
+            PropertyDescriptor pd= (PropertyDescriptor)it.next();
+            String key=pd.getName().getLocalPart();
+            Object value=f.getProperty(pd.getName()).getValue();
+            result.put(key, value);
+        }
+        return result;
+    }
+    public HashMap toHashMap(ResultSet rs) throws Exception{
+        HashMap result = new HashMap();
+        ResultSetMetaData rsmd=rs.getMetaData();
+        for (int i=0; i < rsmd.getColumnCount(); i++){
+            String key=rsmd.getColumnLabel(i);
+            Object value=rs.getObject(key);
+            result.put(key, value);
+        }
+        return result;
+    }
+     /*
+     * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
+     * Bijvoorbeeld:
+     * http://plannen.kaartenbalie.nl/[planeigenaar]/[plannaam]/[planidentificyaty].html
+     * Kan dan worden:
+     * http://plannen.kaartenbalie.nl/gemeente/plansoen/p38.html
+     */
+    public String replaceValuesInString(String string, HashMap values) throws Exception{
+        if (!string.contains("[") && !string.contains("]")) {
+            return string;
+        }
+        StringBuffer url;
+        if (string!= null) {
+            url = new StringBuffer(string);
+        } else {
+            url = new StringBuffer();
+        }
+        
+        int begin = -1;
+        int eind = -1;
+        for (int i = 0; i < url.length(); i++) {
+            char c = url.charAt(i);
+            if (c == '[') {
+                if (begin == -1) {
+                    begin = i;
+                } else {
+                    log.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+                    throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+                }
+            } else if (c == ']') {
+                eind = i;
+                if (begin != -1 && eind != -1) {
+                    String kolomnaam = url.substring(begin + 1, eind);
+                    if (kolomnaam == null || kolomnaam.length() == 0) {
+                        log.error("Commando \"" + string + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                        throw new Exception("Commando \"" + string + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                    }
+                    Object value = values.get(kolomnaam);
+                    if (value == null) {
+                        value = "";
+                    }
+                    url.replace(begin, eind + 1, value.toString().trim());
+                    begin = -1;
+                    eind = -1;
+                    i = 0;
+                } else {
+                    log.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een [ .");
+                    throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een [ .");
+                }
+            } else if (i == url.length() - 1 && begin != -1) {
+                log.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+                throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+            }
+        }
+        return url.toString();        
+    }
+
+    private List splitObject(Object value,String seperator){
+        ArrayList values=new ArrayList();
+        if (value ==null){
+            values.add(value);
+        }else if (value instanceof String){
+            String[] tokens=((String)value).split(seperator);
+            for (int i=0; i < tokens.length; i++){
+                values.add(tokens[i]);
+            }
+        }else{
+            values.add(value);
+        }
+        return values;
     }
 }
