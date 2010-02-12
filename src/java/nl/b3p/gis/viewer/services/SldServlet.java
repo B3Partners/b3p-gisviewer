@@ -110,16 +110,19 @@ public class SldServlet extends HttpServlet {
             }
             //get the list of themas in the cluster
             if (clusterId != null) {
-                try {
-                    Integer cid = Integer.parseInt(clusterId);
-                    List<Themas> clusterThemaList = getClusterThemas(cid);
-                    if (clusterThemaList == null || clusterThemaList.size() == 0) {
-                        log.warn("No cluster or no themas in cluster: " + clusterId);
-                    } else {
-                        themaList.addAll(clusterThemaList);
+                String[] clusterIds= clusterId.split(",");
+                for (int i=0; i < clusterIds.length; i++){
+                    try {
+                        Integer cid = Integer.parseInt(clusterIds[i]);
+                        List<Themas> clusterThemaList = getClusterThemas(cid);
+                        if (clusterThemaList == null || clusterThemaList.size() == 0) {
+                            log.warn("No cluster or no themas in cluster: " + clusterIds[i]);
+                        } else {
+                            themaList.addAll(clusterThemaList);
+                        }
+                    } catch (NumberFormatException nfe) {
+                        log.error("clusterId is NAN: " + clusterIds[i]);
                     }
-                } catch (NumberFormatException nfe) {
-                    log.error("clusterId is NAN: " + clusterId);
                 }
             }
 
