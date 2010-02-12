@@ -98,11 +98,14 @@ public class SldServlet extends HttpServlet {
             //create thema list
             List<Themas> themaList = new ArrayList();
             if (themaId != null) {
-                Themas th = SpatialUtil.getThema(themaId);
-                if (th == null) {
-                    log.error("Can't find thema with id: " + themaId);
-                } else {
-                    themaList.add(th);
+                String[] themaIds=themaId.split(",");
+                for (int i=0;i < themaIds.length; i++){
+                    Themas th = SpatialUtil.getThema(themaIds[i]);
+                    if (th == null) {
+                        log.error("Can't find thema with id: " + themaId);
+                    } else {
+                        themaList.add(th);
+                    }
                 }
             }
             //get the list of themas in the cluster
@@ -113,6 +116,7 @@ public class SldServlet extends HttpServlet {
                     if (clusterThemaList == null || clusterThemaList.size() == 0) {
                         log.warn("No cluster or no themas in cluster: " + clusterId);
                     } else {
+                        themaList.addAll(clusterThemaList);
                     }
                 } catch (NumberFormatException nfe) {
                     log.error("clusterId is NAN: " + clusterId);
@@ -126,12 +130,12 @@ public class SldServlet extends HttpServlet {
                     sldattribuut = th.getAdmin_pk();
                 }
                 if (sldattribuut == null || sldattribuut.length() == 0) {
-                    log.error("thema heeft geen sld attribuut");
+                    log.debug("thema heeft geen sld attribuut");
                     continue;
                 }
                 String featureType = th.getWms_layers_real();
                 if (featureType == null || featureType.length() == 0) {
-                    log.error("thema heeft geen featuretype");
+                    log.debug("thema heeft geen featuretype");
                     continue;
                 }
 
@@ -140,7 +144,7 @@ public class SldServlet extends HttpServlet {
                 try {
                     geometryType = getGeomtryType(th);
                 } catch (Exception e) {
-                    log.error("Error getting geometry type. Creating the style with a polygonsimbolizer.");
+                    log.debug("Error getting geometry type. Creating the style with a polygonsimbolizer.");
                 }
                 Node child = createNamedLayer(doc, featureType, sldattribuut, visibleValue, geometryType, sldType);
                 root.appendChild(child);
