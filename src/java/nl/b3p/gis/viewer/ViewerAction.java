@@ -63,13 +63,33 @@ public class ViewerAction extends BaseGisAction {
     private static final Log log = LogFactory.getLog(ViewerAction.class);
     protected static final String LIST = "list";
     protected static final String LOGIN = "login";
+    /*Mogelijke request waarden*/
+    //De themaid's die zichtbaar moeten zijn in de kaart en aangevinkt moeten zijn. Komma gescheiden
+    public static final String ID="id";
+    //de clusterIds waarvan de themas zichtbaar moeten zijn in de kaart (aangevinkt). Komma gescheiden
+    public static final String CLUSTERID="clusterId";
+    //de extent waarde kaart naar moet zoomen
+    public static final String EXTENT="extent";
+    //de zoekConfiguratie id die moet worden gebruikt om te zoeken
     public static final String SEARCHCONFIGID ="searchConfigId";
+    //het woord waarop gezocht moet worden in de zoekconfiguratie
     public static final String SEARCH ="search";
+    //de actie die gedaan kan worden na het zoeken (filter,zoom,highlight)
     public static final String SEARCHACTION ="searchAction";
+    //Het thema waarop een sld moet worden toegepast (alleen filter en highlight)
     public static final String SEARCHSLDTHEMAID ="searchSldThemaId";
+    //Het cluster waarop een sld moet worden toegepast (alleen filter en highlight)
     public static final String SEARCHSLDCLUSTERID ="searchSldClusterId";
+    //De waarde die moet worden gebruikt in het sld als value
     public static final String SEARCHSLDVISIBLEVALUE="searchSldVisibleValue";
 
+    //Het tabblad dat actief moet zijn (moet wel enabled zijn)
+    public static final String ACTIVETAB="activeTab";
+    //De enabled tabs die mogelijk zijn. Komma gescheiden
+    public static final String ENABLEDTAB="enabledTabs";
+    /*Einde mogelijke request waarden*/
+
+    public static final String ZOEKCONFIGURATIES="zoekconfiguraties";
     /**
      * Return een hashmap die een property koppelt aan een Action.
      *
@@ -141,9 +161,9 @@ public class ViewerAction extends BaseGisAction {
         List themalist = getValidThemas(false, ctl, request);
         Map rootClusterMap = getClusterMap(themalist, ctl, null);
         List actieveThemas = null;
-        if (FormUtils.nullIfEmpty(request.getParameter("id"))!=null){
+        if (FormUtils.nullIfEmpty(request.getParameter(ID))!=null){
             actieveThemas = new ArrayList();
-            String[] ids=request.getParameter("id").split(",");
+            String[] ids=request.getParameter(ID).split(",");
             for (int i =0; i < ids.length; i++){
                 try{
                     int id= Integer.parseInt(ids[i]);
@@ -162,9 +182,9 @@ public class ViewerAction extends BaseGisAction {
         Themas actiefThema = SpatialUtil.getThema(lastActiefThemaId);
 
         List actieveClusters=null;
-        if (FormUtils.nullIfEmpty(request.getParameter("clusterId"))!=null){
+        if (FormUtils.nullIfEmpty(request.getParameter(CLUSTERID))!=null){
             actieveClusters=new ArrayList();
-            String[] ids=request.getParameter("clusterId").split(",");
+            String[] ids=request.getParameter(CLUSTERID).split(",");
             for (int i =0; i < ids.length; i++){
                 try{
                     int id= Integer.parseInt(ids[i]);
@@ -212,9 +232,9 @@ public class ViewerAction extends BaseGisAction {
         }
         String extent = null;
         //Controleer of een extent is meegegeven en of de extent een bbox is van 4 getallen
-        if (request.getParameter("extent") != null && request.getParameter("extent").split(",").length == 4) {
+        if (request.getParameter(EXTENT) != null && request.getParameter(EXTENT).split(",").length == 4) {
             try {
-                String requestExtent = request.getParameter("extent");
+                String requestExtent = request.getParameter(EXTENT);
                 int test = Integer.parseInt(requestExtent.split(",")[0]);
                 test = Integer.parseInt(requestExtent.split(",")[1]);
                 test = Integer.parseInt(requestExtent.split(",")[2]);
@@ -266,7 +286,7 @@ public class ViewerAction extends BaseGisAction {
                     }
                 }
             }
-            request.setAttribute("extent", extent);
+            request.setAttribute(EXTENT, extent);
         }
         //set search params
         if(FormUtils.nullIfEmpty(request.getParameter(SEARCHCONFIGID))!=null && FormUtils.nullIfEmpty(request.getParameter(SEARCH))!=null){
@@ -301,8 +321,32 @@ public class ViewerAction extends BaseGisAction {
             }
         }
         if (zoekconfiguraties!=null){
-            request.setAttribute("zoekconfiguraties", zoekconfiguratiesJson);
+            request.setAttribute(ZOEKCONFIGURATIES, zoekconfiguratiesJson);
         }
+        //set de actieve tabs en enabled tabs
+        JSONArray enabledTabs=null;
+        String[] enabledTokens=null;
+        String enabledTab=FormUtils.nullIfEmpty(request.getParameter(ENABLEDTAB));
+        String activeTab=FormUtils.nullIfEmpty(request.getParameter(ACTIVETAB));
+        if (enabledTab!=null){
+            //stop alle enabled tabs in een jsonarray en controleer of de activeTab er in zit.
+            enabledTabs= new JSONArray();
+            enabledTokens =enabledTab.split(",");
+            boolean containsActiveTab=false;
+            for (int i=0; i < enabledTokens.length; i++){
+                enabledTabs.put(enabledTokens[i]);
+                if (enabledTokens[i].equalsIgnoreCase(activeTab)){
+                    containsActiveTab=true;
+                }
+            }
+            if (!containsActiveTab && activeTab!=null){
+                enabledTabs.put(activeTab);
+            }
+        }
+        if (activeTab!=null)
+            request.setAttribute(ACTIVETAB,activeTab);
+        if (enabledTabs!=null)
+            request.setAttribute(ENABLEDTAB, enabledTabs);
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
