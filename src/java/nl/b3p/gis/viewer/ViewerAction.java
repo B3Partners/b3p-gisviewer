@@ -87,6 +87,9 @@ public class ViewerAction extends BaseGisAction {
     public static final String ACTIVETAB="activeTab";
     //De enabled tabs die mogelijk zijn. Komma gescheiden
     public static final String ENABLEDTAB="enabledTabs";
+
+    //De mappen die je opengeklapt wil hebben
+    public static final String EXPANDNODES="expandNodes";
     /*Einde mogelijke request waarden*/
 
     public static final String ZOEKCONFIGURATIES="zoekconfiguraties";
@@ -347,6 +350,17 @@ public class ViewerAction extends BaseGisAction {
             request.setAttribute(ACTIVETAB,activeTab);
         if (enabledTabs!=null)
             request.setAttribute(ENABLEDTAB, enabledTabs);
+
+        //kijk of er in de tree iets moet worden uitgeklapt
+        if(FormUtils.nullIfEmpty(request.getParameter(EXPANDNODES))!=null){
+            String collapsedNodes=request.getParameter(EXPANDNODES);
+            JSONArray nodes=new JSONArray();
+            String[] nodeIds=collapsedNodes.split(",");
+            for (int i=0; i < nodeIds.length; i++){
+                nodes.put(nodeIds[i]);
+            }
+            request.setAttribute(EXPANDNODES,nodes);
+        }
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
