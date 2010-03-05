@@ -1097,7 +1097,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     public HashMap toHashMap(ResultSet rs) throws Exception{
         HashMap result = new HashMap();
         ResultSetMetaData rsmd=rs.getMetaData();
-        for (int i=0; i < rsmd.getColumnCount(); i++){
+        for (int i=1; i <= rsmd.getColumnCount(); i++){
             String key=rsmd.getColumnLabel(i);
             Object value=rs.getObject(key);
             result.put(key, value);
