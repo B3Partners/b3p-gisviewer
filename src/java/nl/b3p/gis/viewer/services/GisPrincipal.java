@@ -67,7 +67,7 @@ public class GisPrincipal implements Principal {
         //create wfs connectie object.
         kbWfsConnectie = new Connecties();
         kbWfsConnectie.setType(Connecties.TYPE_WFS);
-        kbWfsConnectie.setConnectie_url(HibernateUtil.getKbUrl());
+        kbWfsConnectie.setConnectie_url(HibernateUtil.createPersonalKbUrl(code));
         kbWfsConnectie.setNaam(HibernateUtil.kbWfsConnectieNaam);
         kbWfsConnectie.setGebruikersnaam(name);
         kbWfsConnectie.setWachtwoord(password);
