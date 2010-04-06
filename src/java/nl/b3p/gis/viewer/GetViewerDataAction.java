@@ -64,8 +64,7 @@ public class GetViewerDataAction extends BaseGisAction {
     protected static final String OBJECTDATA = "objectdata";
     protected static final String ANALYSEDATA = "analysedata";
     protected static final String ANALYSEWAARDE = "analysewaarde";
-    protected static final String ANALYSEOBJECT = "analyseobject";
-    protected static final double DEFAULTTOLERANCE = 5.0;
+    protected static final String ANALYSEOBJECT = "analyseobject";    
     protected static final String PK_FIELDNAME_PARAM = "pkFieldName";
 
     /**
@@ -185,6 +184,9 @@ public class GetViewerDataAction extends BaseGisAction {
                     List l = null;
                     if (c != null) {
                         connectieType = c.getType();
+
+
+
                         if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
                             List pks = null;
                             pks = findPks(t, mapping, dynaForm, request);
@@ -787,46 +789,14 @@ public class GetViewerDataAction extends BaseGisAction {
             throw new Exception("Er is geen themadata geconfigureerd voor thema: " + t.getNaam() + " met id: " + t.getId());
         }
         Connecties c = t.getWFSConnectie(request);
-
+        //Haal de juiste info op
         String geom = request.getParameter("geom");
-        String[] coordString = null;
-        double[] coords = null;
-        if (request.getParameter("coords") != null && !request.getParameter("coords").equals("")) {
-            coordString = request.getParameter("coords").split(",");
-            coords = new double[coordString.length];
-            for (int i = 0; i < coordString.length; i++) {
-                coords[i] = Double.parseDouble(coordString[i]);
-            }
-        }
-        String s = request.getParameter("scale");
-        double scale = 0.0;
-        try {
-            if (s != null) {
-                scale = Double.parseDouble(s);
-                //af ronden op 6 decimalen
-                scale = Math.round((scale * 1000000));
-                scale = scale / 1000000;
-            }
-        } catch (NumberFormatException nfe) {
-            scale = 0.0;
-            log.debug("Scale is geen double dus wordt genegeerd");
-        }
-        String tolerance = request.getParameter("tolerance");
-        double clickTolerance = DEFAULTTOLERANCE;
-        try {
-            if (tolerance != null) {
-                clickTolerance = Double.parseDouble(tolerance);
-            }
-        } catch (NumberFormatException nfe) {
-            clickTolerance = DEFAULTTOLERANCE;
-            log.debug("Tolerance is geen double dus de default wordt gebruikt: " + DEFAULTTOLERANCE + " pixels");
-        }
-        double distance = clickTolerance;
-        if (scale > 0.0) {
-            distance = scale * (clickTolerance);
-        }
+        double[] coords = getCoords(request);        
+        double distance = getDistance(request);
+        String extraWhere = getExtraWhere(t, request);
+        
         ArrayList regels = new ArrayList();
-        List features = WfsUtil.getWFSObjects(t, coords, "EPSG:28992", distance, c, geom);
+        List features = WfsUtil.getWFSObjects(t, coords, "EPSG:28992", distance, c, geom,extraWhere);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             regels.add(getRegel(f, t, thema_items));

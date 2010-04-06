@@ -24,7 +24,6 @@ package nl.b3p.gis.viewer;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -39,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.NotSupportedException;
+import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.ThemaData;
@@ -56,13 +56,13 @@ import org.apache.struts.validator.DynaValidatorForm;
 import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
 
 public abstract class BaseGisAction extends BaseHibernateAction {
 
     private static final Log log = LogFactory.getLog(BaseGisAction.class);
     public static final String URL_AUTH = "code";
+    protected static final double DEFAULTTOLERANCE = 5.0;
 
     protected String getOrganizationCode(HttpServletRequest request) {
         GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
@@ -423,40 +423,15 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      */
     // <editor-fold defaultstate="" desc="protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request)">
     protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
-        String[] coordString = null;
+        //Haal de juiste info op
         String geom = request.getParameter("geom");
-        double[] coords = null;
-        if (request.getParameter("coords") != null && !request.getParameter("coords").equals("")) {
-            coordString = request.getParameter("coords").split(",");
-            coords = new double[coordString.length];
-            for (int i = 0; i < coordString.length; i++) {
-                coords[i] = Double.parseDouble(coordString[i]);
-            }
-        } else {
+        double[] coords = getCoords(request);
+        if (coords==null){
             coords = new double[0];
         }
-        String s = request.getParameter("scale");
-        double scale = 0.0;
-        try {
-            if (s != null) {
-                scale = Double.parseDouble(s);
-                //af ronden op 1 decimaal
-
-            }
-        } catch (NumberFormatException nfe) {
-            scale = 0.0;
-            log.debug("Scale is geen double dus wordt genegeerd");
-        }
-        double distance = 10.0;
-        if (scale > 0.0) {
-            distance = scale * (distance);
-            distance = Math.round(distance * 1000) / 1000;
-            if (distance < 1.0) {
-                distance = 1.0;
-            }
-        } else {
-            distance = 10.0;
-        }
+        String extraWhere = getExtraWhere(t,request);
+        double distance = getDistance(request);
+        
         int srid = 28992; // RD-new
 
         ArrayList pks = new ArrayList();
@@ -479,18 +454,11 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
             return null;
         }
-        try {
-            String organizationcodekey = t.getOrganizationcodekey();
-            String organizationcode = getOrganizationCode(request);
+        try {            
             String geomColumnName = SpatialUtil.getTableGeomName(t, connection);
             String q = null;
-            if (organizationcodekey != null && organizationcodekey.length() > 0
-                    && organizationcode != null && organizationcode.length() > 0) {
-                q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, organizationcodekey, organizationcode, geom);
-            } else {
-                q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, geom);
-            }
-
+            q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, extraWhere, geom);
+            
             PreparedStatement statement = connection.prepareStatement(q);
             try {
                 ResultSet rs = statement.executeQuery();
@@ -1174,5 +1142,114 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             values.add(value);
         }
         return values;
+    }
+
+    private boolean doExtraSearchFilter(Themas t, HttpServletRequest request) {
+        if (FormUtils.nullIfEmpty(t.getSldattribuut())!=null && FormUtils.nullIfEmpty(request.getParameter(ViewerAction.SEARCH))!=null){
+            String searchId=request.getParameter(ViewerAction.SEARCHID);
+            String searchClusterId=request.getParameter(ViewerAction.SEARCHCLUSTERID);
+            if (FormUtils.nullIfEmpty(searchId)!=null){
+                String[] searchIds = searchId.split(",");
+                for (int i=0; i < searchIds.length; i++){
+                    try{
+                        if (t.getId().intValue() == Integer.parseInt(searchIds[i])){
+                            return true;
+                        }
+                    }catch(NumberFormatException nfe){}
+                }
+            }
+            if (FormUtils.nullIfEmpty(searchClusterId)!=null){
+                String[] clusterIds= searchClusterId.split(",");
+                for (int i=0; i < clusterIds.length; i++){
+                    try{
+                        if (isInCluster(t.getCluster(),Integer.parseInt(clusterIds[i]))){
+                                return true;
+                        }
+                    }catch (NumberFormatException nfe){}
+                }
+            }
+
+        }
+        return false;
+    }
+    /**
+     * this cluster is or is in the cluster with id==clusterId
+     */
+    private boolean isInCluster(Clusters themaCluster,int clusterId){
+        if (themaCluster==null){
+            return false;
+        }else if (themaCluster.getId()==clusterId){
+            return true;
+        }else{
+            return isInCluster(themaCluster.getParent(),clusterId);
+        }
+    }
+
+    private String createCqlString(Themas t, HttpServletRequest request) {
+        if (doExtraSearchFilter(t,request)){
+            return t.getSldattribuut()+" = '"+request.getParameter(ViewerAction.SEARCH)+"'";
+        }
+        return null;
+    }
+
+    public double[] getCoords(HttpServletRequest request){
+        double[] coords = null;
+        if (request.getParameter("coords") != null && !request.getParameter("coords").equals("")) {
+            String[] coordString = request.getParameter("coords").split(",");
+            coords = new double[coordString.length];
+            for (int i = 0; i < coordString.length; i++) {
+                coords[i] = Double.parseDouble(coordString[i]);
+            }
+        }
+        return coords;
+    }
+
+    public String getExtraWhere(Themas t, HttpServletRequest request){
+        //controleer of er een extra filter meegegeven is en of die op dit thema moet worden toegepast.
+        String extraWhere=createCqlString(t,request);
+        //controleer of er een organization code is voor dit thema
+        String organizationcodekey = t.getOrganizationcodekey();
+        String organizationcode = getOrganizationCode(request);
+        if (FormUtils.nullIfEmpty(organizationcodekey) != null
+                    && FormUtils.nullIfEmpty(organizationcode) != null) {
+            if(extraWhere==null){
+                extraWhere="";
+            }else{
+                extraWhere+=" AND ";
+            }
+            extraWhere+=organizationcodekey+" = "+organizationcode;
+        }
+        return extraWhere;
+    }
+
+    protected double getDistance(HttpServletRequest request){
+        String s = request.getParameter("scale");
+        double scale = 0.0;
+        try {
+            if (s != null) {
+                scale = Double.parseDouble(s);
+                //af ronden op 6 decimalen
+                scale = Math.round((scale * 1000000));
+                scale = scale / 1000000;
+            }
+        } catch (NumberFormatException nfe) {
+            scale = 0.0;
+            log.debug("Scale is geen double dus wordt genegeerd");
+        }
+        String tolerance = request.getParameter("tolerance");
+        double clickTolerance = DEFAULTTOLERANCE;
+        try {
+            if (tolerance != null) {
+                clickTolerance = Double.parseDouble(tolerance);
+            }
+        } catch (NumberFormatException nfe) {
+            clickTolerance = DEFAULTTOLERANCE;
+            log.debug("Tolerance is geen double dus de default wordt gebruikt: " + DEFAULTTOLERANCE + " pixels");
+        }
+        double distance = clickTolerance;
+        if (scale > 0.0) {
+            distance = scale * (clickTolerance);
+        }
+        return distance;
     }
 }

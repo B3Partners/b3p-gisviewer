@@ -76,10 +76,12 @@ public class ViewerAction extends BaseGisAction {
     public static final String SEARCH ="search";
     //de actie die gedaan kan worden na het zoeken (filter,zoom,highlight)
     public static final String SEARCHACTION ="searchAction";
-    //Het thema waarop een sld moet worden toegepast (alleen filter en highlight)
-    public static final String SEARCHSLDTHEMAID ="searchSldThemaId";
+    //Het thema waarop een sld moet worden toegepast (alleen filter en highlight)    
+    public static final String SEARCHSLDTHEMAID ="searchSldThemaId";//deze niet meer gebruiken!
+    public static final String SEARCHID="searchId";
     //Het cluster waarop een sld moet worden toegepast (alleen filter en highlight)
-    public static final String SEARCHSLDCLUSTERID ="searchSldClusterId";
+    public static final String SEARCHSLDCLUSTERID ="searchSldClusterId";//deze niet meer gebruiken!
+    public static final String SEARCHCLUSTERID="searchClusterId";
     //De waarde die moet worden gebruikt in het sld als value
     public static final String SEARCHSLDVISIBLEVALUE="searchSldVisibleValue";
 
@@ -300,11 +302,17 @@ public class ViewerAction extends BaseGisAction {
                 if (FormUtils.nullIfEmpty(request.getParameter(SEARCHACTION))!=null){
                     request.setAttribute(SEARCHACTION,request.getParameter(SEARCHACTION));
                 }
-                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDTHEMAID))!=null){
-                    request.setAttribute(SEARCHSLDTHEMAID,request.getParameter(SEARCHSLDTHEMAID));
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHID))!=null){
+                    request.setAttribute(SEARCHID,request.getParameter(SEARCHID));
+                //om backwards compatible te houden
+                }else if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDTHEMAID))!=null){
+                    request.setAttribute(SEARCHID,request.getParameter(SEARCHSLDTHEMAID));
                 }
-                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDCLUSTERID))!=null){
-                    request.setAttribute(SEARCHSLDCLUSTERID,request.getParameter(SEARCHSLDCLUSTERID));
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHCLUSTERID))!=null){
+                    request.setAttribute(SEARCHCLUSTERID,request.getParameter(SEARCHCLUSTERID));
+                //om backwards compatible te houden
+                }else if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDCLUSTERID))!=null){
+                    request.setAttribute(SEARCHCLUSTERID,request.getParameter(SEARCHSLDCLUSTERID));
                 }
                 if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDVISIBLEVALUE))!=null){
                     request.setAttribute(SEARCHSLDVISIBLEVALUE,request.getParameter(SEARCHSLDVISIBLEVALUE));

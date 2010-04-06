@@ -112,7 +112,7 @@ public class WfsUtil {
         return OgcWfsClient.getCapabilities(or);
     }
 
-    public static List getWFSObjects(Themas t, double[] coords, String srsName, double distance, Connecties conn, String geom) throws Exception {
+    public static List getWFSObjects(Themas t, double[] coords, String srsName, double distance, Connecties conn, String geom, String extraWhere) throws Exception {
         if (conn == null || !Connecties.TYPE_WFS.equalsIgnoreCase(conn.getType())) {
             return null;
         }
@@ -124,12 +124,23 @@ public class WfsUtil {
         //beide nodig voor het maken van een bbox wfs query
         WFS_Capabilities cap = OgcWfsClient.getCapabilities(or);
         FeatureType ft = OgcWfsClient.getCapabilitieFeatureType(cap, t.getAdmin_tabel());
-
+        //combineer de adminQuery, geom (click punt) and extraWhere -filter stukken met elkaar
+        String extraFilterPart=null;
         String adminQuery = t.getAdmin_query();
         Filter adminQueryFilter = null;
         if (adminQuery != null && !adminQuery.equals("") && !adminQuery.startsWith("select")) {
-            adminQueryFilter = OgcWfsClient.createQueryFilter(gf, adminQuery, srsName, ft);
-            //OgcWfsClient.addQueryFilter(gf, adminQuery, srsName, ft);
+            extraFilterPart=adminQuery;
+        }
+        if (extraWhere!=null){
+            if (extraFilterPart!=null){
+                extraFilterPart="("+extraFilterPart+") AND ";
+            }else{
+                extraFilterPart="";
+            }
+            extraFilterPart+=extraWhere;
+        }
+        if (extraFilterPart!=null){
+            adminQueryFilter = OgcWfsClient.createQueryFilter(gf, extraFilterPart, srsName, ft);
         }
 
         if (geom == null) {

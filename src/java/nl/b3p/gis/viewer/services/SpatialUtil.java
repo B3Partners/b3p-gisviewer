@@ -463,14 +463,14 @@ public class SpatialUtil {
     static public String InfoSelectQuery(String kolom, String tabel, double[] coords, double distance, int srid, String geom) {
         // Als thema punten of lijnen dan afstand
         // Als thema polygon dan Intersects
-        return InfoSelectQuery(kolom, tabel, coords, distance, srid, null, null, geom);
+        return InfoSelectQuery(kolom, tabel, coords, distance, srid, null, geom);
     }
     // </editor-fold>
 
     static public String InfoSelectQuery(String kolom, String tabel, String geomKolom, double[] coords, double distance, int srid, String geom) {
         // Als thema punten of lijnen dan afstand
         // Als thema polygon dan Intersects
-        return InfoSelectQuery(kolom, tabel, geomKolom, coords, distance, srid, null, null, geom);
+        return InfoSelectQuery(kolom, tabel, geomKolom, coords, distance, srid, null, geom);
     }
 
     /**
@@ -485,8 +485,8 @@ public class SpatialUtil {
      * @return infoselect query
      * @deprecated use InfoSelectQuery(String kolom, String tabel, String geomKolom, double[] coords, double distance, int srid, String organizationcodekey, String organizationcode)
      */
-    static public String InfoSelectQuery(String kolom, String tabel, double[] coords, double distance, int srid, String organizationcodekey, String organizationcode, String geom) {
-        return InfoSelectQuery(kolom, tabel, "the_geom", coords, distance, srid, organizationcodekey, organizationcode, geom);
+    static public String InfoSelectQuery(String kolom, String tabel, double[] coords, double distance, int srid, String extraWhere, String geom) {
+        return InfoSelectQuery(kolom, tabel, "the_geom", coords, distance, srid, extraWhere, geom);
     }
 
     /**
@@ -501,7 +501,7 @@ public class SpatialUtil {
      * @param organizationcode
      * @return infoselect query
      */
-    static public String InfoSelectQuery(String kolom, String tabel, String geomKolom, double[] coords, double distance, int srid, String organizationcodekey, String organizationcode, String geom) {
+    static public String InfoSelectQuery(String kolom, String tabel, String geomKolom, double[] coords, double distance, int srid, String extraWhere, String geom) {
         StringBuffer sq = new StringBuffer();
         sq.append("select \"");
         sq.append(kolom);
@@ -509,12 +509,13 @@ public class SpatialUtil {
         sq.append(tabel);
         sq.append("\" tbl where ");
 
-        if (organizationcode != null) {
-            sq.append("tbl.\"" + organizationcodekey + "\" = '" + organizationcode + "'");
-            sq.append(" and ");
+        if (extraWhere != null) {
+            /*sq.append("tbl.\"" + organizationcodekey + "\" = '" + organizationcode + "'");
+            sq.append(" and ");*/
+            sq.append(extraWhere+" and ");
         }
 
-        sq.append("(");
+        sq.append("((");
         if ((coords.length == 2 && geom == null) ||
                 (geom != null && !geom.startsWith("POLYGON"))) {
             sq.append("(Dimension(tbl.\"" + geomKolom + "\") < 2) ");
@@ -537,7 +538,7 @@ public class SpatialUtil {
             sq.append(" GeomFromText ( '" + geom + "'," + srid + ") ");
         }
         sq.append(", tbl.\"" + geomKolom + "\") = true");
-        sq.append(") order by Distance(tbl.\"" + geomKolom + "\", ");
+        sq.append(")) order by Distance(tbl.\"" + geomKolom + "\", ");
         if (geom == null) {
             sq.append(createClickGeom(coords, srid));
         } else {
