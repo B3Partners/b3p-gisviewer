@@ -307,12 +307,18 @@ public class ViewerAction extends BaseGisAction {
                 //om backwards compatible te houden
                 }else if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDTHEMAID))!=null){
                     request.setAttribute(SEARCHID,request.getParameter(SEARCHSLDTHEMAID));
+                //als geen searchId is gebruikt gebruik dan voor de searchId's de id's.
+                }else if (FormUtils.nullIfEmpty(request.getParameter(ID))!=null){
+                    request.setAttribute(SEARCHID,request.getParameter(ID));
                 }
                 if (FormUtils.nullIfEmpty(request.getParameter(SEARCHCLUSTERID))!=null){
                     request.setAttribute(SEARCHCLUSTERID,request.getParameter(SEARCHCLUSTERID));
                 //om backwards compatible te houden
                 }else if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDCLUSTERID))!=null){
                     request.setAttribute(SEARCHCLUSTERID,request.getParameter(SEARCHSLDCLUSTERID));
+                //als er geen searchClusterId is gebruikt dan gebruik de clusterId
+                }else if (FormUtils.nullIfEmpty(request.getParameter(CLUSTERID))!=null){
+                    request.setAttribute(SEARCHCLUSTERID,request.getParameter(CLUSTERID));
                 }
                 if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDVISIBLEVALUE))!=null){
                     request.setAttribute(SEARCHSLDVISIBLEVALUE,request.getParameter(SEARCHSLDVISIBLEVALUE));
