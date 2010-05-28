@@ -19,8 +19,8 @@
 		<property name="jdbc.batch_size">20</property>
 
 		<!-- Mapping files -->
-
 		<mapping resource="gisviewer.hbm.xml"/>
+                <mapping resource="zoeker.hbm.xml"/>
 	</session-factory>
 </hibernate-configuration>
 
