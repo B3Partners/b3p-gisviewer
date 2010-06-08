@@ -300,7 +300,7 @@ public class WfsUtil {
         if (conn == null || !Connecties.TYPE_WFS.equalsIgnoreCase(conn.getType())) {
             return null;
         }
-        OGCRequest or = new OGCRequest(conn.getConnectie_url());
+        OGCRequest or = new OGCRequest(conn.getUrl());
         or.setUsername(conn.getGebruikersnaam());
         or.setPassword(conn.getWachtwoord());
         return or;
