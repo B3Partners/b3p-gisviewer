@@ -1,8 +1,19 @@
 
+    create table bron (
+        id  serial not null,
+        naam varchar(255),
+        url varchar(255),
+        gebruikersnaam varchar(255),
+        wachtwoord varchar(255),
+        volgorde int4,
+        primary key (id)
+    );
+
     create table clusters (
         id  serial not null,
         naam varchar(255),
         omschrijving varchar(255),
+        belangnr int4 not null,
         metadatalink varchar(255),
         default_cluster bool not null,
         hide_legend bool not null,
@@ -12,15 +23,6 @@
         callable bool not null,
         default_visible bool not null,
         parent int4,
-        primary key (id)
-    );
-
-    create table connecties (
-        id  serial not null,
-        naam varchar(255),
-        connectie_url varchar(255),
-        gebruikersnaam varchar(255),
-        wachtwoord varchar(255),
         primary key (id)
     );
 
@@ -119,4 +121,4 @@
     alter table themas 
         add constraint FKCBDB434E2921D2A3 
         foreign key (connectie) 
-        references connecties;
+        references bron;
