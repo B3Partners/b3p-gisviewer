@@ -154,17 +154,24 @@ public class CreateMapPDF extends HttpServlet {
                 String url = ogcr.getUrl();
                 Image map = getImage(url, request);
                 map.setAlignment(Image.ALIGN_CENTER);
-                //als pagina gedraaid is en er is een opmerking gegeven maak het plaatje minder hoog
-                //zodat er ruimte is voor de opmerking
+
+                /* indien liggend dan plaatje wat verkleinen zodat opmerking er
+                 * ook onder past */
+                int resize = 75;
+
                 if (landscape && remark != null) {
-                    imageWidth -= 100;
+                    imageHeight -= resize;
+                    imageWidth -= Math.round(resize * factor);
                 }
                 if (landscape && addFooter){
-                    imageWidth -= 100;
+                    imageHeight -= resize;
+                    imageWidth -= Math.round(resize * factor);
                 }
                 if (landscape && title!=null){
-                    imageWidth -= 50;
+                    imageHeight -= resize;
+                    imageWidth -= Math.round(resize * factor);
                 }
+                
                 map.scaleToFit(imageWidth, imageHeight);
                 doc.add(map);
             } catch (Exception ex) {
