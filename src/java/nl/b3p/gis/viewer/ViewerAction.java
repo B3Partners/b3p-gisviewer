@@ -29,6 +29,7 @@ import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.PrecisionModel;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,6 +40,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
+import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
@@ -375,6 +377,21 @@ public class ViewerAction extends BaseGisAction {
             }
             request.setAttribute(EXPANDNODES,nodes);
         }
+
+        /* Ophalen ConfigKeeper settings */
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Map map = configKeeper.getConfigMap("viewer");
+
+        /* de getConfigMap geeft alle waardes terug volgens de types
+         * zoals deze gedefinieerd zijn in het type kolom van de configuratie */
+        boolean usePopup = (Boolean) map.get("usePopup");
+        boolean useDivPopup = (Boolean) map.get("useDivPopup");
+        boolean usePanelControls = (Boolean) map.get("usePanelControls");
+
+        /* config klaarzetten voor de jsp */
+        request.setAttribute("cfg_usePopup", usePopup);
+        request.setAttribute("cfg_useDivPopup", useDivPopup);
+        request.setAttribute("cfg_usePanelControls", usePanelControls);
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
