@@ -384,14 +384,40 @@ public class ViewerAction extends BaseGisAction {
 
         /* de getConfigMap geeft alle waardes terug volgens de types
          * zoals deze gedefinieerd zijn in het type kolom van de configuratie */
+        boolean useCookies = (Boolean) map.get("useCookies");
+        boolean multipleActiveThemas = (Boolean) map.get("multipleActiveThemas");
         boolean usePopup = (Boolean) map.get("usePopup");
         boolean useDivPopup = (Boolean) map.get("useDivPopup");
+        boolean dataframepopupHandle = (Boolean) map.get("dataframepopupHandle");
         boolean usePanelControls = (Boolean) map.get("usePanelControls");
+        boolean showLeftPanel = (Boolean) map.get("showLeftPanel");
+        int autoRedirect = (Integer) map.get("autoRedirect");
+        int tolerance = (Integer) map.get("tolerance");
+        boolean useSortableFunction = (Boolean) map.get("useSortableFunction");
+        int layerDelay = (Integer) map.get("layerDelay");
+        int refreshDelay = (Integer) map.get("refreshDelay");
+        String zoekConfigIds = (String) map.get("zoekConfigIds");
+        int minBboxZoeken = (Integer) map.get("minBboxZoeken");
+        int maxResults = (Integer) map.get("maxResults");
+        boolean expandAll = (Boolean) map.get("expandAll");
 
         /* config klaarzetten voor de jsp */
+        request.setAttribute("cfg_useCookies", useCookies);
+        request.setAttribute("cfg_multipleActiveThemas", multipleActiveThemas);
         request.setAttribute("cfg_usePopup", usePopup);
         request.setAttribute("cfg_useDivPopup", useDivPopup);
+        request.setAttribute("cfg_dataframepopupHandle", dataframepopupHandle);
         request.setAttribute("cfg_usePanelControls", usePanelControls);
+        request.setAttribute("cfg_showLeftPanel", showLeftPanel);
+        request.setAttribute("cfg_autoRedirect", autoRedirect);
+        request.setAttribute("cfg_tolerance", tolerance);
+        request.setAttribute("cfg_useSortableFunction", useSortableFunction);
+        request.setAttribute("cfg_layerDelay", layerDelay);
+        request.setAttribute("cfg_refreshDelay", refreshDelay);
+        request.setAttribute("cfg_zoekConfigIds", zoekConfigIds);
+        request.setAttribute("cfg_minBboxZoeken", minBboxZoeken);
+        request.setAttribute("cfg_maxResults", maxResults);
+        request.setAttribute("cfg_expandAll", expandAll);
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
