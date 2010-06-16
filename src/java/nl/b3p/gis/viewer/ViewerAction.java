@@ -400,6 +400,10 @@ public class ViewerAction extends BaseGisAction {
         int minBboxZoeken = (Integer) map.get("minBboxZoeken");
         int maxResults = (Integer) map.get("maxResults");
         boolean expandAll = (Boolean) map.get("expandAll");
+        String tabbladenBeheerder = (String) map.get("tabbladenBeheerder");
+        String tabbladenGebruiker = (String) map.get("tabbladenGebruiker");
+        String tabbladenDemoGebruiker = (String) map.get("tabbladenDemoGebruiker");
+        String tabbladenAnoniem = (String) map.get("tabbladenAnoniem");
 
         /* config klaarzetten voor de jsp */
         request.setAttribute("cfg_useCookies", useCookies);
@@ -418,6 +422,10 @@ public class ViewerAction extends BaseGisAction {
         request.setAttribute("cfg_minBboxZoeken", minBboxZoeken);
         request.setAttribute("cfg_maxResults", maxResults);
         request.setAttribute("cfg_expandAll", expandAll);
+        request.setAttribute("cfg_tabbladenBeheerder", tabbladenBeheerder);
+        request.setAttribute("cfg_tabbladenGebruiker", tabbladenGebruiker);
+        request.setAttribute("cfg_tabbladenDemoGebruiker", tabbladenDemoGebruiker);
+        request.setAttribute("cfg_tabbladenAnoniem", tabbladenAnoniem);
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
