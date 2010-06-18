@@ -388,7 +388,7 @@ public class ViewerAction extends BaseGisAction {
         boolean multipleActiveThemas = (Boolean) map.get("multipleActiveThemas");
         boolean usePopup = (Boolean) map.get("usePopup");
         boolean useDivPopup = (Boolean) map.get("useDivPopup");
-        boolean dataframepopupHandle = (Boolean) map.get("dataframepopupHandle");
+        //boolean dataframepopupHandle = (Boolean) map.get("dataframepopupHandle");
         boolean usePanelControls = (Boolean) map.get("usePanelControls");
         boolean showLeftPanel = (Boolean) map.get("showLeftPanel");
         int autoRedirect = (Integer) map.get("autoRedirect");
@@ -410,7 +410,7 @@ public class ViewerAction extends BaseGisAction {
         request.setAttribute("cfg_multipleActiveThemas", multipleActiveThemas);
         request.setAttribute("cfg_usePopup", usePopup);
         request.setAttribute("cfg_useDivPopup", useDivPopup);
-        request.setAttribute("cfg_dataframepopupHandle", dataframepopupHandle);
+        request.setAttribute("cfg_dataframepopupHandle", "null");
         request.setAttribute("cfg_usePanelControls", usePanelControls);
         request.setAttribute("cfg_showLeftPanel", showLeftPanel);
         request.setAttribute("cfg_autoRedirect", autoRedirect);

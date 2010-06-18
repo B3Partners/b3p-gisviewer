@@ -24,10 +24,10 @@ public class ConfigKeeper {
         String hql = "from Configuratie";
 
         if (setting != null && setting.length() != 0) {
-            hql += " where SETTING = '" + setting + "'";
+            hql += " where setting = '" + setting + "'";
         }
 
-        hql += " ORDER BY ID";
+        hql += " order by id";
 
         Session sess = null;
         Transaction tx = null;
@@ -73,5 +73,37 @@ public class ConfigKeeper {
         }
         
         return dbconfig;
+    }
+
+    public Configuratie getConfiguratie(String property, String setting) {
+        String hql = "from Configuratie";
+
+        if (property != null && property.length() != 0) {
+            hql += " where property = '" + property + "'";
+        }
+
+        if (setting != null && setting.length() != 0) {
+            hql += " and setting = '" + setting + "'";
+        }
+
+        Session sess = null;
+        Transaction tx = null;
+        Configuratie configuratie = null;
+
+        try {
+            sess = HibernateUtil.getSessionFactory().openSession();
+            tx = sess.beginTransaction();
+
+            Query q = sess.createQuery(hql);
+            configuratie = (Configuratie) q.uniqueResult();
+
+            tx.commit();
+
+        } catch (Exception ex) {
+            log.error("Fout tijdens getConfiguratie: " + ex.getLocalizedMessage());
+            tx.rollback();
+        }
+
+        return configuratie;
     }
 }
