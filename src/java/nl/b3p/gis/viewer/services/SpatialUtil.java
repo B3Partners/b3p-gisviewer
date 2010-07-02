@@ -34,6 +34,7 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.PrecisionModel;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -45,12 +46,14 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import nl.b3p.gis.viewer.db.Clusters;
-import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geotools.data.DataStore;
 import org.hibernate.Query;
 import org.hibernate.Session;
+import org.opengis.feature.simple.SimpleFeatureType;
 
 public class SpatialUtil {
 
@@ -162,26 +165,22 @@ public class SpatialUtil {
      * @return int
      *
      */
-    static public String getTableGeomName(Themas t, Connection conn) throws SQLException {
+    static public String getThemaGeomName(Themas t, Bron bron) throws IOException {
         String table = t.getSpatial_tabel();
         if (table == null) {
             table = t.getAdmin_tabel();
         }
-        return getTableGeomName(table, conn);
+        return getThemaGeomName(table, bron);
     }
 
-    static public String getTableGeomName(String table, Connection conn) throws SQLException {
-        DatabaseMetaData dbmd = conn.getMetaData();
-        ResultSet rs = dbmd.getColumns(null, null, table, null);
+    static public String getThemaGeomName(String featureType, Bron bron) throws IOException {
+        DataStore ds= bron.toDatastore();
         try {
-            while (rs.next()) {
-                String typenaam = rs.getString("TYPE_NAME");
-                if (typenaam.equalsIgnoreCase("geometry")) {
-                    return rs.getString("COLUMN_NAME");
-                }
-            }
+            SimpleFeatureType sft=ds.getSchema(featureType);
+            if (sft.getGeometryDescriptor()!=null)
+                return sft.getGeometryDescriptor().getName().toString();
         } finally {
-            rs.close();
+            ds.dispose();
         }
         return null;
     }

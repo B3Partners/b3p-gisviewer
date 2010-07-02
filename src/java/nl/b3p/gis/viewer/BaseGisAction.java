@@ -315,9 +315,9 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      * Om getPks backwardcompatable te maken
      */
     @Deprecated
-    protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request) throws SQLException, NotSupportedException {
+   /* protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request) throws SQLException, NotSupportedException {
         return getPks(t, dynaForm, request, null);
-    }
+    }*/
 
     /**
      * DOCUMENT ME!!!
@@ -337,7 +337,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      *
      * @see Themas
      */
-    protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request, String pksField) throws SQLException, NotSupportedException {
+    /*protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request, String pksField) throws SQLException, NotSupportedException {
         ArrayList pks = new ArrayList();
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -405,7 +405,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             }
         }
         return pks;
-    }
+    }*/
 
     /**
      * DOCUMENT ME!!!
@@ -422,7 +422,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      * @see Themas
      */
     // <editor-fold defaultstate="" desc="protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request)">
-    protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
+   /* protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         //Haal de juiste info op
         String geom = request.getParameter("geom");
         double[] coords = getCoords(request);
@@ -472,7 +472,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             connection.close();
         }
         return pks;
-    }
+    }*/
     // </editor-fold>
 
     /**
@@ -505,7 +505,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      * @return a String with the Geometry type.
      *
      */
-    protected String getThemaGeomType(Themas t) throws Exception {
+    /*protected String getThemaGeomType(Themas t) throws Exception {
         String themaGeomType = t.getView_geomtype();
         if (themaGeomType != null) {
             return themaGeomType;
@@ -517,7 +517,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             return null;
         }
         return SpatialUtil.getThemaGeomType(t, connection);
-    }
+    }*/
 
     /**
      * Een protected methode die de Analysenaam van een bepaalde tabel en kolom samenstelt met
@@ -530,7 +530,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      * @return a String with the analysename.
      *
      */
-    protected String getAnalyseNaam(String analyseGeomId, Themas t) throws NotSupportedException, SQLException {
+   /* protected String getAnalyseNaam(String analyseGeomId, Themas t) throws NotSupportedException, SQLException {
 
         String analyseGeomTabel = t.getSpatial_tabel();
         String analyseGeomIdColumn = t.getSpatial_admin_ref();
@@ -585,7 +585,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         }
 
         return analyseNaam;
-    }
+    }*/
 
     /**
      *

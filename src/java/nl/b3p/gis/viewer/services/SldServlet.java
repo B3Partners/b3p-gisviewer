@@ -179,13 +179,13 @@ public class SldServlet extends HttpServlet {
     private String getGeomtryType(Themas t) throws Exception {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         String geometryType = null;
-        if (t.getConnectie() != null && Connecties.TYPE_JDBC.equals(t.getConnectie().getType())) {
+        /*if (t.getConnectie() != null && Connecties.TYPE_JDBC.equals(t.getConnectie().getType())) {
             geometryType = SpatialUtil.getThemaGeomType(t, t.getConnectie().getJdbcConnection());
         } else {
-            throw new UnsupportedOperationException("Not supported for other then JDBC themas");
-        }
+           */ throw new UnsupportedOperationException("Not supported for other then JDBC themas");
+        /*}
 
-        return geometryType;
+        return geometryType;*/
     }
 
     public Document getDefaultSld() throws Exception {

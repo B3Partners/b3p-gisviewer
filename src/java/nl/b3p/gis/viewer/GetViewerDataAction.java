@@ -22,15 +22,10 @@
  */
 package nl.b3p.gis.viewer;
 
-import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Time;
-import java.sql.Timestamp;
+import nl.b3p.gis.geotools.DataStoreUtil;
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -38,22 +33,25 @@ import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.transaction.NotSupportedException;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
+import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
-import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
-import nl.b3p.gis.viewer.services.WfsUtil;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
-import org.hibernate.Session;
+import org.geotools.factory.CommonFactoryFinder;
+import org.geotools.factory.GeoTools;
+import org.geotools.filter.text.cql2.CQL;
 import org.opengis.feature.Feature;
+import org.opengis.filter.Filter;
+import org.opengis.filter.FilterFactory2;
 
 public class GetViewerDataAction extends BaseGisAction {
 
@@ -179,28 +177,14 @@ public class GetViewerDataAction extends BaseGisAction {
                         }
                     }
 
-                    Connecties c = t.getConnectie(request);
+                    Bron b = t.getConnectie();
                     String connectieType = Connecties.TYPE_EMPTY;
                     List l = null;
-                    if (c != null) {
-                        connectieType = c.getType();
-
-
-
-                        if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
-                            List pks = null;
-                            pks = findPks(t, mapping, dynaForm, request);
-                            if (themadatanummer == regels.size()) {
-                                regels.add(new ArrayList());
-                            }
-                            l = getThemaObjects(t, pks, thema_items);
-
-                        } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
-                            if (themadatanummer == regels.size()) {
-                                regels.add(new ArrayList());
-                            }
-                            l = getThemaWfsObjectsWithGeom(t, thema_items, request);
+                    if (b != null) {                      
+                        if (themadatanummer == regels.size()) {
+                            regels.add(new ArrayList());
                         }
+                        l = getThemaObjectsWithGeom(t, thema_items, request);                        
                     }
                     if (l != null && l.size() > 0) {
                         ((ArrayList) regels.get(themadatanummer)).addAll(l);
@@ -250,19 +234,9 @@ public class GetViewerDataAction extends BaseGisAction {
         List thema_items = SpatialUtil.getThemaData(t, false);
         request.setAttribute("thema_items", thema_items);
 
-        Connecties c = t.getConnectie(request);
-        String connectieType = Connecties.TYPE_EMPTY;
-        if (c != null) {
-            connectieType = c.getType();
-            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
-                List pks = getPks(t, dynaForm, request, request.getParameter(PK_FIELDNAME_PARAM));
-                request.setAttribute("regels", getThemaObjects(t, pks, thema_items));
-                if (addKaart) {
-                    request.setAttribute("envelops", getThemaEnvelops(t, pks));
-                }
-            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
-                request.setAttribute("regels", getThemaWfsObjectsWithId(t, thema_items, request));
-            }
+        Bron b = t.getConnectie();
+        if (b != null) {           
+            request.setAttribute("regels",getThemaObjectsWithId(t,thema_items,request));
         }
         return mapping.findForward("aanvullendeinfo");
     }
@@ -304,21 +278,16 @@ public class GetViewerDataAction extends BaseGisAction {
      */
     public ActionForward objectdata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        Themas t = getThema(mapping, dynaForm, request, true);
-        if (t == null) {
+        //Themas t = getThema(mapping, dynaForm, request, true);
+        /*if (t == null) {
             return mapping.findForward("objectdata");
-        }
-        Connecties c = t.getConnectie(request);
-        String connectieType = Connecties.TYPE_EMPTY;
-        if (c != null) {
-            connectieType = c.getType();
-            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
-                List tol = createThemaObjectsList(mapping, dynaForm, request);
-                request.setAttribute("object_data", tol);
-            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
-                throw new NotSupportedException("Gebieden bij een WFS thema wordt nog niet ondersteund");
-            }
-        }
+        }*/
+        /*Bron b = t.getConnectie(request);
+        String connectieType = Connecties.TYPE_EMPTY;*/
+        /*if (b != null) {*/
+        List tol = createLocatieThemaList(mapping, dynaForm, request);
+        request.setAttribute("object_data", tol);
+        //}
         return mapping.findForward("objectdata");
     }
 
@@ -340,22 +309,8 @@ public class GetViewerDataAction extends BaseGisAction {
      *
      */
     public ActionForward analysedata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-
-        Themas t = getThema(mapping, dynaForm, request, true);
-        if (t == null) {
-            return mapping.findForward("analysedata");
-        }
-        Connecties c = t.getConnectie(request);
-        String connectieType = Connecties.TYPE_EMPTY;
-        if (c != null) {
-            connectieType = c.getType();
-            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
-                List tol = createThemaObjectsList(mapping, dynaForm, request);
-                request.setAttribute("object_data", tol);
-            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
-                throw new NotSupportedException("Analyse bij een WFS thema wordt nog niet ondersteund");
-            }
-        }
+        List tol = createLocatieThemaList(mapping, dynaForm, request);
+        request.setAttribute("object_data", tol);
         return mapping.findForward("analysedata");
     }
 
@@ -374,8 +329,10 @@ public class GetViewerDataAction extends BaseGisAction {
      * waarde
      */
     public ActionForward analysewaarde(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        request.setAttribute("waarde", "Funcitonaliteit moet nog worden omgezet.");
+            return mapping.findForward("analyseobject");
         // Maakt nu gebruik van het activeanalysethema property door true mee te geven
-        Themas t = getThema(mapping, dynaForm, request, true);
+        /*Themas t = getThema(mapping, dynaForm, request, true);
         if (t == null) {
             request.removeAttribute("waarde");
             return mapping.findForward("analyseobject");
@@ -504,7 +461,7 @@ public class GetViewerDataAction extends BaseGisAction {
         StringBuffer result = new StringBuffer("");
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         if (stype != null) {
-            Connection connection = t.getConnectie().getJdbcConnection();
+            Bron bron = t.getConnectie();
             String query = null;
             String columnName = geselecteerdObjectThema.getSpatial_admin_ref();
             if (columnName == null || columnName.length() <= 0) {
@@ -524,8 +481,8 @@ public class GetViewerDataAction extends BaseGisAction {
             if (geomTable2 == null || geomTable2.length() == 0) {
                 geomTable2 = geselecteerdObjectThema.getAdmin_tabel();
             }
-            String geomName1 = SpatialUtil.getTableGeomName(t, connection);
-            String geomName2 = SpatialUtil.getTableGeomName(geselecteerdObjectThema, connection);
+            String geomName1 = SpatialUtil.getThemaGeomName(t, bron);
+            String geomName2 = SpatialUtil.getThemaGeomName(geselecteerdObjectThema, bron);
             if ("POINT".equalsIgnoreCase(stype)) {
                 query = SpatialUtil.withinQuery(
                         sfunction,
@@ -576,7 +533,7 @@ public class GetViewerDataAction extends BaseGisAction {
 
         request.setAttribute("waarde", result.toString());
 
-        return mapping.findForward("analyseobject");
+        return mapping.findForward("analyseobject");*/
     }
 
     /**
@@ -599,7 +556,9 @@ public class GetViewerDataAction extends BaseGisAction {
      *
      */
     public ActionForward analyseobject(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        Themas t = getThema(mapping, dynaForm, request, true);
+        request.setAttribute("waarde", "Funcitonaliteit moet nog worden omgezet.");
+        return mapping.findForward("analyseobject");
+        /*Themas t = getThema(mapping, dynaForm, request, true);
         if (t == null) {
             return mapping.findForward("analyseobject");
         }
@@ -708,7 +667,7 @@ public class GetViewerDataAction extends BaseGisAction {
             request.setAttribute("thema_items_list", ti);
             request.setAttribute("regels_list", regels);
         }
-        return mapping.findForward("admindata");
+        return mapping.findForward("admindata");*/
     }
 
     public static String calculateExtraWhere(List thema_items, String extraCriterium,
@@ -753,7 +712,7 @@ public class GetViewerDataAction extends BaseGisAction {
         return extraWhere.toString();
     }
 
-    protected List createThemaObjectsList(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
+    protected List createLocatieThemaList(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
 
         ArrayList objectdata = new ArrayList();
         List ctl = getValidThemas(true, null, request);
@@ -765,13 +724,11 @@ public class GetViewerDataAction extends BaseGisAction {
         while (it.hasNext()) {
             Themas t = (Themas) it.next();
             List thema_items = SpatialUtil.getThemaData(t, true);
-            List pks = findPks(t, mapping, dynaForm, request);
-            List ao = getThemaObjects(t, pks, thema_items);
-
+            //List pks = findPks(t, mapping, dynaForm, request);
+            List ao = getThemaObjectsWithGeom(t, thema_items, request);
             if (ao == null || ao.isEmpty()) {
                 continue;
             }
-
             ArrayList thema = new ArrayList();
             thema.add(t.getId());
             thema.add(t.getNaam());
@@ -781,22 +738,23 @@ public class GetViewerDataAction extends BaseGisAction {
         return objectdata;
     }
 
-    protected List getThemaWfsObjectsWithGeom(Themas t, List thema_items, HttpServletRequest request) throws Exception {
+    protected ArrayList<AdminDataRowBean> getThemaObjectsWithGeom(Themas t, List thema_items, HttpServletRequest request) throws Exception {
         if (t == null) {
             return null;
         }
         if (thema_items == null || thema_items.isEmpty()) {
             throw new Exception("Er is geen themadata geconfigureerd voor thema: " + t.getNaam() + " met id: " + t.getId());
         }
-        Connecties c = t.getWFSConnectie(request);
+        Bron bron = t.getConnectie();
         //Haal de juiste info op
-        String geom = request.getParameter("geom");
-        double[] coords = getCoords(request);        
-        double distance = getDistance(request);
+        Geometry geom=getGeometry(request);
         String extraWhere = getExtraWhere(t, request);
-        
-        ArrayList regels = new ArrayList();
-        List features = WfsUtil.getWFSObjects(t, coords, "EPSG:28992", distance, c, geom,extraWhere);
+        Filter filter= null;
+        if (extraWhere!=null){
+            filter=CQL.toFilter(extraWhere);
+        }
+        ArrayList<Feature> features=DataStoreUtil.getFeatures(t,geom,filter,null);
+        ArrayList<AdminDataRowBean> regels=new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             regels.add(getRegel(f, t, thema_items));
@@ -804,24 +762,36 @@ public class GetViewerDataAction extends BaseGisAction {
         return regels;
     }
 
-    protected List getThemaWfsObjectsWithId(Themas t, List thema_items, HttpServletRequest request) throws Exception {
+    protected List getThemaObjectsWithId(Themas t, List thema_items, HttpServletRequest request) throws Exception {
         if (t == null) {
             return null;
         }
         if (thema_items == null || thema_items.isEmpty()) {
             return null;
         }
-        Connecties c = t.getWFSConnectie(request);
+        //Bron b=t.getConnectie();
 
         String adminPk = t.getAdmin_pk();
         adminPk = removeNamespace(adminPk);
-        String id = request.getParameter(adminPk);
-
+        String id =null;
+        if (adminPk!=null){
+            id= request.getParameter(adminPk);
+        }
         if (id == null) {
             return null;
         }
+        
+        /*String extraCql= adminPk+" = ";
+        try{
+            int iid=Integer.parseInt(id);
+            extraCql+=iid;
+        }catch(NumberFormatException nfe){
+            extraCql+="'"+id+"'";
+        }*/
+        Filter filter = FilterBuilder.createEqualsFilterFromKVP(adminPk,id);
         List regels = new ArrayList();
-        List features = WfsUtil.getWFSObjects(t, adminPk, id, c);
+
+        List<Feature> features = DataStoreUtil.getFeatures(t, null,filter,null);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             regels.add(getRegel(f, t, thema_items));
@@ -841,7 +811,7 @@ public class GetViewerDataAction extends BaseGisAction {
      *
      * @see Themas
      */
-    protected List getThemaObjects(Themas t, List pks, List thema_items) throws SQLException, UnsupportedEncodingException, NotSupportedException, Exception {
+    /*protected List getThemaObjects(Themas t, List pks, List thema_items) throws SQLException, UnsupportedEncodingException, NotSupportedException, Exception {
         if (t == null) {
             return null;
         }
@@ -928,21 +898,8 @@ public class GetViewerDataAction extends BaseGisAction {
             connection.close();
         }
         return regels;
-    }
-
-    /**
-     * Haalt een lijst met bbox/envelops op van een thema waarvan de feature ids in de lijst met pks voor komen. 
-     * @param t Thema
-     * @param pks Lijst met primary keys
-     * @return lijst met envelops in strings. 
-     */
-    public List getThemaEnvelops(Themas t, List pks) {
-        ArrayList envelops = new ArrayList();
-        for (int i = 0; i < pks.size(); i++) {
-            envelops.add(getThemaEnvelope(t, t.getAdmin_pk(), pks.get(i).toString()));
-        }
-        return envelops;
-    }
+    }*/
+  
 
     /**
      * Haalt een envelop op van een bepaalde feature(s) aangegeven.
@@ -951,7 +908,7 @@ public class GetViewerDataAction extends BaseGisAction {
      * @param attributeValue attribuut waarde die rechts van het = teken staat.
      * @return de envelop van alle gevonden features bij elkaar
      */
-    public double[] getThemaEnvelope(Themas t, String attributeName, String attributeValue) {
+   /* public double[] getThemaEnvelope(Themas t, String attributeName, String attributeValue) {
         if (t == null) {
             return null;
         }
@@ -983,5 +940,30 @@ public class GetViewerDataAction extends BaseGisAction {
             log.error("getFeatureEnvelope error ", se);
         }
         return SpatialUtil.wktEnvelope2bbox(envelope, 28992);
+    }*/
+
+    private Geometry getGeometry(HttpServletRequest request) {
+        String geom = request.getParameter("geom");
+        double distance = getDistance(request);
+        Geometry geometry=null;
+        if (geom!=null){
+            geometry=SpatialUtil.geometrieFromText(geom,28992);                        
+        }else{
+            GeometryFactory gf = new GeometryFactory();
+            double[] coords = getCoords(request);
+            if (coords.length == 2) {
+                geometry=gf.createPoint(new Coordinate(coords[0], coords[1]));
+            } else if (coords.length == 10) {
+                Coordinate[] coordinates= new Coordinate[5];
+                for (int i=0; i < coordinates.length; i++){
+                    coordinates[i]=new Coordinate(coords[i*2],coords[i*2+1]);
+                }
+                geometry=gf.createPolygon(gf.createLinearRing(coordinates),null);
+            }            
+        }
+        if (geometry!=null){
+            geometry=geometry.buffer(distance);
+        }
+        return geometry;
     }
 }

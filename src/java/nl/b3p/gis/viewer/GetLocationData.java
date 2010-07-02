@@ -22,19 +22,18 @@
  */
 package nl.b3p.gis.viewer;
 
+import nl.b3p.gis.geotools.DataStoreUtil;
 import com.vividsolutions.jts.geom.Geometry;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.commons.services.FormUtils;
+import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
-import nl.b3p.gis.viewer.services.WfsUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 //import org.geotools.data.wfs.v1_1_0.WFSFeatureSource;
@@ -68,36 +67,13 @@ public class GetLocationData {
 
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
-            Connecties c = t.getConnectie(request);
-            if (c == null) {
-                return returnValue;
-            }
-
-            String connectieType = c.getType();
-            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
-                Connection conn = t.getJDBCConnection();
-                if (conn == null) {
-                    return null;
-                }
-                String geomColumn = SpatialUtil.getTableGeomName(t, conn);
-                String tableName = t.getSpatial_tabel();
-                if (tableName == null) {
-                    tableName = t.getAdmin_tabel();
-                }
-                String q = SpatialUtil.getAreaQuery(tableName, geomColumn, attributeName, compareValue);
-                PreparedStatement statement = conn.prepareStatement(q);
-                try {
-                    ResultSet rs = statement.executeQuery();
-                    if (rs.next()) {
-                        area = new Double(rs.getString(1)).doubleValue();
-                    }
-                } finally {
-                    statement.close();
-                }
-            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
-                Feature f = WfsUtil.getWfsObject(t, attributeName, compareValue, c);
+            
+            ArrayList<Feature> list=DataStoreUtil.getFeatures(t, null, FilterBuilder.createEqualsFilterFromKVP(attributeName,compareValue),1);
+            if (list.size()>=1){
+                Feature f = list.get(0);
                 area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
             }
+            
         } catch (Exception ex) {
             log.error("", ex);
             return returnValue;
@@ -166,7 +142,7 @@ public class GetLocationData {
 
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
-            Connecties c = t.getConnectie(request);
+            Connecties c = (Connecties) t.getConnectie();
             if (c == null) {
                 return returnValue;
             }
@@ -216,7 +192,7 @@ public class GetLocationData {
      */
     public String[] getData(String x_input, String y_input, String[] cols, int themaId, double distance, int srid) throws SQLException {
         String[] results = new String[cols.length + 3];
-        try {
+        /*try {
             double x, y;
             String rdx, rdy;
             try {
@@ -251,7 +227,7 @@ public class GetLocationData {
 
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
-            Connecties c = t.getConnectie(request);
+            Connecties c = (Connecties) t.getConnectie(request);
             if (c == null) {
                 return results;
             }
@@ -288,7 +264,7 @@ public class GetLocationData {
             }
         } catch (Exception e) {
             log.error("", e);
-        }
+        }*/
         return results;
 
 

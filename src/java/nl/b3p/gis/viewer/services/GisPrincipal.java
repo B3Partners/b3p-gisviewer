@@ -38,6 +38,7 @@ import nl.b3p.wms.capabilities.Roles;
 import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.wms.capabilities.Style;
 import nl.b3p.wms.capabilities.StyleDomainResource;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.securityfilter.filter.SecurityRequestWrapper;
@@ -51,7 +52,7 @@ public class GisPrincipal implements Principal {
     private String code;
     private Set roles;
     private ServiceProvider sp;
-    private Connecties kbWfsConnectie;
+    private Bron kbWfsConnectie;
 
     public GisPrincipal(String name, List roles) {
         this.name = name;
@@ -65,8 +66,7 @@ public class GisPrincipal implements Principal {
         this.code = code;
         this.sp = sp;
         //create wfs connectie object.
-        kbWfsConnectie = new Connecties();
-        kbWfsConnectie.setType(Connecties.TYPE_WFS);
+        kbWfsConnectie = new Bron();
         kbWfsConnectie.setUrl(HibernateUtil.createPersonalKbUrl(code));
         kbWfsConnectie.setNaam(HibernateUtil.kbWfsConnectieNaam);
         kbWfsConnectie.setGebruikersnaam(name);
@@ -279,14 +279,14 @@ public class GisPrincipal implements Principal {
     /**
      * @return the kbWfsConnectie
      */
-    public Connecties getKbWfsConnectie() {
+    public Bron getKbWfsConnectie() {
         return kbWfsConnectie;
     }
 
     /**
      * @param kbWfsConnectie the kbWfsConnectie to set
      */
-    public void setKbWfsConnectie(Connecties kbWfsConnectie) {
+    public void setKbWfsConnectie(Bron kbWfsConnectie) {
         this.kbWfsConnectie = kbWfsConnectie;
     }
 }

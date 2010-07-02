@@ -24,6 +24,7 @@ import nl.b3p.commons.csv.CsvOutputStream;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.fileupload.FileUploadBase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -75,22 +76,22 @@ public class Data2CSV extends HttpServlet {
                 return;
             }
 
-            Connecties c = thema.getConnectie();
-            if (c == null && thema.getAdmin_tabel() != null && thema.getAdmin_tabel().length() > 0) {
-                c = user.getKbWfsConnectie();
+            Bron b = thema.getConnectie();
+            if (b == null && thema.getAdmin_tabel() != null && thema.getAdmin_tabel().length() > 0) {
+                b = user.getKbWfsConnectie();
             }
-            if (c == null || !Connecties.TYPE_JDBC.equalsIgnoreCase(c.getType())) {
+           /* if (b == null || !Connecties.TYPE_JDBC.equalsIgnoreCase(b.getType())) {
                 log.error("Connection type " + Connecties.TYPE_WFS + " not supported");
                 throw new ServletException("Connection type " + Connecties.TYPE_WFS + " not supported");
-            }
+            }*/
 
             Connection conn = null;
-            try {
+            /*try {
                 conn = thema.getConnectie().getJdbcConnection();
             } catch (SQLException ex) {
                 writeErrorMessage(response, out, "Kan geen verbinding maken met datasource. Reden: " + ex.getMessage());
                 return;
-            }
+            }*/
             List data = null;
             try {
                 data = getData(conn, thema, pks);

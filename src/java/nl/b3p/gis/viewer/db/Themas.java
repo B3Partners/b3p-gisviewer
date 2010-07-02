@@ -28,6 +28,7 @@ import java.util.Set;
 import java.sql.Connection;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.viewer.services.GisPrincipal;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geotools.data.wfs.WFSDataStore;
@@ -43,7 +44,7 @@ public class Themas implements Comparable {
     private int belangnr;
     private Clusters cluster;
     private String opmerkingen;
-    private Connecties connectie;
+    private Bron connectie;
     private boolean analyse_thema;
     private boolean locatie_thema;
     private boolean visible = false;
@@ -743,41 +744,25 @@ public class Themas implements Comparable {
         this.metadata_link = metadata_link;
     }
 
-    public Connecties getConnectie() {
+    public Bron getConnectie() {
         return connectie;
     }
 
-    public Connecties getConnectie(HttpServletRequest request) {
+    /*public Bron getConnectie(HttpServletRequest request) {
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         return getConnectie(user);
     }
-
-    public Connecties getConnectie(GisPrincipal user) {
-        Connecties c = connectie;
-        if (c == null && admin_tabel!=null && 
+*/
+    /*public Bron getConnectie(GisPrincipal user) {
+        Bron b = connectie;
+        if (b == null && admin_tabel!=null &&
                 admin_tabel.length() > 0 && user != null) {
-            c = user.getKbWfsConnectie();
+            b = user.getKbWfsConnectie();
         }
-        return c;
-    }
-
-    public Connection getJDBCConnection() throws SQLException {
-        Connecties c = this.getConnectie();
-        if (c == null || !Connecties.TYPE_JDBC.equalsIgnoreCase(c.getType())) {
-            return null;
-        }
-        return this.getConnectie().getJdbcConnection();
-    }
-
-    public Connecties getWFSConnectie(HttpServletRequest request) throws SQLException {
-        Connecties c = this.getConnectie(request);
-        if (c == null || !Connecties.TYPE_WFS.equalsIgnoreCase(c.getType())) {
-            return null;
-        }
-        return c;
-    }
-
-    public void setConnectie(Connecties connectie) {
+        return b;
+    }*/
+    
+    public void setConnectie(Bron connectie) {
         this.connectie = connectie;
     }
 
@@ -811,5 +796,9 @@ public class Themas implements Comparable {
 
     public void setUitgebreid(boolean uitgebreid) {
         this.uitgebreid = uitgebreid;
+    }
+
+    public Connection getJDBCConnection() {
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 }
