@@ -5,11 +5,13 @@
 
 package nl.b3p.gis.geotools;
 
+import java.util.ArrayList;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.Expression;
+import org.opengis.filter.expression.PropertyName;
 
 /**
  * B3partners B.V. http://www.b3partners.nl
@@ -30,5 +32,25 @@ public class FilterBuilder {
             e=ff.literal(value);
         }
         return ff.equals(ff.property(key), e);
+    }
+
+    public static FilterFactory2 getFactory(){
+        return ff;
+    }
+
+    public static Filter createOrEqualsFilterFromList(String key, String[] pks) {
+        ArrayList<Filter> filters = new ArrayList();
+        PropertyName pn=ff.property(key);
+        for(int i=0; i < pks.length; i++){
+            filters.add(ff.equals(pn,ff.literal(pks[i])));
+        }
+        if (filters.size()==1){
+            return filters.get(0);
+        }else if (filters.size()>1){
+            return ff.or(filters);
+        }else{
+            return null;
+        }
+
     }
 }

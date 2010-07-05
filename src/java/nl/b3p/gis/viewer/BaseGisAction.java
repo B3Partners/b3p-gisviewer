@@ -23,7 +23,6 @@
 package nl.b3p.gis.viewer;
 
 import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -39,6 +38,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.NotSupportedException;
 import nl.b3p.commons.services.FormUtils;
+import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.ThemaData;
@@ -57,6 +57,7 @@ import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
+import org.opengis.filter.Filter;
 
 public abstract class BaseGisAction extends BaseHibernateAction {
 
@@ -1185,9 +1186,9 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         }
     }
 
-    private String createCqlString(Themas t, HttpServletRequest request) {
+    private Filter createSldFilter(Themas t, HttpServletRequest request) {
         if (doExtraSearchFilter(t,request)){
-            return t.getSldattribuut()+" = '"+request.getParameter(ViewerAction.SEARCH)+"'";
+            return FilterBuilder.createEqualsFilterFromKVP(t.getSldattribuut(), request.getParameter(ViewerAction.SEARCH));
         }
         return null;
     }
@@ -1204,22 +1205,22 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         return coords;
     }
 
-    public String getExtraWhere(Themas t, HttpServletRequest request){
+    public Filter getExtraFilter(Themas t, HttpServletRequest request){
         //controleer of er een extra filter meegegeven is en of die op dit thema moet worden toegepast.
-        String extraWhere=createCqlString(t,request);
+        Filter sldFilter=createSldFilter(t,request);
         //controleer of er een organization code is voor dit thema
         String organizationcodekey = t.getOrganizationcodekey();
         String organizationcode = getOrganizationCode(request);
         if (FormUtils.nullIfEmpty(organizationcodekey) != null
-                    && FormUtils.nullIfEmpty(organizationcode) != null) {
-            if(extraWhere==null){
-                extraWhere="";
+                    && FormUtils.nullIfEmpty(organizationcode) != null) {            
+            Filter organizationFilter= FilterBuilder.createEqualsFilterFromKVP(organizationcodekey,organizationcode);
+            if (sldFilter==null){
+                return organizationFilter;
             }else{
-                extraWhere+=" AND ";
+                return FilterBuilder.getFactory().and(sldFilter,organizationFilter);
             }
-            extraWhere+=organizationcodekey+" = "+organizationcode;
         }
-        return extraWhere;
+        return sldFilter;
     }
 
     protected double getDistance(HttpServletRequest request){

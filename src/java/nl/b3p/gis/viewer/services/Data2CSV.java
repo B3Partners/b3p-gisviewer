@@ -8,11 +8,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -21,14 +19,19 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.csv.CsvOutputStream;
-import nl.b3p.gis.viewer.db.Connecties;
+import nl.b3p.gis.geotools.DataStoreUtil;
+import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.fileupload.FileUploadBase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geotools.data.DataStore;
 import org.hibernate.Transaction;
+import org.opengis.feature.Feature;
+import org.opengis.feature.Property;
+import org.opengis.filter.Filter;
 
 /**
  *
@@ -58,12 +61,10 @@ public class Data2CSV extends HttpServlet {
         Transaction tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
         try {
             Themas thema = SpatialUtil.getThema(themaId);
-            response.setContentType("text/csv");
-            response.setHeader(FileUploadBase.CONTENT_DISPOSITION, "attachment; filename=\"" + thema.getNaam() + ".csv\";");
-
-            String[] pks = null;
+            
+            String[] ids = null;
             if (objectIds != null) {
-                pks = objectIds.split(",");
+                ids = objectIds.split(",");
             }
 
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
@@ -80,28 +81,27 @@ public class Data2CSV extends HttpServlet {
             if (b == null && thema.getAdmin_tabel() != null && thema.getAdmin_tabel().length() > 0) {
                 b = user.getKbWfsConnectie();
             }
-           /* if (b == null || !Connecties.TYPE_JDBC.equalsIgnoreCase(b.getType())) {
-                log.error("Connection type " + Connecties.TYPE_WFS + " not supported");
-                throw new ServletException("Connection type " + Connecties.TYPE_WFS + " not supported");
-            }*/
-
-            Connection conn = null;
-            /*try {
-                conn = thema.getConnectie().getJdbcConnection();
-            } catch (SQLException ex) {
-                writeErrorMessage(response, out, "Kan geen verbinding maken met datasource. Reden: " + ex.getMessage());
-                return;
-            }*/
-            List data = null;
-            try {
-                data = getData(conn, thema, pks);
-            } catch (SQLException ex) {
-                writeErrorMessage(response, out, ex.getMessage());
-                log.error(ex);
-                return;
+            if (b==null){
+                throw new ServletException("Thema with id: "+thema.getId()+" has no connection");
             }
-            String[] columns = getThemaColumnNames(thema);
-            cos.writeRecord(columns);
+
+            List data = null;
+            DataStore ds= b.toDatastore();
+            String[] propertyNames = getThemaPropertyNames(thema);
+            try {
+                data = getData(ds, thema, ids, propertyNames);
+            } catch (Exception ex) {
+                writeErrorMessage(response, out, ex.getMessage());
+                log.error("Fout bij laden csv data.",ex);
+                return;
+            }finally{
+                ds.dispose();
+            }
+
+            response.setContentType("text/csv");
+            response.setHeader(FileUploadBase.CONTENT_DISPOSITION, "attachment; filename=\"" + thema.getNaam() + ".csv\";");
+            
+            cos.writeRecord(propertyNames);
             for (int i = 0; i < data.size(); i++) {
                 String[] row = (String[]) data.get(i);
                 cos.writeRecord(row);
@@ -122,7 +122,7 @@ public class Data2CSV extends HttpServlet {
     /**
      * Haal de kolomnamen op uit de themadata. Elke kolomnaam wordt maar 1 keer toegevoegd.
      */
-    public String[] getThemaColumnNames(Themas thema) {
+    public String[] getThemaPropertyNames(Themas thema) {
         Set themadata = thema.getThemaData();
         Iterator it = themadata.iterator();
         ArrayList columns = new ArrayList();
@@ -144,58 +144,27 @@ public class Data2CSV extends HttpServlet {
     /**
      * Haalt de data op. Van een thema (t) waarvan de pk is meegegeven
      */
-    public List getData(Connection conn, Themas t, String[] pks) throws SQLException {
-        String[] columns = getThemaColumnNames(t);
-        String q = createSelectQuery(t, pks, columns);
-        PreparedStatement statement = conn.prepareStatement(q);
-        ResultSet rs = statement.executeQuery();
+    public List getData(DataStore ds, Themas t, String[] pks, String[] propertyNames)throws IOException, Exception {
+        //String[] columns = getThemaColumnNames(t);
+        Filter filter = FilterBuilder.createOrEqualsFilterFromList(t.getAdmin_pk(), pks);
+        ArrayList<Feature> features=DataStoreUtil.getFeatures(t, null, filter,null);
         ArrayList result = new ArrayList();
-        while (rs.next()) {
-            String[] row = new String[columns.length];
-            for (int i = 0; i < columns.length; i++) {
-                String s = rs.getString(columns[i]);
-                if (s == null) {
-                    row[i] = "";
-                } else {
-                    row[i] = s.trim();
+        for (int i=0; i < features.size(); i++) {
+            Feature f = features.get(i);
+            String[] row = new String[propertyNames.length];
+            
+            for (int p=0; p< propertyNames.length; p++) {
+                Property property = f.getProperty(propertyNames[p]);
+                if (property!=null && property.getValue()!=null && property.getValue().toString()!=null){
+                    row[p]= property.getValue().toString().trim();
+                }else{
+                    row[p] = "";
                 }
             }
             result.add(row);
         }
         return result;
     }
-
-    /**
-     * Maak de query
-     */
-    public String createSelectQuery(Themas t, String[] pks, String[] columns) {
-        StringBuffer sb = new StringBuffer();
-        sb.append("SELECT ");
-        for (int i = 0; i < columns.length; i++) {
-            if (i != 0) {
-                sb.append(", ");
-            }
-            sb.append("\"" + columns[i] + "\"");
-        }
-        /*TODO: Spatial component toevoegen?? Hou dan ook rekening met dat een spatial object uit een andere
-        tabel kan komen*/
-        sb.append(" FROM ");
-        sb.append("\"" + t.getAdmin_tabel() + "\"");
-        if (pks != null) {
-            sb.append(" WHERE ");
-            for (int i = 0; i < pks.length; i++) {
-                if (i != 0) {
-                    sb.append("OR ");
-                }
-                sb.append("\"" + t.getAdmin_pk() + "\"");
-                sb.append(" = ");
-                sb.append("'" + pks[i] + "' ");
-            }
-        }
-        log.debug("Do query for csv output: " + sb.toString());
-        return sb.toString();
-    }
-
     /**
      * Writes a error message to the response
      */

@@ -46,12 +46,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
-import org.geotools.factory.CommonFactoryFinder;
-import org.geotools.factory.GeoTools;
-import org.geotools.filter.text.cql2.CQL;
 import org.opengis.feature.Feature;
 import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory2;
 
 public class GetViewerDataAction extends BaseGisAction {
 
@@ -748,12 +744,8 @@ public class GetViewerDataAction extends BaseGisAction {
         Bron bron = t.getConnectie();
         //Haal de juiste info op
         Geometry geom=getGeometry(request);
-        String extraWhere = getExtraWhere(t, request);
-        Filter filter= null;
-        if (extraWhere!=null){
-            filter=CQL.toFilter(extraWhere);
-        }
-        ArrayList<Feature> features=DataStoreUtil.getFeatures(t,geom,filter,null);
+        Filter extraFilter = getExtraFilter(t, request);
+        ArrayList<Feature> features=DataStoreUtil.getFeatures(t,geom,extraFilter,null);
         ArrayList<AdminDataRowBean> regels=new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
