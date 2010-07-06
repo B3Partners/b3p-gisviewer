@@ -375,7 +375,9 @@ public class GetViewerDataAction extends BaseGisAction {
         DataStore dsAnalyse = analyseObjectThema.getConnectie().toDatastore();
         try{
             String geometryName= DataStoreUtil.getSchema(dsAnalyse, t).getGeometryDescriptor().getLocalName();
-            analyseFeatures=DataStoreUtil.getFeatures(dsAnalyse, analyseObjectThema, f,new String[]{geometryName},1);
+            ArrayList<String> propertyNames=new ArrayList();
+            propertyNames.add(geometryName);
+            analyseFeatures=DataStoreUtil.getFeatures(dsAnalyse, analyseObjectThema, f,propertyNames,1);
         }
         finally{
             dsAnalyse.dispose();

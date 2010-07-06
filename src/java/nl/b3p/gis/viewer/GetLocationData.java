@@ -72,7 +72,9 @@ public class GetLocationData {
                 HttpServletRequest request = ctx.getHttpServletRequest();
                 //haal alleen de geometry op.
                 String geometryName= DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
-                ArrayList<Feature> list=DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName,compareValue),new String[]{geometryName},1);
+                ArrayList<String> propertyNames=new ArrayList();
+                propertyNames.add(geometryName);
+                ArrayList<Feature> list=DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName,compareValue),propertyNames,1);
                 if (list.size()>=1){
                     Feature f = list.get(0);
                     area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
