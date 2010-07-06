@@ -8,9 +8,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -146,7 +144,7 @@ public class Data2CSV extends HttpServlet {
      */
     public List getData(DataStore ds, Themas t, String[] pks, String[] propertyNames)throws IOException, Exception {
         //String[] columns = getThemaColumnNames(t);
-        Filter filter = FilterBuilder.createOrEqualsFilterFromList(t.getAdmin_pk(), pks);
+        Filter filter = FilterBuilder.createOrEqualsFilter(t.getAdmin_pk(), pks);
         ArrayList<Feature> features=DataStoreUtil.getFeatures(t, null, filter,null);
         ArrayList result = new ArrayList();
         for (int i=0; i < features.size(); i++) {

@@ -68,7 +68,7 @@ public class GetLocationData {
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
             
-            ArrayList<Feature> list=DataStoreUtil.getFeatures(t, null, FilterBuilder.createEqualsFilterFromKVP(attributeName,compareValue),1);
+            ArrayList<Feature> list=DataStoreUtil.getFeatures(t, null, FilterBuilder.createEqualsFilter(attributeName,compareValue),1);
             if (list.size()>=1){
                 Feature f = list.get(0);
                 area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
@@ -192,6 +192,7 @@ public class GetLocationData {
      */
     public String[] getData(String x_input, String y_input, String[] cols, int themaId, double distance, int srid) throws SQLException {
         String[] results = new String[cols.length + 3];
+        return new String[]{"Fout bij laden van data. Functie nog niet omgezet"};
         /*try {
             double x, y;
             String rdx, rdy;
@@ -265,7 +266,6 @@ public class GetLocationData {
         } catch (Exception e) {
             log.error("", e);
         }*/
-        return results;
 
 
     }

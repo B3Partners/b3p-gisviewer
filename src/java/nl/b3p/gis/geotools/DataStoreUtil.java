@@ -49,71 +49,84 @@ public class DataStoreUtil {
     static{
         Logging.ALL.setLoggerFactory(Log4JLoggerFactory.getInstance());
     }
-    /**
-     * Haal de features op van het bijhorende thema
-     */
-    public static ArrayList<Feature> getFeatures(Themas t, Geometry geom, Filter filter) throws IOException, Exception {
-        return getFeatures(t, geom, filter, maxFeatures);
-    }
-
-    /**
+        /**
      * Haal de features op van het Thema
      * De 3 mogelijke filters worden gecombineerd als ze gevuld zijn (1: ThemaFilter, 2: ExtraFilter 3: GeometryFilter)
+     * LETOP!: De DataStore wordt in deze functie geopend en gesloten. Als je dus al een datastore hebt geopend, gebruik dan de functie
+     * waarin je de DataStore mee kan geven.
      * @param t Het thema waarvan de features moeten worden opgehaald
      * @param geom De geometrie waarmee de features moeten intersecten (mag null zijn)
      * @param extraFilter een extra filter dat wordt gebruikt om de features op te halen
      * @param maximum Het maximum aantal features die gereturned moeten worden. (default is geset op 1000)
+     *
      */
     public static ArrayList<Feature> getFeatures(Themas t, Geometry geom, Filter extraFilter, Integer maximum) throws IOException, Exception {
-        Bron b = t.getConnectie();       
+        Bron b = t.getConnectie();
         DataStore ds = b.toDatastore();
-        try {
-            ArrayList<Filter> filters= new ArrayList();
-            Filter adminFilter = getThemaFilter(t);
-            Filter geomFilter = createGeomFilter(t, ds, geom);
-            if (adminFilter!=null){
-                filters.add(adminFilter);            
-            }
-            if(extraFilter!=null){
-                filters.add(extraFilter);
-            }            
+        try{
+            Filter geomFilter = createIntersectFilter(t, ds, geom);
+            ArrayList<Filter> filters=new ArrayList();
             if (geomFilter!=null){
                 filters.add(geomFilter);
+            }if (extraFilter!=null){
+                filters.add(extraFilter);
             }
             Filter filter = null;
             if (filters.size()==1)
                 filter = filters.get(0);
             else if (filters.size() > 1)
                 filter= ff.and(filters);
-            else
-               throw new Exception("Geen filter gemaakt. Data wordt niet getoond");
-            
-            FeatureSource fs = ds.getFeatureSource(t.getAdmin_tabel());
-            FilterTransformer ft= new FilterTransformer();
-            String s=ft.transform(filter);
-            log.info("Do query with filter: "+s);
-            DefaultQuery query = new DefaultQuery(t.getAdmin_tabel(), filter);
-            int max;
-            if (maximum != null) {
-                max = maximum.intValue();
-            } else {
-                max = maxFeatures;
-            }
+            return getFeatures(ds,t,filter,maximum);
+        }finally{
+            ds.dispose();
+        }        
+    }    
+    /**
+     * De beste functie om te gebruiken. Open en dispose de DataStore zelf bij het meegeven.
+     * Alle filters zijn gecombineerd in Filter f. (geometry filter en extra filter)
+     * Het adminfilter wordt automatisch toegevoegd.
+     */
+    public static ArrayList<Feature> getFeatures(DataStore ds,Themas t, Filter f, Integer maximum) throws IOException, Exception {        
+        ArrayList<Filter> filters= new ArrayList();
+        Filter adminFilter = getThemaFilter(t);        
+        if (adminFilter!=null){
+            filters.add(adminFilter);
+        }
+        if(f!=null){
+            filters.add(f);
+        }
+        Filter filter = null;
+        if (filters.size()==1)
+            filter = filters.get(0);
+        else if (filters.size() > 1)
+            filter= ff.and(filters);
+        else
+           throw new Exception("Geen filter gemaakt. Data wordt niet getoond");
+
+        FeatureSource fs = ds.getFeatureSource(t.getAdmin_tabel());
+        FilterTransformer ft= new FilterTransformer();
+        String s=ft.transform(filter);
+        log.info("Do query with filter: "+s);
+        DefaultQuery query = new DefaultQuery(t.getAdmin_tabel(), filter);
+        int max;
+        if (maximum != null) {
+            max = maximum.intValue();
+        } else {
+            max = maxFeatures;
+        }
+        if (max > 0)
             query.setMaxFeatures(max);
 
-            FeatureCollection fc = fs.getFeatures(query);
-            FeatureIterator fi = fc.features();
-            ArrayList<Feature> features = new ArrayList();
-            while (fi.hasNext()) {
-                features.add(fi.next());
-            }
-            return features;
-        } finally {
-            ds.dispose();
+        FeatureCollection fc = fs.getFeatures(query);
+        FeatureIterator fi = fc.features();
+        ArrayList<Feature> features = new ArrayList();
+        while (fi.hasNext()) {
+            features.add(fi.next());
         }
+        return features;
     }
 
-    public static Filter createGeomFilter(Themas t, DataStore ds, Geometry geom) throws Exception {
+    public static Filter createIntersectFilter(Themas t, DataStore ds, Geometry geom) throws Exception {
         if (geom == null) {
             return null;
         }
@@ -130,7 +143,7 @@ public class DataStoreUtil {
                 filter=ff.not(ff.disjoint(ff.property(geomAttributeName), ff.literal(geom)));
             }
             if (!wfsDs.getCapabilities().getFilterCapabilities().supports(filter)){
-                if (geom instanceof Point){
+                if (!(geom instanceof Point)){
                     Envelope env=geom.getEnvelopeInternal();
                     CoordinateReferenceSystem crs = getSchema(ds, t).getGeometryDescriptor().getCoordinateReferenceSystem();
                     ReferencedEnvelope bbox = new ReferencedEnvelope( env.getMinX(),env.getMinY(), env.getMaxX(), env.getMaxY(),crs);
@@ -180,7 +193,7 @@ public class DataStoreUtil {
     }
 
     //Thema helpers
-    private static String getGeometryAttributeName(DataStore ds, Themas t) throws Exception {
+    public static String getGeometryAttributeName(DataStore ds, Themas t) throws Exception {
         return getSchema(ds, t).getGeometryDescriptor().getName().toString();
     }
 

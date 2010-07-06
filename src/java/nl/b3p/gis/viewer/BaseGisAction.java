@@ -1188,7 +1188,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
     private Filter createSldFilter(Themas t, HttpServletRequest request) {
         if (doExtraSearchFilter(t,request)){
-            return FilterBuilder.createEqualsFilterFromKVP(t.getSldattribuut(), request.getParameter(ViewerAction.SEARCH));
+            return FilterBuilder.createEqualsFilter(t.getSldattribuut(), request.getParameter(ViewerAction.SEARCH));
         }
         return null;
     }
@@ -1213,7 +1213,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         String organizationcode = getOrganizationCode(request);
         if (FormUtils.nullIfEmpty(organizationcodekey) != null
                     && FormUtils.nullIfEmpty(organizationcode) != null) {            
-            Filter organizationFilter= FilterBuilder.createEqualsFilterFromKVP(organizationcodekey,organizationcode);
+            Filter organizationFilter= FilterBuilder.createEqualsFilter(organizationcodekey,organizationcode);
             if (sldFilter==null){
                 return organizationFilter;
             }else{

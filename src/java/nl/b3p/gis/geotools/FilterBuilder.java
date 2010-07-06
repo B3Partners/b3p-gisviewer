@@ -23,7 +23,7 @@ public class FilterBuilder {
     /**
      * Maak een propertyIsEqualTo filter van een kvp
      */
-    public static Filter createEqualsFilterFromKVP(String key, String value){
+    public static Filter createEqualsFilter(String key, String value){
         Expression e;
         try{
             int iid=Integer.parseInt(value);
@@ -37,8 +37,11 @@ public class FilterBuilder {
     public static FilterFactory2 getFactory(){
         return ff;
     }
-
-    public static Filter createOrEqualsFilterFromList(String key, String[] pks) {
+    /**
+     * Maak een OR filter met daarin allemaal propertyIsEqualTo filters.
+     * Voor elke pks wordt een propertyIsEqualTo filter gemaakt en opgenomen in het or filter
+     */
+    public static Filter createOrEqualsFilter(String key, String[] pks) {
         ArrayList<Filter> filters = new ArrayList();
         PropertyName pn=ff.property(key);
         for(int i=0; i < pks.length; i++){
@@ -52,5 +55,9 @@ public class FilterBuilder {
             return null;
         }
 
+    }
+
+    public static Filter createLikeFilter(String key, String extraCriterium) {
+        return ff.like(ff.property(key), extraCriterium);
     }
 }
