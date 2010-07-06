@@ -39,6 +39,7 @@ import org.apache.commons.logging.LogFactory;
 //import org.geotools.data.wfs.v1_1_0.WFSFeatureSource;
 import org.directwebremoting.WebContext;
 import org.directwebremoting.WebContextFactory;
+import org.geotools.data.DataStore;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.opengis.feature.Feature;
@@ -57,6 +58,7 @@ public class GetLocationData {
         String[] returnValue = new String[2];
         returnValue[0] = elementId;
         returnValue[1] = "Fout (zie log)";
+
         try {
             sess = HibernateUtil.getSessionFactory().openSession();
             sess.beginTransaction();
@@ -64,14 +66,19 @@ public class GetLocationData {
             if (t == null) {
                 return returnValue;
             }
-
-            WebContext ctx = WebContextFactory.get();
-            HttpServletRequest request = ctx.getHttpServletRequest();
-            
-            ArrayList<Feature> list=DataStoreUtil.getFeatures(t, null, FilterBuilder.createEqualsFilter(attributeName,compareValue),1);
-            if (list.size()>=1){
-                Feature f = list.get(0);
-                area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
+            DataStore ds = t.getConnectie().toDatastore();
+            try{
+                WebContext ctx = WebContextFactory.get();
+                HttpServletRequest request = ctx.getHttpServletRequest();
+                //haal alleen de geometry op.
+                String geometryName= DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
+                ArrayList<Feature> list=DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName,compareValue),new String[]{geometryName},1);
+                if (list.size()>=1){
+                    Feature f = list.get(0);
+                    area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
+                }
+            }finally{
+                ds.dispose();
             }
             
         } catch (Exception ex) {

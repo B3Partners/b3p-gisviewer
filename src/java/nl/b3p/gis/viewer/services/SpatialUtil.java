@@ -46,6 +46,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import nl.b3p.gis.viewer.db.Clusters;
+import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
@@ -332,7 +333,7 @@ public class SpatialUtil {
      *
      */
     // <editor-fold defaultstate="" desc="static public List getThemaData(Themas t, boolean basisregel)">
-    static public List getThemaData(Themas t, boolean basisregel) {
+    static public List<ThemaData> getThemaData(Themas t, boolean basisregel) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         String query = "from ThemaData td where td.thema.id = :tid ";
         if (basisregel) {

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import nl.b3p.gis.viewer.GetViewerDataAction;
+import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
@@ -60,7 +61,7 @@ public class DataStoreUtil {
      * @param maximum Het maximum aantal features die gereturned moeten worden. (default is geset op 1000)
      *
      */
-    public static ArrayList<Feature> getFeatures(Themas t, Geometry geom, Filter extraFilter, Integer maximum) throws IOException, Exception {
+    public static ArrayList<Feature> getFeatures(Themas t, Geometry geom, Filter extraFilter, ArrayList<String> propNames, Integer maximum) throws IOException, Exception {
         Bron b = t.getConnectie();
         DataStore ds = b.toDatastore();
         try{
@@ -76,17 +77,20 @@ public class DataStoreUtil {
                 filter = filters.get(0);
             else if (filters.size() > 1)
                 filter= ff.and(filters);
-            return getFeatures(ds,t,filter,maximum);
+            return getFeatures(ds,t,filter,propNames,maximum);
         }finally{
             ds.dispose();
         }        
-    }    
+    }
+    public static ArrayList<Feature> getFeatures(Themas t, Geometry geom, Filter extraFilter, List<ThemaData> themaData, Integer maximum) throws IOException, Exception{
+        return getFeatures(t,geom,extraFilter,themaData2PropertyNames(themaData),maximum);
+    }
     /**
      * De beste functie om te gebruiken. Open en dispose de DataStore zelf bij het meegeven.
      * Alle filters zijn gecombineerd in Filter f. (geometry filter en extra filter)
      * Het adminfilter wordt automatisch toegevoegd.
      */
-    public static ArrayList<Feature> getFeatures(DataStore ds,Themas t, Filter f, Integer maximum) throws IOException, Exception {        
+    public static ArrayList<Feature> getFeatures(DataStore ds,Themas t, Filter f, List<String> propNames,Integer maximum) throws IOException, Exception {
         ArrayList<Filter> filters= new ArrayList();
         Filter adminFilter = getThemaFilter(t);        
         if (adminFilter!=null){
@@ -116,6 +120,13 @@ public class DataStoreUtil {
         }
         if (max > 0)
             query.setMaxFeatures(max);
+        if (propNames!=null){
+            if (t.getAdmin_pk()!=null && !propNames.contains(t.getAdmin_pk()))
+                propNames.add(t.getAdmin_pk());
+            if (propNames.size()>0){
+                query.setPropertyNames(propNames);
+            }
+        }
 
         FeatureCollection fc = fs.getFeatures(query);
         FeatureIterator fi = fc.features();
@@ -254,5 +265,15 @@ public class DataStoreUtil {
             attributen.add(descriptors.get(i).getName().toString());
         }
         return attributen;
-    }    
+    }
+
+    public static ArrayList<String> themaData2PropertyNames(List<ThemaData> themaData) {
+        ArrayList<String> propNamesList = new ArrayList();
+        for (int i=0; i < themaData.size(); i++){
+            if (themaData.get(i).getKolomnaam()!=null){
+                propNamesList.add(themaData.get(i).getKolomnaam());
+            }
+        }
+        return propNamesList;
+    }
 }

@@ -145,7 +145,7 @@ public class Data2CSV extends HttpServlet {
     public List getData(DataStore ds, Themas t, String[] pks, String[] propertyNames)throws IOException, Exception {
         //String[] columns = getThemaColumnNames(t);
         Filter filter = FilterBuilder.createOrEqualsFilter(t.getAdmin_pk(), pks);
-        ArrayList<Feature> features=DataStoreUtil.getFeatures(t, null, filter,null);
+        ArrayList<Feature> features=DataStoreUtil.getFeatures(t, null, filter,SpatialUtil.getThemaData(t, false),null);
         ArrayList result = new ArrayList();
         for (int i=0; i < features.size(); i++) {
             Feature f = features.get(i);

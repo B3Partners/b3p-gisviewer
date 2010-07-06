@@ -370,8 +370,17 @@ public class GetViewerDataAction extends BaseGisAction {
         String analyseGeomId = tokens[2];
         //Haal de geometry binnen waarmee de analyse moet worden uitgevoerd.
         Filter f= FilterBuilder.createEqualsFilter(analyseObjectThema.getAdmin_pk(), analyseGeomId);
-        ArrayList<Feature> analyseFeatures=DataStoreUtil.getFeatures(analyseObjectThema, null, f,1);
-        if (analyseFeatures.size()==0){
+
+        ArrayList<Feature> analyseFeatures=null;
+        DataStore dsAnalyse = analyseObjectThema.getConnectie().toDatastore();
+        try{
+            String geometryName= DataStoreUtil.getSchema(dsAnalyse, t).getGeometryDescriptor().getLocalName();
+            analyseFeatures=DataStoreUtil.getFeatures(dsAnalyse, analyseObjectThema, f,new String[]{geometryName},1);
+        }
+        finally{
+            dsAnalyse.dispose();
+        }
+        if (analyseFeatures==null || analyseFeatures.size()==0){
             log.error("De gekozen geometry kan niet worden gevonden");
             request.setAttribute("waarde", "De gekozen geometry kan niet worden gevonden");
         }
@@ -389,7 +398,7 @@ public class GetViewerDataAction extends BaseGisAction {
             GeometryType tgt = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getType();
                         
             //Haal alle features op die binnen de analyseGeometry vallen:
-            ArrayList<Feature> features=DataStoreUtil.getFeatures(t, analyseGeometry, extraFilter,-1);
+            ArrayList<Feature> features=DataStoreUtil.getFeatures(t, analyseGeometry, extraFilter,thema_items,-1);
             int zow = 0;
             try {
                 zow = Integer.parseInt(dynaForm.getString("zoekopties_waarde"));
@@ -510,7 +519,7 @@ public class GetViewerDataAction extends BaseGisAction {
         String analyseGeomId = tokens[2];
         //Haal de geometry binnen waarmee de analyse moet worden uitgevoerd.
         Filter f= FilterBuilder.createEqualsFilter(analyseObjectThema.getAdmin_pk(), analyseGeomId);
-        ArrayList<Feature> analyseFeatures=DataStoreUtil.getFeatures(analyseObjectThema, null, f,1);
+        ArrayList<Feature> analyseFeatures=DataStoreUtil.getFeatures(analyseObjectThema, null, f,thema_items,1);
         if (analyseFeatures.size()==0){
             log.error("De gekozen geometry kan niet worden gevonden");
             request.setAttribute("waarde", "De gekozen geometry kan niet worden gevonden");
@@ -555,7 +564,7 @@ public class GetViewerDataAction extends BaseGisAction {
                 filter=analyseFilter;
             }
             //Haal alle features op met de geometry
-            ArrayList<Feature> features=DataStoreUtil.getFeatures(ds,t, filter,null);
+            ArrayList<Feature> features=DataStoreUtil.getFeatures(ds,t, filter,DataStoreUtil.themaData2PropertyNames(thema_items),null);
             ArrayList<AdminDataRowBean> regels = new ArrayList();
             for (int i = 0; i < features.size(); i++) {
                 Feature feature = features.get(i);
@@ -654,7 +663,7 @@ public class GetViewerDataAction extends BaseGisAction {
         //Haal de juiste info op
         Geometry geom = getGeometry(request);
         Filter extraFilter = getExtraFilter(t, request);
-        ArrayList<Feature> features = DataStoreUtil.getFeatures(t, geom, extraFilter, null);
+        ArrayList<Feature> features = DataStoreUtil.getFeatures(t, geom, extraFilter,thema_items, null);
         ArrayList<AdminDataRowBean> regels = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
@@ -692,7 +701,7 @@ public class GetViewerDataAction extends BaseGisAction {
         Filter filter = FilterBuilder.createEqualsFilter(adminPk, id);
         List regels = new ArrayList();
 
-        List<Feature> features = DataStoreUtil.getFeatures(t, null, filter, null);
+        List<Feature> features = DataStoreUtil.getFeatures(t, null, filter, thema_items,null);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             regels.add(getRegel(f, t, thema_items));
