@@ -301,7 +301,9 @@ public class DataStoreUtil {
         ArrayList<String> propNamesList = new ArrayList();
         for (int i=0; i < themaData.size(); i++){
             if (themaData.get(i).getKolomnaam()!=null){
-                propNamesList.add(themaData.get(i).getKolomnaam());
+                if (!propNamesList.contains(themaData.get(i).getKolomnaam())){
+                    propNamesList.add(themaData.get(i).getKolomnaam());
+                }
             }
         }
         return propNamesList;
