@@ -9,10 +9,13 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.Point;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import nl.b3p.gis.viewer.GetViewerDataAction;
+import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -121,8 +124,32 @@ public class DataStoreUtil {
         if (max > 0)
             query.setMaxFeatures(max);
         if (propNames!=null){
+            //zorg er voor dat de pk ook wordt opgehaald
             if (t.getAdmin_pk()!=null && !propNames.contains(t.getAdmin_pk()))
-                propNames.add(t.getAdmin_pk());
+                propNames.add(t.getAdmin_pk());            
+            /*Als een themaDataObject van het type query is en er zitten [] in
+            dan moeten deze ook worden opgehaald*/
+            Iterator<ThemaData> it=SpatialUtil.getThemaData(t, false).iterator();
+            while(it.hasNext()){
+                ThemaData td=it.next();
+                //als de td van het type query is.
+                if (td.getDataType()!=null && td.getDataType().getId()==DataTypen.QUERY){
+                    String commando=td.getCommando();
+                    //als er in het commando [replaceme] voorkomt
+                    while(commando.indexOf("[")!=-1 && commando.indexOf("]")!=-1){
+                        //haal alle properties er uit.en stuur deze mee in de query
+                        int beginIndex=commando.indexOf("[")+1;
+                        int endIndex=commando.indexOf("]");
+                        String property= commando.substring(beginIndex,endIndex);
+                        propNames.add(property);
+                        if (endIndex+1>=commando.length()-1){
+                            commando="";
+                        }else{
+                            commando=commando.substring(endIndex+1);
+                        }
+                    }
+                }
+            }
             if (propNames.size()>0){
                 query.setPropertyNames(propNames);
             }
