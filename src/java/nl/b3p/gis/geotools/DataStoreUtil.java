@@ -141,7 +141,10 @@ public class DataStoreUtil {
                         int beginIndex=commando.indexOf("[")+1;
                         int endIndex=commando.indexOf("]");
                         String property= commando.substring(beginIndex,endIndex);
-                        propNames.add(property);
+                        //geen dubbele meegeven.
+                        if (!propNames.contains(property)){
+                            propNames.add(property);
+                        }
                         if (endIndex+1>=commando.length()-1){
                             commando="";
                         }else{
