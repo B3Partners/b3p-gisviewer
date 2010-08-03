@@ -223,7 +223,7 @@ public class DataStoreUtil {
                 }
             }
         }
-        if (adminQuery != null) {
+        if ( (adminQuery != null) && (adminQuery.length() > 0) ) {
             try {
                 return CQL.toFilter(adminQuery);
             } catch (Exception e) {

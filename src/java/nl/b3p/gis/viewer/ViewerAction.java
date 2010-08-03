@@ -384,91 +384,101 @@ public class ViewerAction extends BaseGisAction {
 
         /* Ophalen rollen in configuratie database */
         ConfigKeeper configKeeper = new ConfigKeeper();
-        Configuratie rollenPrio = configKeeper.getConfiguratie("rollenPrio","rollen");       
-        String[] configRollen = rollenPrio.getPropval().split(",");
+        Configuratie rollenPrio = null;
+        
+        try {
+            configKeeper.getConfiguratie("rollenPrio","rollen");
+        } catch (Exception ex) {
+            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
+        }
 
-        /* init loop vars */
-        String rolnaam = "";
-        String inlogRol = "";
-        String cfg_rolnaam = "";
+        /* alleen doen als configuratie tabel bestaat */
+        if (rollenPrio != null) {
+            String[] configRollen = rollenPrio.getPropval().split(",");
 
-        Map map = null;
-        boolean foundRole = false;
+            /* init loop vars */
+            String rolnaam = "";
+            String inlogRol = "";
+            String cfg_rolnaam = "";
 
-        /* Zoeken of gebruiker een rol heeft die in de rollen
-         * configuratie voorkomt. Hoogste rol wordt geladen */
-        for (int i=0; i < configRollen.length; i++) {
+            Map map = null;
+            boolean foundRole = false;
 
-            /* al een rol gevonden breakie breakie */
-            if (foundRole)
-                break;
+            /* Zoeken of gebruiker een rol heeft die in de rollen
+             * configuratie voorkomt. Hoogste rol wordt geladen */
+            for (int i=0; i < configRollen.length; i++) {
 
-            rolnaam = configRollen[i];
-
-            /* per rol uit config database loopen door
-             * toegekende rollen */
-            Iterator iter = roles.iterator();
-
-            while (iter.hasNext()) {
-                inlogRol = iter.next().toString();
-
-                /* rolnaam zetten. deze wordt gebruikt in jsp */
-                cfg_rolnaam = inlogRol;
-
-                if (rolnaam.equals(inlogRol)) {
-                    map = configKeeper.getConfigMap(rolnaam);
-                    foundRole = true;
-
+                /* al een rol gevonden breakie breakie */
+                if (foundRole)
                     break;
+
+                rolnaam = configRollen[i];
+
+                /* per rol uit config database loopen door
+                 * toegekende rollen */
+                Iterator iter = roles.iterator();
+
+                while (iter.hasNext()) {
+                    inlogRol = iter.next().toString();
+
+                    /* rolnaam zetten. deze wordt gebruikt in jsp */
+                    cfg_rolnaam = inlogRol;
+
+                    if (rolnaam.equals(inlogRol)) {
+                        map = configKeeper.getConfigMap(rolnaam);
+                        foundRole = true;
+
+                        break;
+                    }
                 }
             }
+
+            /* als gevonden rol geen configuratie records heeft dan defaults laden */
+            if ( (map == null) || (map.size() < 1) ) {
+                map = configKeeper.getConfigMap("default");
+            }
+
+            /* de getConfigMap geeft alle waardes terug volgens de types
+             * zoals deze gedefinieerd zijn in het type kolom van de configuratie */
+            boolean useCookies = (Boolean) map.get("useCookies");
+            boolean multipleActiveThemas = (Boolean) map.get("multipleActiveThemas");
+            boolean usePopup = (Boolean) map.get("usePopup");
+            boolean useDivPopup = (Boolean) map.get("useDivPopup");
+            boolean usePanelControls = (Boolean) map.get("usePanelControls");
+            boolean showLeftPanel = (Boolean) map.get("showLeftPanel");
+            int autoRedirect = (Integer) map.get("autoRedirect");
+            int tolerance = (Integer) map.get("tolerance");
+            boolean useSortableFunction = (Boolean) map.get("useSortableFunction");
+            int layerDelay = (Integer) map.get("layerDelay");
+            int refreshDelay = (Integer) map.get("refreshDelay");
+            String zoekConfigIds = (String) map.get("zoekConfigIds");
+            int minBboxZoeken = (Integer) map.get("minBboxZoeken");
+            int maxResults = (Integer) map.get("maxResults");
+            boolean expandAll = (Boolean) map.get("expandAll");
+            String tabs = (String) map.get("tabs");
+
+            /* rol klaarzetten voor tabblad config */
+            request.setAttribute("cfg_rolnaam", cfg_rolnaam);
+            request.setAttribute("cfg_tabs", tabs);
+
+            /* config klaarzetten voor de jsp */
+            request.setAttribute("cfg_useCookies", useCookies);
+            request.setAttribute("cfg_multipleActiveThemas", multipleActiveThemas);
+            request.setAttribute("cfg_usePopup", usePopup);
+            request.setAttribute("cfg_useDivPopup", useDivPopup);
+            request.setAttribute("cfg_dataframepopupHandle", "null");
+            request.setAttribute("cfg_usePanelControls", usePanelControls);
+            request.setAttribute("cfg_showLeftPanel", showLeftPanel);
+            request.setAttribute("cfg_autoRedirect", autoRedirect);
+            request.setAttribute("cfg_tolerance", tolerance);
+            request.setAttribute("cfg_useSortableFunction", useSortableFunction);
+            request.setAttribute("cfg_layerDelay", layerDelay);
+            request.setAttribute("cfg_refreshDelay", refreshDelay);
+            request.setAttribute("cfg_zoekConfigIds", zoekConfigIds);
+            request.setAttribute("cfg_minBboxZoeken", minBboxZoeken);
+            request.setAttribute("cfg_maxResults", maxResults);
+            request.setAttribute("cfg_expandAll", expandAll);
         }
-
-        /* als gevonden rol geen configuratie records heeft dan defaults laden */
-        if ( (map == null) || (map.size() < 1) ) {
-            map = configKeeper.getConfigMap("default");
-        }
-      
-        /* de getConfigMap geeft alle waardes terug volgens de types
-         * zoals deze gedefinieerd zijn in het type kolom van de configuratie */
-        boolean useCookies = (Boolean) map.get("useCookies");
-        boolean multipleActiveThemas = (Boolean) map.get("multipleActiveThemas");
-        boolean usePopup = (Boolean) map.get("usePopup");
-        boolean useDivPopup = (Boolean) map.get("useDivPopup");
-        boolean usePanelControls = (Boolean) map.get("usePanelControls");
-        boolean showLeftPanel = (Boolean) map.get("showLeftPanel");
-        int autoRedirect = (Integer) map.get("autoRedirect");
-        int tolerance = (Integer) map.get("tolerance");
-        boolean useSortableFunction = (Boolean) map.get("useSortableFunction");
-        int layerDelay = (Integer) map.get("layerDelay");
-        int refreshDelay = (Integer) map.get("refreshDelay");
-        String zoekConfigIds = (String) map.get("zoekConfigIds");
-        int minBboxZoeken = (Integer) map.get("minBboxZoeken");
-        int maxResults = (Integer) map.get("maxResults");
-        boolean expandAll = (Boolean) map.get("expandAll");
-        String tabs = (String) map.get("tabs");
-
-        /* rol klaarzetten voor tabblad config */
-        request.setAttribute("cfg_rolnaam", cfg_rolnaam);
-        request.setAttribute("cfg_tabs", tabs);
-
-        /* config klaarzetten voor de jsp */
-        request.setAttribute("cfg_useCookies", useCookies);
-        request.setAttribute("cfg_multipleActiveThemas", multipleActiveThemas);
-        request.setAttribute("cfg_usePopup", usePopup);
-        request.setAttribute("cfg_useDivPopup", useDivPopup);
-        request.setAttribute("cfg_dataframepopupHandle", "null");
-        request.setAttribute("cfg_usePanelControls", usePanelControls);
-        request.setAttribute("cfg_showLeftPanel", showLeftPanel);
-        request.setAttribute("cfg_autoRedirect", autoRedirect);
-        request.setAttribute("cfg_tolerance", tolerance);
-        request.setAttribute("cfg_useSortableFunction", useSortableFunction);
-        request.setAttribute("cfg_layerDelay", layerDelay);
-        request.setAttribute("cfg_refreshDelay", refreshDelay);
-        request.setAttribute("cfg_zoekConfigIds", zoekConfigIds);
-        request.setAttribute("cfg_minBboxZoeken", minBboxZoeken);
-        request.setAttribute("cfg_maxResults", maxResults);
-        request.setAttribute("cfg_expandAll", expandAll);       
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
