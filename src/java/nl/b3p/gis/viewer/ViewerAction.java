@@ -387,7 +387,7 @@ public class ViewerAction extends BaseGisAction {
         Configuratie rollenPrio = null;
         
         try {
-            configKeeper.getConfiguratie("rollenPrio","rollen");
+            rollenPrio = configKeeper.getConfiguratie("rollenPrio","rollen");
         } catch (Exception ex) {
             log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
         }
