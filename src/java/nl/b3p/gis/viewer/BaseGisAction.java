@@ -22,6 +22,8 @@
  */
 package nl.b3p.gis.viewer;
 
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.io.WKTWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.Connection;
@@ -818,6 +820,18 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         return returnValue;
     }
 
+    private String convertFeature2WKT(Feature f) {
+        if (f==null || f.getDefaultGeometryProperty()==null) {
+            return null;
+        }
+         Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
+        if (geom != null && geom.isSimple() && geom.isValid()) {
+            WKTWriter wktw = new WKTWriter();
+            return wktw.write(geom);
+        }
+        return null;
+    }
+
     /**
      * Zelfde als getRegel met Resultset maar nu met Feature
      *
@@ -838,6 +852,10 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         String adminPk = convertAttributeName(t.getAdmin_pk(), f);
         if (adminPk != null) {
             regel.setPrimairyKey(f.getProperty(adminPk).getValue());
+        }
+        String wkt = convertFeature2WKT(f);
+        if (wkt!=null && wkt.length()!=0) {
+            regel.setWkt(wkt);
         }
         Iterator it = thema_items.iterator();
         while (it.hasNext()) {
@@ -999,7 +1017,6 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      */
     protected String getStringFromParam(Map params, String key) {
         Object ob = params.get(key);
-        String zoekopties_waarde = null;
         String string = null;
         if (ob instanceof String) {
             string = (String) ob;

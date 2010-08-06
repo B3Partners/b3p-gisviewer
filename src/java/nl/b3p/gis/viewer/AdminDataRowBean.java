@@ -29,6 +29,7 @@ import java.util.List;
 public class AdminDataRowBean {
     
     private Object primairyKey;
+    private String wkt;
     private List values=null;
 
     public Object getPrimairyKey() {
@@ -52,6 +53,20 @@ public class AdminDataRowBean {
             values=new ArrayList();
         }
         values.add(o);
+    }
+
+    /**
+     * @return the wkt
+     */
+    public String getWkt() {
+        return wkt;
+    }
+
+    /**
+     * @param wkt the wkt to set
+     */
+    public void setWkt(String wkt) {
+        this.wkt = wkt;
     }
     
 }

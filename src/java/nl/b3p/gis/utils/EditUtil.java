@@ -64,15 +64,13 @@ public class EditUtil {
     }
 
     private Geometry createGeomFromWKTString(String wktstring) throws Exception {
-        Geometry geom = null;
-
+        WKTReader wktreader = new WKTReader(new GeometryFactory(new PrecisionModel(), 28992));
         try {
-            geom = new WKTReader().read(wktstring);
+            return wktreader.read(wktstring);
         } catch (ParseException ex) {
             throw new Exception(ex);
         }
 
-        return geom;
     }
 
     private Geometry getLargestPolygonFromMultiPolygon(Geometry multipolygon) {

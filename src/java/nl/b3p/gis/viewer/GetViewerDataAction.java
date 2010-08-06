@@ -187,7 +187,6 @@ public class GetViewerDataAction extends BaseGisAction {
                     }
 
                     Bron b = t.getConnectie();
-                    String connectieType = Connecties.TYPE_EMPTY;
                     List l = null;
                     if (b != null) {
                         if (themadatanummer == regels.size()) {
