@@ -456,6 +456,7 @@ public class ViewerAction extends BaseGisAction {
             int maxResults = (Integer) map.get("maxResults");
             boolean expandAll = (Boolean) map.get("expandAll");
             String tabs = (String) map.get("tabs");
+            boolean useInheritCheckbox = (Boolean) map.get("useInheritCheckbox");
 
             /* rol klaarzetten voor tabblad config */
             request.setAttribute("cfg_rolnaam", cfg_rolnaam);
@@ -478,6 +479,7 @@ public class ViewerAction extends BaseGisAction {
             request.setAttribute("cfg_minBboxZoeken", minBboxZoeken);
             request.setAttribute("cfg_maxResults", maxResults);
             request.setAttribute("cfg_expandAll", expandAll);
+            request.setAttribute("cfg_useInheritCheckbox", useInheritCheckbox);
         }
     }
 
