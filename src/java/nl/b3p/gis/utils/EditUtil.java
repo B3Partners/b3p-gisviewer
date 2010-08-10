@@ -9,12 +9,22 @@ import com.vividsolutions.jts.geom.PrecisionModel;
 import com.vividsolutions.jts.geom.util.PolygonExtracter;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
+import com.vividsolutions.jts.io.WKTWriter;
 import com.vividsolutions.jts.operation.buffer.BufferOp;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import nl.b3p.gis.geotools.DataStoreUtil;
+import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.services.HibernateUtil;
+import nl.b3p.gis.viewer.services.SpatialUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.opengis.feature.Feature;
+import org.opengis.feature.Property;
 
 /**
  *
@@ -61,6 +71,57 @@ public class EditUtil {
         buffer = poly.toText();
         
         return buffer;
+    }
+
+    public String getHighlightWktForThema(String themaIds, String wktPoint) {
+        
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Transaction tx = sess.beginTransaction();
+
+        try {
+            log.debug("getHighlightWktForThema themaIds=" + themaIds);
+
+            Geometry geom = createGeomFromWKTString(wktPoint);
+
+            if (geom == null)
+                throw new Exception("Kan niet highlighten. Geometrie is incorrect.");
+
+            Themas thema = SpatialUtil.getThema(themaIds);
+
+            if (thema == null)
+                throw new Exception("Kan niet highlighten. Layer niet gevonden.");
+
+            List thema_items = SpatialUtil.getThemaData(thema, true);
+            ArrayList<Feature> features = DataStoreUtil.getFeatures(thema, geom, null, DataStoreUtil.themaData2PropertyNames(thema_items), null);
+
+            if (features.size() == 1) {
+
+                Feature f = features.get(0);
+
+                if (f == null || f.getDefaultGeometryProperty() == null) {
+                    return null;
+                }
+
+                Geometry object = (Geometry) f.getDefaultGeometryProperty().getValue();
+                if (object != null && object.isSimple() && object.isValid()) {
+                    WKTWriter wktw = new WKTWriter();
+
+                    wktPoint = wktw.write(object);
+                }
+            }
+
+            return wktPoint;
+
+        } catch (Exception ex) {
+
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+
+            log.debug("Fout bij highlighten object:" + ex);
+        }
+        
+        return "";
     }
 
     private Geometry createGeomFromWKTString(String wktstring) throws Exception {
