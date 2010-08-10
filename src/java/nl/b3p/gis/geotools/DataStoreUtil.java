@@ -93,7 +93,7 @@ public class DataStoreUtil {
      * Alle filters zijn gecombineerd in Filter f. (geometry filter en extra filter)
      * Het adminfilter wordt automatisch toegevoegd.
      */
-    public static ArrayList<Feature> getFeatures(DataStore ds,Themas t, Filter f, List<String> propNames,Integer maximum) throws IOException, Exception {
+    public static ArrayList<Feature> getFeatures(DataStore ds, Themas t, Filter f, List<String> propNames, Integer maximum) throws IOException, Exception {
         ArrayList<Filter> filters= new ArrayList();
         Filter adminFilter = getThemaFilter(t);        
         if (adminFilter!=null){
@@ -126,7 +126,13 @@ public class DataStoreUtil {
         if (propNames!=null){
             //zorg er voor dat de pk ook wordt opgehaald
             if (t.getAdmin_pk()!=null && !propNames.contains(t.getAdmin_pk()))
-                propNames.add(t.getAdmin_pk());            
+                propNames.add(t.getAdmin_pk());
+
+            // zorg ervoor dat de geometry wordt opgehaald, indien aanwezig.
+            String geomAttributeName = getGeometryAttributeName(ds, t);
+            if (geomAttributeName != null && geomAttributeName.length()>0) {
+                propNames.add(geomAttributeName);
+            }
             /*Als een themaDataObject van het type query is en er zitten [] in
             dan moeten deze ook worden opgehaald*/
             Iterator<ThemaData> it=SpatialUtil.getThemaData(t, false).iterator();
