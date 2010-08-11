@@ -79,8 +79,6 @@ public class EditUtil {
         Transaction tx = sess.beginTransaction();
 
         try {
-            log.debug("getHighlightWktForThema themaIds=" + themaIds);
-
             Geometry geom = createGeomFromWKTString(wktPoint);
 
             if (geom == null)
@@ -92,36 +90,41 @@ public class EditUtil {
                 throw new Exception("Kan niet highlighten. Layer niet gevonden.");
 
             List thema_items = SpatialUtil.getThemaData(thema, true);
+
+            if (thema_items.size() < 1)
+                throw new Exception("Kan niet highlighten. Geen themadata gevonden.");
+
             ArrayList<Feature> features = DataStoreUtil.getFeatures(thema, geom, null, DataStoreUtil.themaData2PropertyNames(thema_items), null);
 
-            if (features.size() == 1) {
+            if ( (features == null) || (features.size() < 1) )
+                throw new Exception("Kan niet highlighten. Geen features gevonden.");
 
-                Feature f = features.get(0);
+            if (features.size() > 1)
+                throw new Exception("Kan niet highlighten. Meerdere features gevonden.");
 
-                if (f == null || f.getDefaultGeometryProperty() == null) {
-                    return null;
-                }
+            
+            Feature f = features.get(0);
 
-                Geometry object = (Geometry) f.getDefaultGeometryProperty().getValue();
-                if (object != null && object.isSimple() && object.isValid()) {
-                    WKTWriter wktw = new WKTWriter();
-
-                    wktPoint = wktw.write(object);
-                }
+            if (f == null || f.getDefaultGeometryProperty() == null) {
+                return null;
             }
 
-            return wktPoint;
+            Geometry object = (Geometry) f.getDefaultGeometryProperty().getValue();
+            if (object != null && object.isSimple() && object.isValid()) {
+                WKTWriter wktw = new WKTWriter();
+
+                return wktw.write(object);
+            }
 
         } catch (Exception ex) {
 
-            if (tx.isActive()) {
+            if (tx.isActive())
                 tx.rollback();
-            }
 
-            log.debug("Fout bij highlighten object:" + ex);
+            log.debug(ex);
         }
         
-        return "";
+        return wktPoint;
     }
 
     private Geometry createGeomFromWKTString(String wktstring) throws Exception {
