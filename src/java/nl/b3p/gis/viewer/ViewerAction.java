@@ -458,6 +458,7 @@ public class ViewerAction extends BaseGisAction {
             String tabs = (String) map.get("tabs");
             boolean useInheritCheckbox = (Boolean) map.get("useInheritCheckbox");
             boolean showLegendInTree = (Boolean) map.get("showLegendInTree");
+            boolean useMouseOverTabs = (Boolean) map.get("useMouseOverTabs");
 
             /* rol klaarzetten voor tabblad config */
             request.setAttribute("cfg_rolnaam", cfg_rolnaam);
@@ -482,6 +483,7 @@ public class ViewerAction extends BaseGisAction {
             request.setAttribute("cfg_expandAll", expandAll);
             request.setAttribute("cfg_useInheritCheckbox", useInheritCheckbox);
             request.setAttribute("cfg_showLegendInTree", showLegendInTree);
+            request.setAttribute("cfg_useMouseOverTabs", useMouseOverTabs);
         }
     }
 
