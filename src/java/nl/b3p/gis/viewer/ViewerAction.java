@@ -29,7 +29,6 @@ import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.PrecisionModel;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -63,7 +62,7 @@ import org.json.JSONObject;
 
 public class ViewerAction extends BaseGisAction {
 
-    private static final Log log = LogFactory.getLog(ViewerAction.class);
+    private static final Log logger = LogFactory.getLog(ViewerAction.class);
     protected static final String LIST = "list";
     protected static final String LOGIN = "login";
     /*Mogelijke request waarden*/
@@ -156,13 +155,14 @@ public class ViewerAction extends BaseGisAction {
         //als er geen user principal is (ook geen anoniem) dan forwarden naar de login.
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         if (user == null) {
-            log.info("Geen user beschikbaar, ook geen anoniem. Forward naar login om te proberen een user te maken met login gegevens.");
+            logger.info("Geen user beschikbaar, ook geen anoniem. Forward naar login om te proberen een user te maken met login gegevens.");
             return mapping.findForward(LOGIN);
         }
         createLists(dynaForm, request);
         return mapping.findForward(SUCCESS);
     }
 
+    @Override
     protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         super.createLists(dynaForm, request);
         List ctl = SpatialUtil.getValidClusters();
@@ -177,7 +177,7 @@ public class ViewerAction extends BaseGisAction {
                     int id= Integer.parseInt(ids[i]);
                     actieveThemas.add(id);
                 }catch (NumberFormatException nfe){
-                    log.error("Id geen integer. ",nfe);
+                    logger.error("Id geen integer. ",nfe);
                 }                
             }
             if (actieveThemas.size()==0){
@@ -198,7 +198,7 @@ public class ViewerAction extends BaseGisAction {
                     int id= Integer.parseInt(ids[i]);
                     actieveClusters.add(id);
                 }catch (NumberFormatException nfe){
-                    log.error("ClusterId geen integer. ",nfe);
+                    logger.error("ClusterId geen integer. ",nfe);
                 }
             }
             if (actieveClusters.size()==0){
@@ -231,7 +231,7 @@ public class ViewerAction extends BaseGisAction {
                             LinearRing lr = geometryFactory.createLinearRing(ca);
                             fullExtentBbox = geometryFactory.createPolygon(lr, null);
                         } catch (NumberFormatException nfe) {
-                            log.error("BBOX fullextent wrong format: " + request.getAttribute("fullExtent"));
+                            logger.error("BBOX fullextent wrong format: " + request.getAttribute("fullExtent"));
                         }
                         break;
                     }
@@ -249,7 +249,7 @@ public class ViewerAction extends BaseGisAction {
                 test = Integer.parseInt(requestExtent.split(",")[3]);
                 extent = requestExtent;
             } catch (NumberFormatException nfe) {
-                log.error("1 of meer van de opgegeven extent coordinaten is geen getal.");
+                logger.error("1 of meer van de opgegeven extent coordinaten is geen getal.");
                 extent = null;
             }
         }
@@ -274,7 +274,7 @@ public class ViewerAction extends BaseGisAction {
                                     LinearRing lr = geometryFactory.createLinearRing(ca);
                                     extentBbox = geometryFactory.createPolygon(lr, null);
                                 } catch (NumberFormatException nfe) {
-                                    log.error("BBOX extent wrong format: " + extent);
+                                    logger.error("BBOX extent wrong format: " + extent);
                                 }
                                 break;
                             }
@@ -327,7 +327,7 @@ public class ViewerAction extends BaseGisAction {
                     request.setAttribute(SEARCHSLDVISIBLEVALUE,request.getParameter(SEARCHSLDVISIBLEVALUE));
                 }
             }catch(NumberFormatException nfe){
-                log.error(SEARCHCONFIGID+" = NAN: "+request.getParameter(SEARCHCONFIGID));
+                logger.error(SEARCHCONFIGID+" = NAN: "+request.getParameter(SEARCHCONFIGID));
             }
         }
         //zoekconfiguraties inlezen.
@@ -389,7 +389,7 @@ public class ViewerAction extends BaseGisAction {
         try {
             rollenPrio = configKeeper.getConfiguratie("rollenPrio","rollen");
         } catch (Exception ex) {
-            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
+            logger.debug("Fout bij ophalen configKeeper configuratie: " + ex);
         }
 
         /* alleen doen als configuratie tabel bestaat */

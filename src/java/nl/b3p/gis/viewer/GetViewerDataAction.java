@@ -37,14 +37,18 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
+import nl.b3p.gis.utils.ConfigKeeper;
+import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
@@ -211,7 +215,95 @@ public class GetViewerDataAction extends BaseGisAction {
         }
         request.setAttribute("regels_list", regels);
         request.setAttribute("thema_items_list", ti);
-        return mapping.findForward("admindata");
+
+        /* Bepalen welke jsp (layout) voor admindata gebruikt moet worden
+         * 1 = uitgebreide jsp
+         * 2 = simpel naast elkaar
+         * TODO: 3 = simpel onder elkaar
+         */
+        int aantalThemas = themas.size();
+
+        /* Default ophalen uit configKeeper */
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        Set roles = user.getRoles();
+
+        /* Ophalen rollen in configuratie database */
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Configuratie rollenPrio = null;
+
+        try {
+            rollenPrio = configKeeper.getConfiguratie("rollenPrio","rollen");
+        } catch (Exception ex) {
+            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
+        }
+
+        /* alleen doen als configuratie tabel bestaat */
+        if (rollenPrio != null) {
+            String[] configRollen = rollenPrio.getPropval().split(",");
+
+            /* init loop vars */
+            String rolnaam = "";
+            String inlogRol = "";
+            String cfg_rolnaam = "";
+
+            Map map = null;
+            boolean foundRole = false;
+
+            /* Zoeken of gebruiker een rol heeft die in de rollen
+             * configuratie voorkomt. Hoogste rol wordt geladen */
+            for (int i=0; i < configRollen.length; i++) {
+
+                /* al een rol gevonden breakie breakie */
+                if (foundRole)
+                    break;
+
+                rolnaam = configRollen[i];
+
+                /* per rol uit config database loopen door
+                 * toegekende rollen */
+                Iterator iter = roles.iterator();
+
+                while (iter.hasNext()) {
+                    inlogRol = iter.next().toString();
+
+                    /* rolnaam zetten. deze wordt gebruikt in jsp */
+                    cfg_rolnaam = inlogRol;
+
+                    if (rolnaam.equals(inlogRol)) {
+                        map = configKeeper.getConfigMap(rolnaam);
+                        foundRole = true;
+
+                        break;
+                    }
+                }
+            }
+
+            /* als gevonden rol geen configuratie records heeft dan defaults laden */
+            if ( (map == null) || (map.size() < 1) ) {
+                map = configKeeper.getConfigMap("default");
+            }
+
+            String layoutAdminData = "";
+
+            /* Indien maar 1 thema pak dan de instelling van Thema object
+             of als deze niet ingesteld is pak dan de global configuratie setting */
+            if (aantalThemas == 1) {
+                Themas t = (Themas)themas.get(0);
+                String themaLayout = t.getLayoutadmindata();
+
+                if ( (themaLayout == null) || themaLayout.equals("") )
+                    layoutAdminData = (String) map.get("layoutAdminData");
+                else
+                    layoutAdminData = themaLayout;
+            } else {
+                layoutAdminData = (String) map.get("layoutAdminData");
+            }
+
+            return mapping.findForward(layoutAdminData);
+        }
+
+        /* geen config gevonden of ingesteld pak de uitgebreide versie */
+        return mapping.findForward("admindata1");
     }
 
     /**

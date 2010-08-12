@@ -125,6 +125,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="organizationcodekey"/>
     <property name="maptipstring"/>
     <property name="sldattribuut"/>
+    <property name="layoutadmindata"/>
         <set name="themaData" lazy="false" cascade="all-delete-orphan" order-by="dataorder, basisregel desc, label">
       <key column="thema"/>
       <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
