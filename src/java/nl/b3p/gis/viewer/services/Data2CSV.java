@@ -75,7 +75,7 @@ public class Data2CSV extends HttpServlet {
                 return;
             }
 
-            Bron b = thema.getConnectie();
+            Bron b = thema.getConnectie(request);
             if (b == null && thema.getAdmin_tabel() != null && thema.getAdmin_tabel().length() > 0) {
                 b = user.getKbWfsConnectie();
             }
@@ -84,16 +84,13 @@ public class Data2CSV extends HttpServlet {
             }
 
             List data = null;
-            DataStore ds= b.toDatastore();
             String[] propertyNames = getThemaPropertyNames(thema);
             try {
-                data = getData(ds, thema, ids, propertyNames);
+                data = getData(b, thema, ids, propertyNames);
             } catch (Exception ex) {
                 writeErrorMessage(response, out, ex.getMessage());
                 log.error("Fout bij laden csv data.",ex);
                 return;
-            }finally{
-                ds.dispose();
             }
 
             response.setContentType("text/csv");
@@ -142,10 +139,10 @@ public class Data2CSV extends HttpServlet {
     /**
      * Haalt de data op. Van een thema (t) waarvan de pk is meegegeven
      */
-    public List getData(DataStore ds, Themas t, String[] pks, String[] propertyNames)throws IOException, Exception {
+    public List getData(Bron b, Themas t, String[] pks, String[] propertyNames)throws IOException, Exception {
         //String[] columns = getThemaColumnNames(t);
         Filter filter = FilterBuilder.createOrEqualsFilter(t.getAdmin_pk(), pks);
-        ArrayList<Feature> features=DataStoreUtil.getFeatures(t, null, filter,SpatialUtil.getThemaData(t, false),null);
+        ArrayList<Feature> features=DataStoreUtil.getFeatures(b, t, null, filter,SpatialUtil.getThemaData(t, false),null);
         ArrayList result = new ArrayList();
         for (int i=0; i < features.size(); i++) {
             Feature f = features.get(i);

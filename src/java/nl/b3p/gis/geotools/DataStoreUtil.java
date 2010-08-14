@@ -8,9 +8,12 @@ import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.Point;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import javax.xml.transform.TransformerException;
 import nl.b3p.gis.viewer.GetViewerDataAction;
 import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.ThemaData;
@@ -29,6 +32,7 @@ import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.filter.FilterTransformer;
 import org.geotools.filter.text.cql2.CQL;
+import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.util.logging.Log4JLoggerFactory;
 import org.geotools.util.logging.Logging;
@@ -37,6 +41,7 @@ import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
+import org.opengis.geometry.BoundingBox;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
@@ -64,8 +69,7 @@ public class DataStoreUtil {
      * @param maximum Het maximum aantal features die gereturned moeten worden. (default is geset op 1000)
      *
      */
-    public static ArrayList<Feature> getFeatures(Themas t, Geometry geom, Filter extraFilter, ArrayList<String> propNames, Integer maximum) throws IOException, Exception {
-        Bron b = t.getConnectie();
+    public static ArrayList<Feature> getFeatures(Bron b, Themas t, Geometry geom, Filter extraFilter, ArrayList<String> propNames, Integer maximum) throws IOException, Exception {
         DataStore ds = b.toDatastore();
         try{
             Filter geomFilter = createIntersectFilter(t, ds, geom);
@@ -85,8 +89,8 @@ public class DataStoreUtil {
             ds.dispose();
         }        
     }
-    public static ArrayList<Feature> getFeatures(Themas t, Geometry geom, Filter extraFilter, List<ThemaData> themaData, Integer maximum) throws IOException, Exception{
-        return getFeatures(t,geom,extraFilter,themaData2PropertyNames(themaData),maximum);
+    public static ArrayList<Feature> getFeatures(Bron b, Themas t, Geometry geom, Filter extraFilter, List<ThemaData> themaData, Integer maximum) throws IOException, Exception{
+        return getFeatures(b, t, geom,extraFilter, themaData2PropertyNames(themaData), maximum);
     }
     /**
      * De beste functie om te gebruiken. Open en dispose de DataStore zelf bij het meegeven.
@@ -111,10 +115,19 @@ public class DataStoreUtil {
            throw new Exception("Geen filter gemaakt. Data wordt niet getoond");
 
         FeatureSource fs = ds.getFeatureSource(t.getAdmin_tabel());
-        FilterTransformer ft= new FilterTransformer();
-        String s=ft.transform(filter);
-        log.info("Do query with filter: "+s);
+        try {
+            FilterTransformer ft = new FilterTransformer();
+            String s = ft.transform(filter);
+            log.info("Do query with filter: " + s);
+        } catch (Exception e) {
+            log.debug("Cannot transform filter: " + filter.toString());
+            log.debug("Error transform filter: " + e.getLocalizedMessage());
+            if (e.getCause()!=null) {
+                log.debug("Cause Error transform filter: " + e.getCause().getLocalizedMessage());
+            }
+        }
         DefaultQuery query = new DefaultQuery(t.getAdmin_tabel(), filter);
+//        query.setNamespace(new URI("http://app.b3p.nl"));
         int max;
         if (maximum != null) {
             max = maximum.intValue();
@@ -186,14 +199,17 @@ public class DataStoreUtil {
         if (ds instanceof WFS_1_0_0_DataStore){
             WFS_1_0_0_DataStore wfsDs = (WFS_1_0_0_DataStore)ds;
             //als filter intersect niet wordt ondersteund, probeer het dan met een disjoint.
-            if (!wfsDs.getCapabilities().getFilterCapabilities().supports(filter)){
+            if (!wfsDs.getCapabilities().getFilterCapabilities().fullySupports(filter)){
                 filter=ff.not(ff.disjoint(ff.property(geomAttributeName), ff.literal(geom)));
             }
-            if (!wfsDs.getCapabilities().getFilterCapabilities().supports(filter)){
+            if (!wfsDs.getCapabilities().getFilterCapabilities().fullySupports(filter)){
                 if (!(geom instanceof Point)){
                     Envelope env=geom.getEnvelopeInternal();
                     CoordinateReferenceSystem crs = getSchema(ds, t).getGeometryDescriptor().getCoordinateReferenceSystem();
                     ReferencedEnvelope bbox = new ReferencedEnvelope( env.getMinX(),env.getMinY(), env.getMaxX(), env.getMaxY(),crs);
+
+//                    filter = ff.bbox(ff.property(geomAttributeName), env.getMinX(),env.getMinY(), env.getMaxX(), env.getMaxY(), crs.toString());
+//                    filter = ff.bbox(ff.property(geomAttributeName), ff.literal( JTS.toGeometry( (com.vividsolutions.jts.geom.Envelope)bbox )));
                     filter = ff.bbox(ff.property(geomAttributeName),bbox);
                 }
             }
@@ -277,9 +293,8 @@ public class DataStoreUtil {
      * DataStore geopend hebt gebruik dan getAttributeNames(DataStore,String)! Dit
      * scheelt weer qua performance.
      */
-    public static ArrayList<String> getAttributeNames(Themas t) throws Exception{
-        if (t.getConnectie()!=null){
-            Bron b= t.getConnectie();
+    public static ArrayList<String> getAttributeNames(Bron b, Themas t) throws Exception{
+        if (b!=null){
             DataStore ds = b.toDatastore();
             try{
                 return getAttributeNames(ds,t.getAdmin_tabel());

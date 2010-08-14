@@ -20,24 +20,23 @@
  * You should have received a copy of the GNU General Public License
  * along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package nl.b3p.gis.viewer;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class AdminDataRowBean {
-    
-    private Object primairyKey;
-    private String wkt;
-    private List values=null;
 
-    public Object getPrimairyKey() {
-        return primairyKey;
+    private Object primaryKey;
+    private String wkt;
+    private List values = null;
+
+    public Object getPrimaryKey() {
+        return primaryKey;
     }
 
-    public void setPrimairyKey(Object primairyKey) {
-        this.primairyKey = primairyKey;
+    public void setPrimaryKey(Object primairyKey) {
+        this.primaryKey = primairyKey;
     }
 
     public List getValues() {
@@ -47,10 +46,10 @@ public class AdminDataRowBean {
     public void setValues(List values) {
         this.values = values;
     }
-    
-    public void addValue(Object o){
-        if (values==null){
-            values=new ArrayList();
+
+    public void addValue(Object o) {
+        if (values == null) {
+            values = new ArrayList();
         }
         values.add(o);
     }
@@ -68,5 +67,4 @@ public class AdminDataRowBean {
     public void setWkt(String wkt) {
         this.wkt = wkt;
     }
-    
 }

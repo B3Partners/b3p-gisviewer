@@ -190,7 +190,7 @@ public class GetViewerDataAction extends BaseGisAction {
                         }
                     }
 
-                    Bron b = t.getConnectie();
+                    Bron b = t.getConnectie(request);
                     List l = null;
                     if (b != null) {
                         if (themadatanummer == regels.size()) {
@@ -334,7 +334,7 @@ public class GetViewerDataAction extends BaseGisAction {
         List thema_items = SpatialUtil.getThemaData(t, false);
         request.setAttribute("thema_items", thema_items);
 
-        Bron b = t.getConnectie();
+        Bron b = t.getConnectie(request);
         if (b != null) {
             request.setAttribute("regels", getThemaObjectsWithId(t, thema_items, request));
         }
@@ -381,7 +381,7 @@ public class GetViewerDataAction extends BaseGisAction {
         if (t == null) {
             return mapping.findForward("objectdata");
         }
-        Bron b = t.getConnectie();
+        Bron b = t.getConnectie(request);
         if (b != null) {
             List tol = createLocatieThemaList(mapping, dynaForm, request);
             request.setAttribute("object_data", tol);
@@ -463,7 +463,11 @@ public class GetViewerDataAction extends BaseGisAction {
         Filter f= FilterBuilder.createEqualsFilter(analyseObjectThema.getAdmin_pk(), analyseGeomId);
 
         ArrayList<Feature> analyseFeatures=null;
-        DataStore dsAnalyse = analyseObjectThema.getConnectie().toDatastore();
+        Bron ab = analyseObjectThema.getConnectie(request);
+        DataStore dsAnalyse = null;
+        if (ab!=null) {
+            dsAnalyse = ab.toDatastore();
+        }
         try{
             String geometryName= DataStoreUtil.getSchema(dsAnalyse, t).getGeometryDescriptor().getLocalName();
             ArrayList<String> propertyNames=new ArrayList();
@@ -479,7 +483,7 @@ public class GetViewerDataAction extends BaseGisAction {
         }
         Geometry analyseGeometry = (Geometry) analyseFeatures.get(0).getDefaultGeometryProperty().getValue();
         
-        Bron b = t.getConnectie();
+        Bron b = t.getConnectie(request);
         if (b == null) {
             log.error("Thema heeft geen connectie: "+t.getNaam());
             request.setAttribute("waarde", "Thema heeft geen connectie: "+t.getNaam());
@@ -491,7 +495,7 @@ public class GetViewerDataAction extends BaseGisAction {
             GeometryType tgt = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getType();
                         
             //Haal alle features op die binnen de analyseGeometry vallen:
-            ArrayList<Feature> features=DataStoreUtil.getFeatures(t, analyseGeometry, extraFilter,thema_items,-1);
+            ArrayList<Feature> features=DataStoreUtil.getFeatures(b, t, analyseGeometry, extraFilter,thema_items,-1);
             int zow = 0;
             try {
                 zow = Integer.parseInt(dynaForm.getString("zoekopties_waarde"));
@@ -612,14 +616,15 @@ public class GetViewerDataAction extends BaseGisAction {
         String analyseGeomId = tokens[2];
         //Haal de geometry binnen waarmee de analyse moet worden uitgevoerd.
         Filter f= FilterBuilder.createEqualsFilter(analyseObjectThema.getAdmin_pk(), analyseGeomId);
-        ArrayList<Feature> analyseFeatures=DataStoreUtil.getFeatures(analyseObjectThema, null, f,thema_items,1);
+        Bron ab = analyseObjectThema.getConnectie(request);
+        ArrayList<Feature> analyseFeatures=DataStoreUtil.getFeatures(ab, analyseObjectThema, null, f,thema_items,1);
         if (analyseFeatures.size()==0){
             log.error("De gekozen geometry kan niet worden gevonden");
             request.setAttribute("waarde", "De gekozen geometry kan niet worden gevonden");
         }
         Geometry analyseGeometry = (Geometry) analyseFeatures.get(0).getDefaultGeometryProperty().getValue();
 
-        Bron b = t.getConnectie();
+        Bron b = t.getConnectie(request);
         if (b == null) {
             log.error("Thema heeft geen connectie: "+t.getNaam());
             request.setAttribute("waarde", "Thema heeft geen connectie: "+t.getNaam());
@@ -752,11 +757,12 @@ public class GetViewerDataAction extends BaseGisAction {
             //throw new Exception("Er is geen themadata geconfigureerd voor thema: " + t.getNaam() + " met id: " + t.getId());
             return null;
         }
-        Bron bron = t.getConnectie();
+        Bron bron = t.getConnectie(request);
         //Haal de juiste info op
         Geometry geom = getGeometry(request);
         Filter extraFilter = getExtraFilter(t, request);
-        ArrayList<Feature> features = DataStoreUtil.getFeatures(t, geom, extraFilter,thema_items, null);
+        Bron b = t.getConnectie(request);
+        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, t, geom, extraFilter,thema_items, null);
         ArrayList<AdminDataRowBean> regels = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
@@ -794,7 +800,8 @@ public class GetViewerDataAction extends BaseGisAction {
         Filter filter = FilterBuilder.createEqualsFilter(adminPk, id);
         List regels = new ArrayList();
 
-        List<Feature> features = DataStoreUtil.getFeatures(t, null, filter, thema_items,null);
+        Bron b = t.getConnectie(request);
+        List<Feature> features = DataStoreUtil.getFeatures(b, t, null, filter, thema_items,null);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             regels.add(getRegel(f, t, thema_items));

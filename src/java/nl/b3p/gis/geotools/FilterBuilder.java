@@ -6,12 +6,20 @@
 package nl.b3p.gis.geotools;
 
 import java.util.ArrayList;
+import javax.xml.transform.TransformerException;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
+import org.geotools.filter.BBoxExpression;
+import org.geotools.filter.BBoxExpressionImpl;
+import org.geotools.filter.FilterFactory;
+import org.geotools.filter.FilterTransformer;
+import org.geotools.geometry.jts.JTS;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.Expression;
 import org.opengis.filter.expression.PropertyName;
+import org.opengis.geometry.BoundingBox;
 
 /**
  * B3partners B.V. http://www.b3partners.nl
@@ -60,4 +68,26 @@ public class FilterBuilder {
     public static Filter createLikeFilter(String key, String extraCriterium) {
         return ff.like(ff.property(key), extraCriterium);
     }
+
+    public static void main(String[] args) throws TransformerException {
+        FilterFactory ff = (FilterFactory) CommonFactoryFinder.getFilterFactory(GeoTools.getDefaultHints());
+        ReferencedEnvelope bbox = new ReferencedEnvelope(195580, 466937, 196403, 467760, null);
+        Filter filter = null;
+
+//        filter = ff.bbox(ff.property("geometrie"), 195580,466937, 196403, 467760, "EPSG:28992");
+
+        filter = ff.intersects(ff.property("geometrie"), Expression.NIL);
+//      filter = ff.bbox(ff.property("geometrie"), (BoundingBox) ff.literal(JTS.toGeometry((com.vividsolutions.jts.geom.Envelope) bbox)));
+        filter = ff.bbox(ff.property("geometrie"), bbox);
+        FilterTransformer ft = new FilterTransformer();
+        try {
+            String s = ft.transform(filter);
+            System.out.println(s);
+        } catch (Exception e) {
+            System.out.println(e.getLocalizedMessage());
+        }
+
+    }
+
+
 }

@@ -318,10 +318,9 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      * Om getPks backwardcompatable te maken
      */
     @Deprecated
-   /* protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request) throws SQLException, NotSupportedException {
-        return getPks(t, dynaForm, request, null);
+    /* protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request) throws SQLException, NotSupportedException {
+    return getPks(t, dynaForm, request, null);
     }*/
-
     /**
      * DOCUMENT ME!!!
      *
@@ -341,75 +340,74 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      * @see Themas
      */
     /*protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request, String pksField) throws SQLException, NotSupportedException {
-        ArrayList pks = new ArrayList();
+    ArrayList pks = new ArrayList();
 
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Connection connection = t.getJDBCConnection();
-        if (connection == null) {
-            log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
-            return null;
-        }
-        int dt = SpatialUtil.getPkDataType(t, connection);
-        String adminPk = t.getAdmin_pk();
-        String adminIds = null;
-        if (pksField == null) {
-            adminIds = request.getParameter(adminPk);
-        } else {
-            adminIds = request.getParameter(pksField);
-        }
+    Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+    Connection connection = t.getJDBCConnection();
+    if (connection == null) {
+    log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
+    return null;
+    }
+    int dt = SpatialUtil.getPkDataType(t, connection);
+    String adminPk = t.getAdmin_pk();
+    String adminIds = null;
+    if (pksField == null) {
+    adminIds = request.getParameter(adminPk);
+    } else {
+    adminIds = request.getParameter(pksField);
+    }
 
-        String[] adminIdsArr = adminIds.split(",");
-        for (int i = 0; i < adminIdsArr.length; i++) {
-            String adminId = adminIdsArr[i];
-            switch (dt) {
-                case java.sql.Types.SMALLINT:
-                    pks.add(new Short(adminId));
-                    break;
-                case java.sql.Types.INTEGER:
-                    pks.add(new Integer(adminId));
-                    break;
-                case java.sql.Types.BIGINT:
-                    pks.add(new Long(adminId));
-                    break;
-                case java.sql.Types.BIT:
-                    pks.add(new Boolean(adminId));
-                    break;
-                case java.sql.Types.DATE:
-                    //                pks.add(new Date(adminId));
-                    break;
-                case java.sql.Types.DECIMAL:
-                case java.sql.Types.NUMERIC:
-                    pks.add(new BigDecimal(adminId));
-                    break;
-                case java.sql.Types.REAL:
-                    pks.add(new Float(adminId));
-                    break;
-                case java.sql.Types.FLOAT:
-                case java.sql.Types.DOUBLE:
-                    pks.add(new Double(adminId));
-                    break;
-                case java.sql.Types.TIME:
-                    //                pks.add(new Time(adminId));
-                    break;
-                case java.sql.Types.TIMESTAMP:
-                    //                pks.add(new Timestamp(adminId));
-                    break;
-                case java.sql.Types.TINYINT:
-                    pks.add(new Byte(adminId));
-                    break;
-                case java.sql.Types.CHAR:
-                case java.sql.Types.LONGVARCHAR:
-                case java.sql.Types.VARCHAR:
-                    pks.add(adminId);
-                    break;
-                case java.sql.Types.NULL:
-                default:
-                    return null;
-            }
-        }
-        return pks;
+    String[] adminIdsArr = adminIds.split(",");
+    for (int i = 0; i < adminIdsArr.length; i++) {
+    String adminId = adminIdsArr[i];
+    switch (dt) {
+    case java.sql.Types.SMALLINT:
+    pks.add(new Short(adminId));
+    break;
+    case java.sql.Types.INTEGER:
+    pks.add(new Integer(adminId));
+    break;
+    case java.sql.Types.BIGINT:
+    pks.add(new Long(adminId));
+    break;
+    case java.sql.Types.BIT:
+    pks.add(new Boolean(adminId));
+    break;
+    case java.sql.Types.DATE:
+    //                pks.add(new Date(adminId));
+    break;
+    case java.sql.Types.DECIMAL:
+    case java.sql.Types.NUMERIC:
+    pks.add(new BigDecimal(adminId));
+    break;
+    case java.sql.Types.REAL:
+    pks.add(new Float(adminId));
+    break;
+    case java.sql.Types.FLOAT:
+    case java.sql.Types.DOUBLE:
+    pks.add(new Double(adminId));
+    break;
+    case java.sql.Types.TIME:
+    //                pks.add(new Time(adminId));
+    break;
+    case java.sql.Types.TIMESTAMP:
+    //                pks.add(new Timestamp(adminId));
+    break;
+    case java.sql.Types.TINYINT:
+    pks.add(new Byte(adminId));
+    break;
+    case java.sql.Types.CHAR:
+    case java.sql.Types.LONGVARCHAR:
+    case java.sql.Types.VARCHAR:
+    pks.add(adminId);
+    break;
+    case java.sql.Types.NULL:
+    default:
+    return null;
+    }
+    }
+    return pks;
     }*/
-
     /**
      * DOCUMENT ME!!!
      *
@@ -426,58 +424,57 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      */
     // <editor-fold defaultstate="" desc="protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request)">
    /* protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
-        //Haal de juiste info op
-        String geom = request.getParameter("geom");
-        double[] coords = getCoords(request);
-        if (coords==null){
-            coords = new double[0];
-        }
-        String extraWhere = getExtraWhere(t,request);
-        double distance = getDistance(request);
-        
-        int srid = 28992; // RD-new
+    //Haal de juiste info op
+    String geom = request.getParameter("geom");
+    double[] coords = getCoords(request);
+    if (coords==null){
+    coords = new double[0];
+    }
+    String extraWhere = getExtraWhere(t,request);
+    double distance = getDistance(request);
 
-        ArrayList pks = new ArrayList();
+    int srid = 28992; // RD-new
 
-        String saf = t.getSpatial_admin_ref();
-        if (saf == null || saf.length() == 0) {
-            saf = t.getAdmin_pk();
-        }
-        String sptn = t.getSpatial_tabel();
-        if (sptn == null || sptn.length() == 0) {
-            sptn = t.getAdmin_tabel();
-        }
-        if (sptn == null || saf == null || sptn.length() == 0 || saf.length() == 0) {
-            return null;
-        }
+    ArrayList pks = new ArrayList();
 
-        //Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Connection connection = t.getJDBCConnection();
-        if (connection == null) {
-            log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
-            return null;
-        }
-        try {            
-            String geomColumnName = SpatialUtil.getTableGeomName(t, connection);
-            String q = null;
-            q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, extraWhere, geom);
-            
-            PreparedStatement statement = connection.prepareStatement(q);
-            try {
-                ResultSet rs = statement.executeQuery();
-                while (rs.next()) {
-                    pks.add(rs.getObject(saf));
-                }
-            } finally {
-                statement.close();
-            }
-        } finally {
-            connection.close();
-        }
-        return pks;
+    String saf = t.getSpatial_admin_ref();
+    if (saf == null || saf.length() == 0) {
+    saf = t.getAdmin_pk();
+    }
+    String sptn = t.getSpatial_tabel();
+    if (sptn == null || sptn.length() == 0) {
+    sptn = t.getAdmin_tabel();
+    }
+    if (sptn == null || saf == null || sptn.length() == 0 || saf.length() == 0) {
+    return null;
+    }
+
+    //Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+    Connection connection = t.getJDBCConnection();
+    if (connection == null) {
+    log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
+    return null;
+    }
+    try {
+    String geomColumnName = SpatialUtil.getTableGeomName(t, connection);
+    String q = null;
+    q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, extraWhere, geom);
+
+    PreparedStatement statement = connection.prepareStatement(q);
+    try {
+    ResultSet rs = statement.executeQuery();
+    while (rs.next()) {
+    pks.add(rs.getObject(saf));
+    }
+    } finally {
+    statement.close();
+    }
+    } finally {
+    connection.close();
+    }
+    return pks;
     }*/
     // </editor-fold>
-
     /**
      * Een protected methode het object thema ophaalt dat hoort bij een bepaald id.
      *
@@ -509,19 +506,18 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      *
      */
     /*protected String getThemaGeomType(Themas t) throws Exception {
-        String themaGeomType = t.getView_geomtype();
-        if (themaGeomType != null) {
-            return themaGeomType;
-        }
+    String themaGeomType = t.getView_geomtype();
+    if (themaGeomType != null) {
+    return themaGeomType;
+    }
 
-        Connection connection = t.getJDBCConnection();
-        if (connection == null) {
-            log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
-            return null;
-        }
-        return SpatialUtil.getThemaGeomType(t, connection);
+    Connection connection = t.getJDBCConnection();
+    if (connection == null) {
+    log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
+    return null;
+    }
+    return SpatialUtil.getThemaGeomType(t, connection);
     }*/
-
     /**
      * Een protected methode die de Analysenaam van een bepaalde tabel en kolom samenstelt met
      * de opgegeven waarden.
@@ -533,63 +529,62 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      * @return a String with the analysename.
      *
      */
-   /* protected String getAnalyseNaam(String analyseGeomId, Themas t) throws NotSupportedException, SQLException {
+    /* protected String getAnalyseNaam(String analyseGeomId, Themas t) throws NotSupportedException, SQLException {
 
-        String analyseGeomTabel = t.getSpatial_tabel();
-        String analyseGeomIdColumn = t.getSpatial_admin_ref();
-        int themaid = t.getId().intValue();
+    String analyseGeomTabel = t.getSpatial_tabel();
+    String analyseGeomIdColumn = t.getSpatial_admin_ref();
+    int themaid = t.getId().intValue();
 
-        String analyseNaam = t.getNaam();
-        Connection connection = t.getJDBCConnection();
-        if (connection == null) {
-            log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
-            return null;
-        }
-        try {
-            String statementString = "select * from \"" + analyseGeomTabel
-                    + "\" where " + analyseGeomIdColumn + " = ";
-            String newAnalyseGeomId = "\'" + analyseGeomId + "\'";
-            try {
-                int intGeomId = Integer.parseInt(analyseGeomId);
-                newAnalyseGeomId = "" + intGeomId;
-            } catch (Exception e) {
-            }
-            statementString += newAnalyseGeomId;
-            log.info(statementString);
-            PreparedStatement statement =
-                    connection.prepareStatement(statementString);
-            PreparedStatement statement2 =
-                    connection.prepareStatement("select kolomnaam from thema_data where thema = "
-                    + themaid + " order by dataorder");
+    String analyseNaam = t.getNaam();
+    Connection connection = t.getJDBCConnection();
+    if (connection == null) {
+    log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
+    return null;
+    }
+    try {
+    String statementString = "select * from \"" + analyseGeomTabel
+    + "\" where " + analyseGeomIdColumn + " = ";
+    String newAnalyseGeomId = "\'" + analyseGeomId + "\'";
+    try {
+    int intGeomId = Integer.parseInt(analyseGeomId);
+    newAnalyseGeomId = "" + intGeomId;
+    } catch (Exception e) {
+    }
+    statementString += newAnalyseGeomId;
+    log.info(statementString);
+    PreparedStatement statement =
+    connection.prepareStatement(statementString);
+    PreparedStatement statement2 =
+    connection.prepareStatement("select kolomnaam from thema_data where thema = "
+    + themaid + " order by dataorder");
 
-            try {
-                ResultSet rs = statement.executeQuery();
-                ResultSet rs2 = statement2.executeQuery();
-                if (rs.next() && rs2.next()) {
-                    if (rs2.next()) {
-                        String extraString = rs.getString(rs2.getString("kolomnaam"));
-                        if (extraString != null) {
-                            analyseNaam += " " + extraString;
-                        }
-                    }
-                }
-            } finally {
-                statement.close();
-                statement2.close();
-            }
-        } catch (SQLException ex) {
-            log.error("", ex);
-        } finally {
-            try {
-                connection.close();
-            } catch (SQLException ex) {
-                log.error("", ex);
-            }
-        }
+    try {
+    ResultSet rs = statement.executeQuery();
+    ResultSet rs2 = statement2.executeQuery();
+    if (rs.next() && rs2.next()) {
+    if (rs2.next()) {
+    String extraString = rs.getString(rs2.getString("kolomnaam"));
+    if (extraString != null) {
+    analyseNaam += " " + extraString;
+    }
+    }
+    }
+    } finally {
+    statement.close();
+    statement2.close();
+    }
+    } catch (SQLException ex) {
+    log.error("", ex);
+    } finally {
+    try {
+    connection.close();
+    } catch (SQLException ex) {
+    log.error("", ex);
+    }
+    }
 
-        return analyseNaam;
+    return analyseNaam;
     }*/
-
     /**
      *
      * @param query String
@@ -636,161 +631,6 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     }
     // </editor-fold>
 
-    /**
-     * DOCUMENT ME!!!
-     *
-     * @param rs ResultSet
-     * @param t Themas
-     * @param thema_items List
-     *
-     * @return List
-     *
-     * @throws SQLException
-     * @throws UnsupportedEncodingException
-     *
-     * @see Themas
-     */
-    protected AdminDataRowBean getRegel(ResultSet rs, Themas t, List thema_items) throws SQLException, UnsupportedEncodingException, Exception {
-        //ArrayList regel = new ArrayList();
-        AdminDataRowBean regel = new AdminDataRowBean();
-        regel.setPrimairyKey(rs.getObject(t.getAdmin_pk()));
-        Iterator it = thema_items.iterator();
-        while (it.hasNext()) {
-            ThemaData td = (ThemaData) it.next();
-            /*
-             * Controleer eerst om welk datatype dit themadata object om draait.
-             * Binnen het Datatype zijn er drie mogelijkheden, namelijk echt data,
-             * een URL of een Query.
-             * In alle drie de gevallen moeten er verschillende handelingen verricht
-             * worden om deze informatie op het scherm te krijgen.
-             *
-             * In het eerste geval, wanneer het gaat om data, betreft dit de kolomnaam.
-             * Als deze kolomnaam ingevuld staat hoeft deze alleen opgehaald te worden
-             * en aan de arraylist regel toegevoegd te worden.
-             */
-            if (td.getDataType().getId() == DataTypen.DATA && td.getKolomnaam() != null && !td.getKolomnaam().equals("")) {
-                regel.addValue(rs.getObject(td.getKolomnaam()));
-
-                /*
-                 * In het tweede geval dient de informatie in de thema data als link naar een andere
-                 * informatiebron. Deze link zal enigszins aangepast moeten worden om tot vollende
-                 * werkende link te dienen.
-                 */
-            } else if (td.getDataType().getId() == DataTypen.URL && td.getCommando() != null) {
-                StringBuffer url = new StringBuffer(td.getCommando());
-                url.append(Themas.THEMAID);
-                url.append("=");
-                url.append(t.getId());
-
-                String adminPk = t.getAdmin_pk();
-                Object value = rs.getObject(adminPk);
-                if (value != null) {
-                    url.append("&");
-                    url.append(adminPk);
-                    url.append("=");
-                    url.append(URLEncoder.encode(value.toString().trim(), "utf-8"));
-                }
-
-                String kolomNaam = td.getKolomnaam();
-                if (kolomNaam != null && kolomNaam.length() > 0 && !kolomNaam.equalsIgnoreCase(adminPk)) {
-                    value = rs.getObject(kolomNaam);
-                    if (value != null) {
-                        url.append("&");
-                        url.append(kolomNaam);
-                        url.append("=");
-                        url.append(URLEncoder.encode(value.toString().trim(), "utf-8"));
-                    }
-                }
-
-                regel.addValue(url.toString());
-
-                /*
-                 * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu een
-                 * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
-                 */
-            } else if (td.getDataType().getId() == DataTypen.QUERY) {
-                StringBuffer url;
-                if (td.getCommando() != null) {
-                    url = new StringBuffer(td.getCommando());
-                } else {
-                    url = new StringBuffer();
-                }
-                String kolomnaam = td.getKolomnaam();
-                if (kolomnaam == null || kolomnaam.length() == 0) {
-                    kolomnaam = t.getAdmin_pk();
-                }
-                String commando = url.toString();
-                //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
-                Object valueToSplit = rs.getObject(kolomnaam);
-                List values= splitObject(valueToSplit, ",");
-                HashMap fhm=toHashMap(rs);
-                List regelValues= new ArrayList();
-                for (int i=0; i < values.size(); i++){
-                    Object value=values.get(i);
-                    if (commando.contains("[") || commando.contains("]")) {
-                        //vervang de eventuele csv in 1 waarde van die csv
-                        if (kolomnaam!=null){
-                            fhm.put(removeNamespace(kolomnaam),value);
-                        }
-                        String newCommando=replaceValuesInString(commando, fhm);
-                        regelValues.add(newCommando);
-                    } else {
-                        if (value != null) {
-                            url.append(value.toString().trim());
-                            regelValues.add(url.toString());
-                        } else {
-                            regelValues.add("");
-                        }
-                    }
-                }
-                regel.addValue(regelValues);
-            } else if (td.getDataType().getId() == DataTypen.FUNCTION) {
-                String keyName = t.getAdmin_pk();
-                Object keyValue = rs.getObject(keyName);
-                String attributeName = td.getKolomnaam();
-                Object attributeValue = null;
-
-                String attributeValue2 = "";
-                if (attributeName == null || attributeName.length() == 0) {
-                    attributeName = keyName;
-                    attributeValue = keyValue;
-                } else {
-                    attributeValue = rs.getObject(attributeName);
-                }
-                attributeValue2 = attributeValue.toString();
-                if (keyValue != null) {
-                    // De attributeValue ook eerst vooraan erbij zetten om die te kunnen tonen op de admindata pagina - Drie hekjes als scheidingsteken
-                    // Een aantal waardes worden ge-escaped zodat er geen JavaScript fouten optreden
-                    StringBuffer function = new StringBuffer("");
-                    function.append(attributeValue);
-                    function.append("###" + td.getCommando());
-                    function.append("(this, ");
-                    function.append("'" + td.getThema().getId() + "'");
-                    function.append(",");
-                    function.append("'" + keyName.replaceAll("'", "\\\\'") + "'");
-                    function.append(",");
-                    function.append("'" + keyValue + "'");
-                    function.append(",");
-                    function.append("'" + attributeName.replaceAll("'", "\\\\'") + "'");
-                    function.append(",");
-                    function.append("'" + attributeValue2.replaceAll("'", "\\\\'") + "'");
-                    function.append(",");
-                    function.append("'" + td.getEenheid() + "'");
-                    function.append(")");
-                    regel.addValue(function.toString());
-                } else {
-                    regel.addValue("");
-                }
-            } else /*
-             * Indien een datatype aan geen van de voorwaarden voldoet wordt er een
-             * lege regel aan de regel arraylist toegevoegd.
-             */ {
-                regel.addValue("");
-            }
-        }
-        return regel;
-    }
-
     private String convertAttributeName(String rawName, Feature f) {
         if (rawName == null || rawName.trim().length() == 0) {
             return null;
@@ -806,25 +646,25 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         return null;
     }
 
-    public static String removeNamespace(String rawName) {
+    protected static String removeNamespace(String rawName) {
         if (rawName == null) {
             return rawName;
         }
         String returnValue = new String(rawName);
-        if (returnValue.indexOf("{") >= 0 && returnValue.indexOf("}") >= 0) {
-            returnValue = returnValue.substring(returnValue.indexOf("}") + 1);
-        }
-        if (returnValue.split(":").length > 1) {
-            returnValue = returnValue.split(":")[1];
-        }
+//        if (returnValue.indexOf("{") >= 0 && returnValue.indexOf("}") >= 0) {
+//            returnValue = returnValue.substring(returnValue.indexOf("}") + 1);
+//        }
+//        if (returnValue.split(":").length > 1) {
+//            returnValue = returnValue.split(":")[1];
+//        }
         return returnValue;
     }
 
     private String convertFeature2WKT(Feature f) {
-        if (f==null || f.getDefaultGeometryProperty()==null) {
+        if (f == null || f.getDefaultGeometryProperty() == null) {
             return null;
         }
-         Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
+        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
         if (geom != null && geom.isSimple() && geom.isValid()) {
             WKTWriter wktw = new WKTWriter();
             return wktw.write(geom);
@@ -851,10 +691,10 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
         String adminPk = convertAttributeName(t.getAdmin_pk(), f);
         if (adminPk != null) {
-            regel.setPrimairyKey(f.getProperty(adminPk).getValue());
+            regel.setPrimaryKey(f.getProperty(adminPk).getValue());
         }
         String wkt = convertFeature2WKT(f);
-        if (wkt!=null && wkt.length()!=0) {
+        if (wkt != null && wkt.length() != 0) {
             regel.setWkt(wkt);
         }
         Iterator it = thema_items.iterator();
@@ -936,29 +776,29 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 String commando = url.toString();
                 //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
                 Object valueToSplit = null;
-                if (kolomnaam != null && f.getProperty(kolomnaam)!=null) {
+                if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
                     valueToSplit = f.getProperty(kolomnaam).getValue();
                 }
-                HashMap fhm=toHashMap(f);
-                List values= splitObject(valueToSplit, ",");
-                List regelValues= new ArrayList();
-                for (int i=0; i < values.size(); i++){
-                    Object value=values.get(i);
+                HashMap fhm = toHashMap(f);
+                List values = splitObject(valueToSplit, ",");
+                List regelValues = new ArrayList();
+                for (int i = 0; i < values.size(); i++) {
+                    Object value = values.get(i);
                     if (commando.contains("[") || commando.contains("]")) {
                         //vervang de eventuele csv in 1 waarde van die csv
-                        if (kolomnaam!=null){
-                            fhm.put(removeNamespace(kolomnaam),value);
+                        if (kolomnaam != null) {
+                            fhm.put(removeNamespace(kolomnaam), value);
                         }
-                        String newCommando=replaceValuesInString(commando, fhm);
+                        String newCommando = replaceValuesInString(commando, fhm);
                         regelValues.add(newCommando);
-                    } else {                    
+                    } else {
                         if (value != null) {
                             url.append(value.toString().trim());
                             regelValues.add(url.toString());
                         } else {
                             regelValues.add("");
                         }
-                    }                    
+                    }
                 }
                 regel.addValue(regelValues);
             } else if (td.getDataType().getId() == DataTypen.FUNCTION) {
@@ -1030,7 +870,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     /**
      *Compare 2 thema datalists voor het tonen in de admindata. (dus niet volledige vergelijking maar alleen op label en basisregel)
      */
-    public boolean compareThemaDataLists(List list1, List list2) {
+    protected boolean compareThemaDataLists(List list1, List list2) {
         if (list1 == null || list2 == null) {
             return false;
         }
@@ -1068,46 +908,37 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         }
     }
 
-    public HashMap toHashMap(Feature f) throws Exception{
+    private HashMap toHashMap(Feature f) throws Exception {
         HashMap result = new HashMap();
-        FeatureType ft=f.getType();
-        Iterator it=ft.getDescriptors().iterator();
-        while (it.hasNext()){
-            PropertyDescriptor pd= (PropertyDescriptor)it.next();
-            String key=pd.getName().getLocalPart();
-            Object value=f.getProperty(pd.getName()).getValue();
+        FeatureType ft = f.getType();
+        Iterator it = ft.getDescriptors().iterator();
+        while (it.hasNext()) {
+            PropertyDescriptor pd = (PropertyDescriptor) it.next();
+            String key = pd.getName().getLocalPart();
+            Object value = f.getProperty(pd.getName()).getValue();
             result.put(key, value);
         }
         return result;
     }
-    public HashMap toHashMap(ResultSet rs) throws Exception{
-        HashMap result = new HashMap();
-        ResultSetMetaData rsmd=rs.getMetaData();
-        for (int i=1; i <= rsmd.getColumnCount(); i++){
-            String key=rsmd.getColumnLabel(i);
-            Object value=rs.getObject(key);
-            result.put(key, value);
-        }
-        return result;
-    }
-     /*
+
+    /**
      * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
      * Bijvoorbeeld:
      * http://plannen.kaartenbalie.nl/[planeigenaar]/[plannaam]/[planidentificyaty].html
      * Kan dan worden:
      * http://plannen.kaartenbalie.nl/gemeente/plansoen/p38.html
      */
-    public String replaceValuesInString(String string, HashMap values) throws Exception{
+    private String replaceValuesInString(String string, HashMap values) throws Exception {
         if (!string.contains("[") && !string.contains("]")) {
             return string;
         }
         StringBuffer url;
-        if (string!= null) {
+        if (string != null) {
             url = new StringBuffer(string);
         } else {
             url = new StringBuffer();
         }
-        
+
         int begin = -1;
         int eind = -1;
         for (int i = 0; i < url.length(); i++) {
@@ -1144,73 +975,76 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
             }
         }
-        return url.toString();        
+        return url.toString();
     }
 
-    private List splitObject(Object value,String seperator){
-        ArrayList values=new ArrayList();
-        if (value ==null){
+    private List splitObject(Object value, String seperator) {
+        ArrayList values = new ArrayList();
+        if (value == null) {
             values.add(value);
-        }else if (value instanceof String){
-            String[] tokens=((String)value).split(seperator);
-            for (int i=0; i < tokens.length; i++){
+        } else if (value instanceof String) {
+            String[] tokens = ((String) value).split(seperator);
+            for (int i = 0; i < tokens.length; i++) {
                 values.add(tokens[i]);
             }
-        }else{
+        } else {
             values.add(value);
         }
         return values;
     }
 
     private boolean doExtraSearchFilter(Themas t, HttpServletRequest request) {
-        if (FormUtils.nullIfEmpty(t.getSldattribuut())!=null && FormUtils.nullIfEmpty(request.getParameter(ViewerAction.SEARCH))!=null){
-            String searchId=request.getParameter(ViewerAction.SEARCHID);
-            String searchClusterId=request.getParameter(ViewerAction.SEARCHCLUSTERID);
-            if (FormUtils.nullIfEmpty(searchId)!=null){
+        if (FormUtils.nullIfEmpty(t.getSldattribuut()) != null && FormUtils.nullIfEmpty(request.getParameter(ViewerAction.SEARCH)) != null) {
+            String searchId = request.getParameter(ViewerAction.SEARCHID);
+            String searchClusterId = request.getParameter(ViewerAction.SEARCHCLUSTERID);
+            if (FormUtils.nullIfEmpty(searchId) != null) {
                 String[] searchIds = searchId.split(",");
-                for (int i=0; i < searchIds.length; i++){
-                    try{
-                        if (t.getId().intValue() == Integer.parseInt(searchIds[i])){
+                for (int i = 0; i < searchIds.length; i++) {
+                    try {
+                        if (t.getId().intValue() == Integer.parseInt(searchIds[i])) {
                             return true;
                         }
-                    }catch(NumberFormatException nfe){}
+                    } catch (NumberFormatException nfe) {
+                    }
                 }
             }
-            if (FormUtils.nullIfEmpty(searchClusterId)!=null){
-                String[] clusterIds= searchClusterId.split(",");
-                for (int i=0; i < clusterIds.length; i++){
-                    try{
-                        if (isInCluster(t.getCluster(),Integer.parseInt(clusterIds[i]))){
-                                return true;
+            if (FormUtils.nullIfEmpty(searchClusterId) != null) {
+                String[] clusterIds = searchClusterId.split(",");
+                for (int i = 0; i < clusterIds.length; i++) {
+                    try {
+                        if (isInCluster(t.getCluster(), Integer.parseInt(clusterIds[i]))) {
+                            return true;
                         }
-                    }catch (NumberFormatException nfe){}
+                    } catch (NumberFormatException nfe) {
+                    }
                 }
             }
 
         }
         return false;
     }
+
     /**
      * this cluster is or is in the cluster with id==clusterId
      */
-    private boolean isInCluster(Clusters themaCluster,int clusterId){
-        if (themaCluster==null){
+    private boolean isInCluster(Clusters themaCluster, int clusterId) {
+        if (themaCluster == null) {
             return false;
-        }else if (themaCluster.getId()==clusterId){
+        } else if (themaCluster.getId() == clusterId) {
             return true;
-        }else{
-            return isInCluster(themaCluster.getParent(),clusterId);
+        } else {
+            return isInCluster(themaCluster.getParent(), clusterId);
         }
     }
 
     private Filter createSldFilter(Themas t, HttpServletRequest request) {
-        if (doExtraSearchFilter(t,request)){
+        if (doExtraSearchFilter(t, request)) {
             return FilterBuilder.createEqualsFilter(t.getSldattribuut(), request.getParameter(ViewerAction.SEARCH));
         }
         return null;
     }
 
-    public double[] getCoords(HttpServletRequest request){
+    protected double[] getCoords(HttpServletRequest request) {
         double[] coords = null;
         if (request.getParameter("coords") != null && !request.getParameter("coords").equals("")) {
             String[] coordString = request.getParameter("coords").split(",");
@@ -1222,25 +1056,25 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         return coords;
     }
 
-    public Filter getExtraFilter(Themas t, HttpServletRequest request){
+    protected Filter getExtraFilter(Themas t, HttpServletRequest request) {
         //controleer of er een extra filter meegegeven is en of die op dit thema moet worden toegepast.
-        Filter sldFilter=createSldFilter(t,request);
+        Filter sldFilter = createSldFilter(t, request);
         //controleer of er een organization code is voor dit thema
         String organizationcodekey = t.getOrganizationcodekey();
         String organizationcode = getOrganizationCode(request);
         if (FormUtils.nullIfEmpty(organizationcodekey) != null
-                    && FormUtils.nullIfEmpty(organizationcode) != null) {            
-            Filter organizationFilter= FilterBuilder.createEqualsFilter(organizationcodekey,organizationcode);
-            if (sldFilter==null){
+                && FormUtils.nullIfEmpty(organizationcode) != null) {
+            Filter organizationFilter = FilterBuilder.createEqualsFilter(organizationcodekey, organizationcode);
+            if (sldFilter == null) {
                 return organizationFilter;
-            }else{
-                return FilterBuilder.getFactory().and(sldFilter,organizationFilter);
+            } else {
+                return FilterBuilder.getFactory().and(sldFilter, organizationFilter);
             }
         }
         return sldFilter;
     }
 
-    protected double getDistance(HttpServletRequest request){
+    protected double getDistance(HttpServletRequest request) {
         String s = request.getParameter("scale");
         double scale = 0.0;
         try {

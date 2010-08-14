@@ -34,6 +34,7 @@ import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 //import org.geotools.data.wfs.v1_1_0.WFSFeatureSource;
@@ -66,10 +67,15 @@ public class GetLocationData {
             if (t == null) {
                 return returnValue;
             }
-            DataStore ds = t.getConnectie().toDatastore();
+
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+            Bron b = (Bron) t.getConnectie(request);
+            if (b == null) {
+                return returnValue;
+            }
+            DataStore ds = b.toDatastore();
             try{
-                WebContext ctx = WebContextFactory.get();
-                HttpServletRequest request = ctx.getHttpServletRequest();
                 //haal alleen de geometry op.
                 String geometryName= DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
                 ArrayList<String> propertyNames=new ArrayList();
@@ -151,13 +157,12 @@ public class GetLocationData {
 
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
-            Connecties c = (Connecties) t.getConnectie();
-            if (c == null) {
+            Bron b = (Bron) t.getConnectie(request);
+            if (b == null) {
                 return returnValue;
             }
 
-            String connectieType = c.getType();
-            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
+            if (b.checkType(Bron.TYPE_JDBC) || b.checkType(Bron.TYPE_ORACLE)) {
                 Connection conn = t.getJDBCConnection();
                 String tableName = t.getSpatial_tabel();
                 try {
@@ -174,10 +179,6 @@ public class GetLocationData {
                         }
                     }
                 }
-            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
-                // TODO WFS
-                //Feature f=WfsUtil.getWfsObject(t,attributeName,oldValue);
-                log.error("Thema heeft een WFS connectie: " + t.getNaam(), new UnsupportedOperationException("Function only supports jdbc connections"));
             } else {
                 log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Function only supports jdbc connections"));
             }

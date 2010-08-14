@@ -723,19 +723,19 @@ public class Themas implements Comparable {
         return connectie;
     }
 
-    /*public Bron getConnectie(HttpServletRequest request) {
+    public Bron getConnectie(HttpServletRequest request) {
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         return getConnectie(user);
     }
-*/
-    /*public Bron getConnectie(GisPrincipal user) {
+
+    public Bron getConnectie(GisPrincipal user) {
         Bron b = connectie;
         if (b == null && admin_tabel!=null &&
                 admin_tabel.length() > 0 && user != null) {
             b = user.getKbWfsConnectie();
         }
         return b;
-    }*/
+    }
     
     public void setConnectie(Bron connectie) {
         this.connectie = connectie;
