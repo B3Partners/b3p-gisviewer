@@ -208,8 +208,13 @@ public class GetViewerDataAction extends BaseGisAction {
                         }
                     }
                 } catch (Exception e) {
-                    log.error("Fout bij laden admindata voor thema: ", e);
-                    addAlternateMessage(mapping, request, "", e.getMessage());
+                    String mapserver4Hack = "msQueryByRect(): Search returned no results. No matching record(s) found.";
+                    if (mapserver4Hack.equalsIgnoreCase(e.getMessage())) {
+                        // mapserver 4 returns service exception when no hits, this is not compliant.
+                    } else {
+                        log.error("Fout bij laden admindata voor thema: ", e);
+                        addAlternateMessage(mapping, request, "", e.getMessage());
+                    }
                 }
             }
         }

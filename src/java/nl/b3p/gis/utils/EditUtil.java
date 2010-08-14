@@ -12,19 +12,21 @@ import com.vividsolutions.jts.io.WKTReader;
 import com.vividsolutions.jts.io.WKTWriter;
 import com.vividsolutions.jts.operation.buffer.BufferOp;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.directwebremoting.WebContext;
+import org.directwebremoting.WebContextFactory;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.opengis.feature.Feature;
-import org.opengis.feature.Property;
 
 /**
  *
@@ -94,7 +96,13 @@ public class EditUtil {
             if (thema_items.size() < 1)
                 throw new Exception("Kan niet highlighten. Geen themadata gevonden.");
 
-            ArrayList<Feature> features = DataStoreUtil.getFeatures(thema, geom, null, DataStoreUtil.themaData2PropertyNames(thema_items), null);
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+            Bron b = (Bron) thema.getConnectie(request);
+            if (b == null) {
+               throw new Exception("Kan niet highlighten. Geen connectie gevonden.");
+            }
+            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, thema, geom, null, DataStoreUtil.themaData2PropertyNames(thema_items), null);
 
             if ( (features == null) || (features.size() < 1) )
                 throw new Exception("Kan niet highlighten. Geen features gevonden.");
