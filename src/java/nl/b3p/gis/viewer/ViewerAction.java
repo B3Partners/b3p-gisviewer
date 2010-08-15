@@ -440,25 +440,30 @@ public class ViewerAction extends BaseGisAction {
 
             /* de getConfigMap geeft alle waardes terug volgens de types
              * zoals deze gedefinieerd zijn in het type kolom van de configuratie */
-            boolean useCookies = (Boolean) map.get("useCookies");
-            boolean multipleActiveThemas = (Boolean) map.get("multipleActiveThemas");
-            boolean usePopup = (Boolean) map.get("usePopup");
-            boolean useDivPopup = (Boolean) map.get("useDivPopup");
-            boolean usePanelControls = (Boolean) map.get("usePanelControls");
-            boolean showLeftPanel = (Boolean) map.get("showLeftPanel");
-            int autoRedirect = (Integer) map.get("autoRedirect");
-            int tolerance = (Integer) map.get("tolerance");
-            boolean useSortableFunction = (Boolean) map.get("useSortableFunction");
-            int layerDelay = (Integer) map.get("layerDelay");
-            int refreshDelay = (Integer) map.get("refreshDelay");
+
+            // CvL aan Bdw: waarom niet simpelweg:
+             request.setAttribute("configMap", map);
+            // en dan in jsp ${configMap["useCookies"]} 
+
+            Boolean useCookies = (Boolean) map.get("useCookies");
+            Boolean multipleActiveThemas = (Boolean) map.get("multipleActiveThemas");
+            Boolean usePopup = (Boolean) map.get("usePopup");
+            Boolean useDivPopup = (Boolean) map.get("useDivPopup");
+            Boolean usePanelControls = (Boolean) map.get("usePanelControls");
+            Boolean showLeftPanel = (Boolean) map.get("showLeftPanel");
+            Integer autoRedirect = (Integer) map.get("autoRedirect");
+            Integer tolerance = (Integer) map.get("tolerance");
+            Boolean useSortableFunction = (Boolean) map.get("useSortableFunction");
+            Integer layerDelay = (Integer) map.get("layerDelay");
+            Integer refreshDelay = (Integer) map.get("refreshDelay");
             String zoekConfigIds = (String) map.get("zoekConfigIds");
-            int minBboxZoeken = (Integer) map.get("minBboxZoeken");
-            int maxResults = (Integer) map.get("maxResults");
-            boolean expandAll = (Boolean) map.get("expandAll");
+            Integer minBboxZoeken = (Integer) map.get("minBboxZoeken");
+            Integer maxResults = (Integer) map.get("maxResults");
+            Boolean expandAll = (Boolean) map.get("expandAll");
             String tabs = (String) map.get("tabs");
-            boolean useInheritCheckbox = (Boolean) map.get("useInheritCheckbox");
-            boolean showLegendInTree = (Boolean) map.get("showLegendInTree");
-            boolean useMouseOverTabs = (Boolean) map.get("useMouseOverTabs");
+            Boolean useInheritCheckbox = (Boolean) map.get("useInheritCheckbox");
+            Boolean showLegendInTree = (Boolean) map.get("showLegendInTree");
+            Boolean useMouseOverTabs = (Boolean) map.get("useMouseOverTabs");
 
             /* rol klaarzetten voor tabblad config */
             request.setAttribute("cfg_rolnaam", cfg_rolnaam);
