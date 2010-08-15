@@ -76,9 +76,6 @@ public class Data2CSV extends HttpServlet {
             }
 
             Bron b = thema.getConnectie(request);
-            if (b == null && thema.getAdmin_tabel() != null && thema.getAdmin_tabel().length() > 0) {
-                b = user.getKbWfsConnectie();
-            }
             if (b==null){
                 throw new ServletException("Thema with id: "+thema.getId()+" has no connection");
             }

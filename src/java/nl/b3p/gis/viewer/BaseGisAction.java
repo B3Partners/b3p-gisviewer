@@ -297,7 +297,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             return false;
         }
 
-        // Dit is te streng alleen op wms layer checken
+        // Dit is te streng, alleen op wms layer checken
 //        String wmsqls = t.getWms_querylayers_real();
 //        if (wmsqls!=null && wmsqls.length()>0)
 //            wmsls += "," + wmsqls;
@@ -315,167 +315,6 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     }
 
     /**
-     * Om getPks backwardcompatable te maken
-     */
-    @Deprecated
-    /* protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request) throws SQLException, NotSupportedException {
-    return getPks(t, dynaForm, request, null);
-    }*/
-    /**
-     * DOCUMENT ME!!!
-     *
-     * @param t Themas
-     * @param dynaForm DynaValidatorForm
-     * @param request HttpServletRequest
-     * @param pksField String. De naam van de Parameter waar alle  primary keys
-     *      in opgeslagen zijn. Als het null is wordt de pk naam van het thema
-     *      gebruikt om het van het request te halen. Dit is gedaan omdat de pk
-     *      uit een namespace kan bestaan voorbeeld "{www.b3p.nl}id" Dit gaat fout in js
-     *      als je dit gebruikt om een ref te maken naar het veld. Vandaar dat je dus ook
-     *      een andere kan opgeven als parameter naam. Dus dat is niet verstandig om te gebruiken!
-     * @return List
-     *
-     * @throws SQLException
-     *
-     * @see Themas
-     */
-    /*protected List getPks(Themas t, DynaValidatorForm dynaForm, HttpServletRequest request, String pksField) throws SQLException, NotSupportedException {
-    ArrayList pks = new ArrayList();
-
-    Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-    Connection connection = t.getJDBCConnection();
-    if (connection == null) {
-    log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
-    return null;
-    }
-    int dt = SpatialUtil.getPkDataType(t, connection);
-    String adminPk = t.getAdmin_pk();
-    String adminIds = null;
-    if (pksField == null) {
-    adminIds = request.getParameter(adminPk);
-    } else {
-    adminIds = request.getParameter(pksField);
-    }
-
-    String[] adminIdsArr = adminIds.split(",");
-    for (int i = 0; i < adminIdsArr.length; i++) {
-    String adminId = adminIdsArr[i];
-    switch (dt) {
-    case java.sql.Types.SMALLINT:
-    pks.add(new Short(adminId));
-    break;
-    case java.sql.Types.INTEGER:
-    pks.add(new Integer(adminId));
-    break;
-    case java.sql.Types.BIGINT:
-    pks.add(new Long(adminId));
-    break;
-    case java.sql.Types.BIT:
-    pks.add(new Boolean(adminId));
-    break;
-    case java.sql.Types.DATE:
-    //                pks.add(new Date(adminId));
-    break;
-    case java.sql.Types.DECIMAL:
-    case java.sql.Types.NUMERIC:
-    pks.add(new BigDecimal(adminId));
-    break;
-    case java.sql.Types.REAL:
-    pks.add(new Float(adminId));
-    break;
-    case java.sql.Types.FLOAT:
-    case java.sql.Types.DOUBLE:
-    pks.add(new Double(adminId));
-    break;
-    case java.sql.Types.TIME:
-    //                pks.add(new Time(adminId));
-    break;
-    case java.sql.Types.TIMESTAMP:
-    //                pks.add(new Timestamp(adminId));
-    break;
-    case java.sql.Types.TINYINT:
-    pks.add(new Byte(adminId));
-    break;
-    case java.sql.Types.CHAR:
-    case java.sql.Types.LONGVARCHAR:
-    case java.sql.Types.VARCHAR:
-    pks.add(adminId);
-    break;
-    case java.sql.Types.NULL:
-    default:
-    return null;
-    }
-    }
-    return pks;
-    }*/
-    /**
-     * DOCUMENT ME!!!
-     *
-     * @param t Themas
-     * @param mapping ActionMapping
-     * @param dynaForm DynaValidatorForm
-     * @param request HttpServletRequest
-     *
-     * @return List
-     *
-     * @throws Exception
-     *
-     * @see Themas
-     */
-    // <editor-fold defaultstate="" desc="protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request)">
-   /* protected List findPks(Themas t, ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
-    //Haal de juiste info op
-    String geom = request.getParameter("geom");
-    double[] coords = getCoords(request);
-    if (coords==null){
-    coords = new double[0];
-    }
-    String extraWhere = getExtraWhere(t,request);
-    double distance = getDistance(request);
-
-    int srid = 28992; // RD-new
-
-    ArrayList pks = new ArrayList();
-
-    String saf = t.getSpatial_admin_ref();
-    if (saf == null || saf.length() == 0) {
-    saf = t.getAdmin_pk();
-    }
-    String sptn = t.getSpatial_tabel();
-    if (sptn == null || sptn.length() == 0) {
-    sptn = t.getAdmin_tabel();
-    }
-    if (sptn == null || saf == null || sptn.length() == 0 || saf.length() == 0) {
-    return null;
-    }
-
-    //Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-    Connection connection = t.getJDBCConnection();
-    if (connection == null) {
-    log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
-    return null;
-    }
-    try {
-    String geomColumnName = SpatialUtil.getTableGeomName(t, connection);
-    String q = null;
-    q = SpatialUtil.InfoSelectQuery(saf, sptn, geomColumnName, coords, distance, srid, extraWhere, geom);
-
-    PreparedStatement statement = connection.prepareStatement(q);
-    try {
-    ResultSet rs = statement.executeQuery();
-    while (rs.next()) {
-    pks.add(rs.getObject(saf));
-    }
-    } finally {
-    statement.close();
-    }
-    } finally {
-    connection.close();
-    }
-    return pks;
-    }*/
-    // </editor-fold>
-    /**
      * Een protected methode het object thema ophaalt dat hoort bij een bepaald id.
      *
      * @param identifier String which identifies the object thema to be found.
@@ -483,7 +322,6 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      * @return a Themas object representing the object thema.
      *
      */
-    // <editor-fold defaultstate="" desc="private Themas getObjectThema(String identifier) method.">
     protected Themas getObjectThema(String identifier) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Themas objectThema = null;
@@ -495,97 +333,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         }
         return objectThema;
     }
-    // </editor-fold>
-
-    /**
-     * Een protected methode die het Thema Geometry type ophaalt uit de database.
-     *
-     * @param themaGeomTabel De table for which the Geometry type is requested.
-     *
-     * @return a String with the Geometry type.
-     *
-     */
-    /*protected String getThemaGeomType(Themas t) throws Exception {
-    String themaGeomType = t.getView_geomtype();
-    if (themaGeomType != null) {
-    return themaGeomType;
-    }
-
-    Connection connection = t.getJDBCConnection();
-    if (connection == null) {
-    log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
-    return null;
-    }
-    return SpatialUtil.getThemaGeomType(t, connection);
-    }*/
-    /**
-     * Een protected methode die de Analysenaam van een bepaalde tabel en kolom samenstelt met
-     * de opgegeven waarden.
-     *
-     * @param analyseGeomTabel De table for which the analysename is requested.
-     * @param analyseGeomIdColumn De column for which the analysename is requested.
-     * @param analyseGeomId De id for which the analysename is requested.
-     *
-     * @return a String with the analysename.
-     *
-     */
-    /* protected String getAnalyseNaam(String analyseGeomId, Themas t) throws NotSupportedException, SQLException {
-
-    String analyseGeomTabel = t.getSpatial_tabel();
-    String analyseGeomIdColumn = t.getSpatial_admin_ref();
-    int themaid = t.getId().intValue();
-
-    String analyseNaam = t.getNaam();
-    Connection connection = t.getJDBCConnection();
-    if (connection == null) {
-    log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Can not create a JDBC connection, this function is only supported for JDBC connections"));
-    return null;
-    }
-    try {
-    String statementString = "select * from \"" + analyseGeomTabel
-    + "\" where " + analyseGeomIdColumn + " = ";
-    String newAnalyseGeomId = "\'" + analyseGeomId + "\'";
-    try {
-    int intGeomId = Integer.parseInt(analyseGeomId);
-    newAnalyseGeomId = "" + intGeomId;
-    } catch (Exception e) {
-    }
-    statementString += newAnalyseGeomId;
-    log.info(statementString);
-    PreparedStatement statement =
-    connection.prepareStatement(statementString);
-    PreparedStatement statement2 =
-    connection.prepareStatement("select kolomnaam from thema_data where thema = "
-    + themaid + " order by dataorder");
-
-    try {
-    ResultSet rs = statement.executeQuery();
-    ResultSet rs2 = statement2.executeQuery();
-    if (rs.next() && rs2.next()) {
-    if (rs2.next()) {
-    String extraString = rs.getString(rs2.getString("kolomnaam"));
-    if (extraString != null) {
-    analyseNaam += " " + extraString;
-    }
-    }
-    }
-    } finally {
-    statement.close();
-    statement2.close();
-    }
-    } catch (SQLException ex) {
-    log.error("", ex);
-    } finally {
-    try {
-    connection.close();
-    } catch (SQLException ex) {
-    log.error("", ex);
-    }
-    }
-
-    return analyseNaam;
-    }*/
-    /**
+ 
+   /**
      *
      * @param query String
      * @param sess Session
@@ -646,17 +395,17 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         return null;
     }
 
-    protected static String removeNamespace(String rawName) {
+    public static String removeNamespace(String rawName) {
         if (rawName == null) {
             return rawName;
         }
         String returnValue = new String(rawName);
-//        if (returnValue.indexOf("{") >= 0 && returnValue.indexOf("}") >= 0) {
-//            returnValue = returnValue.substring(returnValue.indexOf("}") + 1);
-//        }
-//        if (returnValue.split(":").length > 1) {
-//            returnValue = returnValue.split(":")[1];
-//        }
+        if (returnValue.indexOf("{") >= 0 && returnValue.indexOf("}") >= 0) {
+            returnValue = returnValue.substring(returnValue.indexOf("}") + 1);
+        }
+        if (returnValue.split(":").length > 1) {
+            returnValue = returnValue.split(":")[1];
+        }
         return returnValue;
     }
 

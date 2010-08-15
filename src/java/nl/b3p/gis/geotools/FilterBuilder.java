@@ -9,17 +9,13 @@ import java.util.ArrayList;
 import javax.xml.transform.TransformerException;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
-import org.geotools.filter.BBoxExpression;
-import org.geotools.filter.BBoxExpressionImpl;
 import org.geotools.filter.FilterFactory;
 import org.geotools.filter.FilterTransformer;
-import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.Expression;
 import org.opengis.filter.expression.PropertyName;
-import org.opengis.geometry.BoundingBox;
 
 /**
  * B3partners B.V. http://www.b3partners.nl

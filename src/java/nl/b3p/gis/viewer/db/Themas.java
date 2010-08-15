@@ -2,6 +2,8 @@ package nl.b3p.gis.viewer.db;
 
 import java.util.Set;
 import java.sql.Connection;
+import javax.servlet.http.HttpServletRequest;
+import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
