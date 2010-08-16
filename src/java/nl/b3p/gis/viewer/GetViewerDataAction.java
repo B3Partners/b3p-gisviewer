@@ -212,8 +212,8 @@ public class GetViewerDataAction extends BaseGisAction {
                     if (mapserver4Hack.equalsIgnoreCase(e.getMessage())) {
                         // mapserver 4 returns service exception when no hits, this is not compliant.
                     } else {
-                        log.error("Fout bij laden admindata voor thema: ", e);
-                        addAlternateMessage(mapping, request, "", e.getMessage());
+                        log.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
+                        addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + e.getMessage());
                     }
                 }
             }

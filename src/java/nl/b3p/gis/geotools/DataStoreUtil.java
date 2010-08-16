@@ -251,7 +251,7 @@ public class DataStoreUtil {
                 if (!(geom instanceof Point)) {
                     Envelope env = geom.getEnvelopeInternal();
                     CoordinateReferenceSystem crs = getSchema(ds, t).getGeometryDescriptor().getCoordinateReferenceSystem();
-                    ReferencedEnvelope bbox = new ReferencedEnvelope(env.getMinX(), env.getMinY(), env.getMaxX(), env.getMaxY(), crs);
+                    ReferencedEnvelope bbox = new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
                     filter = ff.bbox(ff.property(geomAttributeName), bbox);
                 }
             }
