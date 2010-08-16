@@ -57,6 +57,7 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.geotools.data.DataStore;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.GeometryType;
 import org.opengis.filter.Filter;
@@ -74,7 +75,6 @@ public class GetViewerDataAction extends BaseGisAction {
     protected static final String ANALYSEWAARDE = "analysewaarde";
     protected static final String ANALYSEOBJECT = "analyseobject";
     protected static final String PK_FIELDNAME_PARAM = "pkFieldName";
-
     private static final int ANALYSE_TYPE_AVG = 3;
     private static final int ANALYSE_TYPE_SUM = 4;
 
@@ -237,7 +237,7 @@ public class GetViewerDataAction extends BaseGisAction {
         Configuratie rollenPrio = null;
 
         try {
-            rollenPrio = configKeeper.getConfiguratie("rollenPrio","rollen");
+            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
         } catch (Exception ex) {
             log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
         }
@@ -255,10 +255,11 @@ public class GetViewerDataAction extends BaseGisAction {
 
             /* Zoeken of gebruiker een rol heeft die in de rollen
              * configuratie voorkomt. Hoogste rol wordt geladen */
-            for (int i=0; i < configRollen.length; i++) {
+            for (int i = 0; i < configRollen.length; i++) {
 
-                if (foundRole)
+                if (foundRole) {
                     break;
+                }
 
                 rolnaam = configRollen[i];
 
@@ -279,22 +280,23 @@ public class GetViewerDataAction extends BaseGisAction {
             }
 
             /* als gevonden rol geen configuratie records heeft dan defaults laden */
-            if ( (map == null) || (map.size() < 1) ) {
+            if ((map == null) || (map.size() < 1)) {
                 map = configKeeper.getConfigMap("default");
             }
 
             String layoutAdminData = "";
 
             /* Indien maar 1 thema pak dan de instelling van Thema object
-             of als deze niet ingesteld is pak dan de global configuratie setting */
+            of als deze niet ingesteld is pak dan de global configuratie setting */
             if (aantalThemas == 1) {
-                Themas t = (Themas)themas.get(0);
+                Themas t = (Themas) themas.get(0);
                 String themaLayout = t.getLayoutadmindata();
 
-                if ( (themaLayout == null) || themaLayout.equals("") )
+                if ((themaLayout == null) || themaLayout.equals("")) {
                     layoutAdminData = (String) map.get("layoutAdminData");
-                else
+                } else {
                     layoutAdminData = themaLayout;
+                }
             } else {
                 layoutAdminData = (String) map.get("layoutAdminData");
             }
@@ -322,16 +324,12 @@ public class GetViewerDataAction extends BaseGisAction {
      * regels
      */
     public ActionForward aanvullendeinfo(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        boolean addKaart = false;
-        if (FormUtils.nullIfEmpty(request.getParameter("addKaart")) != null) {
-            addKaart = true;
-        }
         Themas t = getThema(mapping, dynaForm, request);
         if (t == null) {
             return mapping.findForward("aanvullendeinfo");
         }
 
-        List thema_items = SpatialUtil.getThemaData(t, false);
+        List<ThemaData> thema_items = SpatialUtil.getThemaData(t, false);
         request.setAttribute("thema_items", thema_items);
 
         Bron b = t.getConnectie(request);
@@ -433,6 +431,13 @@ public class GetViewerDataAction extends BaseGisAction {
             request.removeAttribute("waarde");
             return mapping.findForward("analyseobject");
         }
+        Bron b = t.getConnectie(request);
+        if (b == null) {
+            log.error("Thema heeft geen connectie: " + t.getNaam());
+            request.setAttribute("waarde", "Thema heeft geen connectie: " + t.getNaam());
+            return mapping.findForward("analyseobject");
+        }
+
         List thema_items = SpatialUtil.getThemaData(t, true);
         //maak het eventuele extra filter.
         String organizationcodekey = t.getOrganizationcodekey();
@@ -460,98 +465,92 @@ public class GetViewerDataAction extends BaseGisAction {
         }
         String analyseGeomId = tokens[2];
         //Haal de geometry binnen waarmee de analyse moet worden uitgevoerd.
-        Filter f= FilterBuilder.createEqualsFilter(analyseObjectThema.getAdmin_pk(), analyseGeomId);
+        String adminPk = DataStoreUtil.convertFullnameToQName(analyseObjectThema.getAdmin_pk()).getLocalPart();
+        Filter f = FilterBuilder.createEqualsFilter(adminPk, analyseGeomId);
 
-        ArrayList<Feature> analyseFeatures=null;
+        ArrayList<Feature> analyseFeatures = null;
         Bron ab = analyseObjectThema.getConnectie(request);
         DataStore dsAnalyse = null;
-        if (ab!=null) {
+        if (ab != null) {
             dsAnalyse = ab.toDatastore();
         }
-        try{
-            String geometryName= DataStoreUtil.getSchema(dsAnalyse, t).getGeometryDescriptor().getLocalName();
-            ArrayList<String> propertyNames=new ArrayList();
+        try {
+            String geometryName = DataStoreUtil.getSchema(dsAnalyse, t).getGeometryDescriptor().getLocalName();
+            ArrayList<String> propertyNames = new ArrayList();
             propertyNames.add(geometryName);
-            analyseFeatures=DataStoreUtil.getFeatures(dsAnalyse, analyseObjectThema, f,propertyNames,1);
-        }
-        finally{
+            analyseFeatures = DataStoreUtil.getFeatures(dsAnalyse, analyseObjectThema, f, propertyNames, 1);
+        } finally {
             dsAnalyse.dispose();
         }
-        if (analyseFeatures==null || analyseFeatures.size()==0){
+        if (analyseFeatures == null || analyseFeatures.size() == 0) {
             log.error("De gekozen geometry kan niet worden gevonden");
             request.setAttribute("waarde", "De gekozen geometry kan niet worden gevonden");
         }
         Geometry analyseGeometry = (Geometry) analyseFeatures.get(0).getDefaultGeometryProperty().getValue();
-        
-        Bron b = t.getConnectie(request);
-        if (b == null) {
-            log.error("Thema heeft geen connectie: "+t.getNaam());
-            request.setAttribute("waarde", "Thema heeft geen connectie: "+t.getNaam());
-            return mapping.findForward("analyseobject");
-        }
-        
+
         DataStore ds = b.toDatastore();
         try {
             GeometryType tgt = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getType();
-                        
+
             //Haal alle features op die binnen de analyseGeometry vallen:
-            ArrayList<Feature> features=DataStoreUtil.getFeatures(b, t, analyseGeometry, extraFilter,thema_items,-1);
+            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, t, analyseGeometry, extraFilter, thema_items, -1);
             int zow = 0;
             try {
                 zow = Integer.parseInt(dynaForm.getString("zoekopties_waarde"));
             } catch (NumberFormatException nfe) {
                 log.debug("zoekopties_waarde fout: ", nfe);
             }
-            double resultValue=0.0;
-            String analyseDescr="";
+            double resultValue = 0.0;
+            String analyseDescr = "";
             switch (zow) {
                 case 1:
                     //maximale waarde.
-                    Feature maxFeature=getFeatureWithGeometry(features,tgt,"max");
-                    Geometry maxgeom= (Geometry) maxFeature.getDefaultGeometryProperty().getValue();
-                    if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class){
-                        resultValue=maxgeom.getArea();
-                    }else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class){
-                        resultValue=maxgeom.getLength();
-                    }else if (tgt.getBinding() == Point.class || tgt.getBinding() == MultiPoint.class){
-                        resultValue+=maxgeom.getNumGeometries();
+                    Feature maxFeature = getFeatureWithGeometry(features, tgt, "max");
+                    Geometry maxgeom = (Geometry) maxFeature.getDefaultGeometryProperty().getValue();
+                    if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
+                        resultValue = maxgeom.getArea();
+                    } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
+                        resultValue = maxgeom.getLength();
+                    } else if (tgt.getBinding() == Point.class || tgt.getBinding() == MultiPoint.class) {
+                        resultValue += maxgeom.getNumGeometries();
                     }
                     break;
                 case 2:
                     //minimale waarde
-                    Feature minFeature=getFeatureWithGeometry(features,tgt,"min");
-                    Geometry mingeom= (Geometry) minFeature.getDefaultGeometryProperty().getValue();
-                    if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class){
-                        resultValue=mingeom.getArea();
-                    }else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class){
-                        resultValue=mingeom.getLength();
-                    }else if (tgt.getBinding() == Point.class || tgt.getBinding() == MultiPoint.class){
-                        resultValue+=mingeom.getNumGeometries();
+                    Feature minFeature = getFeatureWithGeometry(features, tgt, "min");
+                    Geometry mingeom = (Geometry) minFeature.getDefaultGeometryProperty().getValue();
+                    if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
+                        resultValue = mingeom.getArea();
+                    } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
+                        resultValue = mingeom.getLength();
+                    } else if (tgt.getBinding() == Point.class || tgt.getBinding() == MultiPoint.class) {
+                        resultValue += mingeom.getNumGeometries();
                     }
 
                     break;
                 case 3:
                     //gemiddelde waarde
-                    double sum=getSumOfGeometries(features,tgt);
-                    resultValue=sum/features.size();
+                    double sum = getSumOfGeometries(features, tgt);
+                    resultValue = sum / features.size();
                     break;
                 case 4:
                     //totaal lengte/oppervlakte/aantal
-                    resultValue=getSumOfGeometries(features,tgt);
+                    resultValue = getSumOfGeometries(features, tgt);
                     break;
                 default:
                     log.error("Er is geen geldige selectie aangegeven door middel van de radio buttons!");
                     throw new Exception("Er is geen geldige selectie aangegeven door middel van de radio buttons!");
             }
             /* Maak er een mooi getal van (km2 of km) en rond netjes af.*/
-            if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class){
-                resultValue=Math.round(resultValue/1000000000)*1000;
-            }else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class){
-                resultValue=Math.round(resultValue/1000000)*1000;
+            // TODO waar staat de eenheid?
+            if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
+                resultValue = Math.round(resultValue / 1000000000) * 1000;
+            } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
+                resultValue = Math.round(resultValue / 1000000) * 1000;
             }
 
             StringBuffer result = new StringBuffer("");
-            result.append("<b>" + analyseDescr + " " + t.getNaam());            
+            result.append("<b>" + analyseDescr + " " + t.getNaam());
             result.append(": ");
             result.append(resultValue);
             result.append("</b>");
@@ -588,6 +587,14 @@ public class GetViewerDataAction extends BaseGisAction {
             request.removeAttribute("waarde");
             return mapping.findForward("analyseobject");
         }
+
+        Bron b = t.getConnectie(request);
+        if (b == null) {
+            log.error("Thema heeft geen connectie: " + t.getNaam());
+            request.setAttribute("waarde", "Thema heeft geen connectie: " + t.getNaam());
+            return mapping.findForward("analyseobject");
+        }
+
         List thema_items = SpatialUtil.getThemaData(t, true);
         //maak het eventuele extra filter.
         String organizationcodekey = t.getOrganizationcodekey();
@@ -615,73 +622,59 @@ public class GetViewerDataAction extends BaseGisAction {
         }
         String analyseGeomId = tokens[2];
         //Haal de geometry binnen waarmee de analyse moet worden uitgevoerd.
-        Filter f= FilterBuilder.createEqualsFilter(analyseObjectThema.getAdmin_pk(), analyseGeomId);
+        String adminPk = DataStoreUtil.convertFullnameToQName(analyseObjectThema.getAdmin_pk()).getLocalPart();
+        Filter f = FilterBuilder.createEqualsFilter(adminPk, analyseGeomId);
         Bron ab = analyseObjectThema.getConnectie(request);
-        ArrayList<Feature> analyseFeatures=DataStoreUtil.getFeatures(ab, analyseObjectThema, null, f,thema_items,1);
-        if (analyseFeatures.size()==0){
+        ArrayList<Feature> analyseFeatures = DataStoreUtil.getFeatures(ab, analyseObjectThema, null, f, thema_items, 1);
+        if (analyseFeatures.size() == 0) {
             log.error("De gekozen geometry kan niet worden gevonden");
             request.setAttribute("waarde", "De gekozen geometry kan niet worden gevonden");
         }
         Geometry analyseGeometry = (Geometry) analyseFeatures.get(0).getDefaultGeometryProperty().getValue();
 
-        Bron b = t.getConnectie(request);
-        if (b == null) {
-            log.error("Thema heeft geen connectie: "+t.getNaam());
-            request.setAttribute("waarde", "Thema heeft geen connectie: "+t.getNaam());
-            return mapping.findForward("analyseobject");
-        }
-
         DataStore ds = b.toDatastore();
         try {
-            //GeometryType tgt = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getType();
-            String geometryAttributeName=DataStoreUtil.getGeometryAttributeName(ds, t);
+            String geometryAttributeName = DataStoreUtil.getGeometryAttributeName(ds, t);
             Filter analyseFilter = null;
             int zoo = 0;
             try {
                 zoo = Integer.parseInt(dynaForm.getString("zoekopties_object"));
             } catch (NumberFormatException nfe) {
-                throw new Exception("fout bij laden analyse data: ",nfe);
+                throw new Exception("fout bij laden analyse data: ", nfe);
             }
             FilterFactory2 ff = FilterBuilder.getFactory();
             if (zoo == 1) {
                 analyseFilter = ff.disjoint(ff.property(geometryAttributeName), FilterBuilder.getFactory().literal(analyseGeometry));
             } else if (zoo == 2) {
-                analyseFilter = ff.within(ff.property(geometryAttributeName), FilterBuilder.getFactory().literal(analyseGeometry));                
+                analyseFilter = ff.within(ff.property(geometryAttributeName), FilterBuilder.getFactory().literal(analyseGeometry));
             } else if (zoo == 3) {
                 analyseFilter = ff.intersects(ff.property(geometryAttributeName), FilterBuilder.getFactory().literal(analyseGeometry));
             } else {
                 throw new UnsupportedOperationException("Deze analyse/zoek_optie is niet geimplementeerd!");
             }
-            if (analyseFilter==null){
+            if (analyseFilter == null) {
                 throw new Exception("Fout bij maken analyse filter");
             }
-            Filter filter= null;
-            if (extraFilter!=null){
-                filter=ff.and(extraFilter,analyseFilter);
-            }else{
-                filter=analyseFilter;
+            Filter filter = null;
+            if (extraFilter != null) {
+                filter = ff.and(extraFilter, analyseFilter);
+            } else {
+                filter = analyseFilter;
             }
             //Haal alle features op met de geometry
-            ArrayList<Feature> features=DataStoreUtil.getFeatures(ds,t, filter,DataStoreUtil.themaData2PropertyNames(thema_items),null);
-            ArrayList<AdminDataRowBean> regels = new ArrayList();
+            List<String> propnames = DataStoreUtil.themaData2PropertyNames(thema_items);
+            List<Feature> features = DataStoreUtil.getFeatures(ds, t, filter, propnames, null);
+            List<AdminDataRowBean> regels = new ArrayList();
             for (int i = 0; i < features.size(); i++) {
                 Feature feature = features.get(i);
                 regels.add(getRegel(feature, t, thema_items));
             }
             request.setAttribute("thema_items_list", thema_items);
             request.setAttribute("regels_list", regels);
-        }finally{
+        } finally {
             ds.dispose();
         }
-        
-        
-        /*ArrayList regels = new ArrayList();
-        ArrayList ti = new ArrayList();
-        regels.add(getThemaObjects(t, pks, thema_items));
-        ti.add(thema_items);
-        request.setAttribute("thema_items_list", ti);
-        request.setAttribute("regels_list", regels);
-        */
+
         return mapping.findForward("admindata");
     }
 
@@ -695,7 +688,9 @@ public class GetViewerDataAction extends BaseGisAction {
             ArrayList<Filter> filters = new ArrayList();
             while (it.hasNext()) {
                 ThemaData td = (ThemaData) it.next();
-                Filter f = FilterBuilder.createLikeFilter(td.getKolomnaam(), '%' + extraCriterium + '%');
+                Filter f = FilterBuilder.createLikeFilter(
+                        DataStoreUtil.convertFullnameToQName(td.getKolomnaam()).getLocalPart(),
+                        '%' + extraCriterium + '%');
                 if (f != null) {
                     filters.add(f);
                 }
@@ -749,7 +744,7 @@ public class GetViewerDataAction extends BaseGisAction {
         return objectdata;
     }
 
-    protected ArrayList<AdminDataRowBean> getThemaObjectsWithGeom(Themas t, List thema_items, HttpServletRequest request) throws Exception {
+    protected List<AdminDataRowBean> getThemaObjectsWithGeom(Themas t, List<ThemaData> thema_items, HttpServletRequest request) throws Exception {
         if (t == null) {
             return null;
         }
@@ -757,13 +752,12 @@ public class GetViewerDataAction extends BaseGisAction {
             //throw new Exception("Er is geen themadata geconfigureerd voor thema: " + t.getNaam() + " met id: " + t.getId());
             return null;
         }
-        Bron bron = t.getConnectie(request);
-        //Haal de juiste info op
         Geometry geom = getGeometry(request);
         Filter extraFilter = getExtraFilter(t, request);
         Bron b = t.getConnectie(request);
-        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, t, geom, extraFilter,thema_items, null);
-        ArrayList<AdminDataRowBean> regels = new ArrayList();
+        List<String> propnames = DataStoreUtil.themaData2PropertyNames(thema_items);
+        List<Feature> features = DataStoreUtil.getFeatures(b, t, geom, extraFilter, propnames, null);
+        List<AdminDataRowBean> regels = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             regels.add(getRegel(f, t, thema_items));
@@ -778,10 +772,8 @@ public class GetViewerDataAction extends BaseGisAction {
         if (thema_items == null || thema_items.isEmpty()) {
             return null;
         }
-        //Bron b=t.getConnectie();
 
-        String adminPk = t.getAdmin_pk();
-        adminPk = removeNamespace(adminPk);
+        String adminPk = DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart();
         String id = null;
         if (adminPk != null) {
             id = request.getParameter(adminPk);
@@ -790,165 +782,34 @@ public class GetViewerDataAction extends BaseGisAction {
             return null;
         }
 
-        /*String extraCql= adminPk+" = ";
-        try{
-        int iid=Integer.parseInt(id);
-        extraCql+=iid;
-        }catch(NumberFormatException nfe){
-        extraCql+="'"+id+"'";
-        }*/
         Filter filter = FilterBuilder.createEqualsFilter(adminPk, id);
         List regels = new ArrayList();
 
+        boolean addKaart = false;
+        if (FormUtils.nullIfEmpty(request.getParameter("addKaart")) != null) {
+            addKaart = true;
+        }
+
+        List<ReferencedEnvelope> kaartEnvelopes = new ArrayList<ReferencedEnvelope>();
         Bron b = t.getConnectie(request);
-        List<Feature> features = DataStoreUtil.getFeatures(b, t, null, filter, thema_items,null);
+        List<String> propnames = DataStoreUtil.themaData2PropertyNames(thema_items);
+        List<Feature> features = DataStoreUtil.getFeatures(b, t, null, filter, propnames, null);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
+            if (addKaart) {
+                ReferencedEnvelope env = convertFeature2Envelop(f);
+                if (env != null) {
+                    kaartEnvelopes.add(env);
+                }
+            }
             regels.add(getRegel(f, t, thema_items));
+        }
+        if (addKaart) {
+            request.setAttribute("envelops", kaartEnvelopes);
         }
         return regels;
     }
 
-    /**
-     *
-     * @param t Themas
-     * @param pks List
-     * @param thema_items List
-     *
-     * @return List
-     *
-     * @throws SQLException, UnsupportedEncodingException
-     *
-     * @see Themas
-     */
-    /*protected List getThemaObjects(Themas t, List pks, List thema_items) throws SQLException, UnsupportedEncodingException, NotSupportedException, Exception {
-    if (t == null) {
-    return null;
-    }
-    if (pks == null || pks.isEmpty()) {
-    return null;
-    }
-    if (thema_items == null || thema_items.isEmpty()) {
-    return null;
-    }
-    Connecties c = t.getConnectie();
-    if (c == null || !Connecties.TYPE_JDBC.equalsIgnoreCase(c.getType())) {
-    log.error("Deze functie kun je alleen aanroepen met JDBC connecties");
-    return null;
-    }
-    ArrayList regels = new ArrayList();
-
-    Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-    Connection connection = t.getConnectie().getJdbcConnection();
-    try {
-    int dt = SpatialUtil.getPkDataType(t, connection);
-    String taq = t.getAdmin_query();
-    for (int i = 1; i <= pks.size(); i++) {
-    PreparedStatement statement = connection.prepareStatement(taq);
-    Object pkObject = pks.get(i - 1);
-    if (pkObject == null) {
-    continue;
-    }
-    switch (dt) {
-    case java.sql.Types.SMALLINT:
-    statement.setShort(1, ((Short) pkObject).shortValue());
-    break;
-    case java.sql.Types.INTEGER:
-    statement.setInt(1, ((Integer) pkObject).intValue());
-    break;
-    case java.sql.Types.BIGINT:
-    statement.setLong(1, ((Long) pkObject).longValue());
-    break;
-    case java.sql.Types.BIT:
-    statement.setBoolean(1, ((Boolean) pkObject).booleanValue());
-    break;
-    case java.sql.Types.DATE:
-    statement.setDate(1, (Date) pkObject);
-    break;
-    case java.sql.Types.DECIMAL:
-    case java.sql.Types.NUMERIC:
-    statement.setBigDecimal(1, (BigDecimal) pkObject);
-    break;
-    case java.sql.Types.REAL:
-    statement.setFloat(1, ((Float) pkObject).floatValue());
-    break;
-    case java.sql.Types.FLOAT:
-    case java.sql.Types.DOUBLE:
-    statement.setDouble(1, ((Double) pkObject).doubleValue());
-    break;
-    case java.sql.Types.TIME:
-    statement.setTime(1, (Time) pkObject);
-    break;
-    case java.sql.Types.TIMESTAMP:
-    statement.setTimestamp(1, (Timestamp) pkObject);
-    break;
-    case java.sql.Types.TINYINT:
-    statement.setByte(1, ((Byte) pkObject).byteValue());
-    break;
-    case java.sql.Types.CHAR:
-    case java.sql.Types.LONGVARCHAR:
-    case java.sql.Types.VARCHAR:
-    statement.setString(1, (String) pkObject);
-    break;
-    case java.sql.Types.NULL:
-    default:
-    //                        SpatialUtil.testMetaData(connection);
-    return null;
-    }
-    try {
-    ResultSet rs = statement.executeQuery();
-    while (rs.next()) {
-    regels.add(getRegel(rs, t, thema_items));
-    }
-    } finally {
-    statement.close();
-    }
-    }
-    } finally {
-    connection.close();
-    }
-    return regels;
-    }*/
-    /**
-     * Haalt een envelop op van een bepaalde feature(s) aangegeven.
-     * @param t Thema
-     * @param attributeName attribuut naam waarmee de vergelijking wordt uitgevoerd.
-     * @param attributeValue attribuut waarde die rechts van het = teken staat.
-     * @return de envelop van alle gevonden features bij elkaar
-     */
-    /* public double[] getThemaEnvelope(Themas t, String attributeName, String attributeValue) {
-    if (t == null) {
-    return null;
-    }
-    Connecties c = t.getConnectie();
-    if (c == null || !Connecties.TYPE_JDBC.equalsIgnoreCase(c.getType())) {
-    log.error("Deze functie kun je alleen aanroepen met JDBC connecties");
-    return null;
-    }
-    String envelope = null;
-    try {
-    Connection conn = t.getConnectie().getJdbcConnection();
-    String geomColumn = SpatialUtil.getTableGeomName(t, conn);
-    String tableName = t.getSpatial_tabel();
-    if (tableName == null) {
-    tableName = t.getAdmin_tabel();
-    }
-
-    String q = SpatialUtil.getEnvelopeQuery(tableName, geomColumn, attributeName, attributeValue);
-    PreparedStatement statement = conn.prepareStatement(q);
-    try {
-    ResultSet rs = statement.executeQuery();
-    if (rs.next()) {
-    envelope = rs.getString(1);
-    }
-    } finally {
-    statement.close();
-    }
-    } catch (SQLException se) {
-    log.error("getFeatureEnvelope error ", se);
-    }
-    return SpatialUtil.wktEnvelope2bbox(envelope, 28992);
-    }*/
     private Geometry getGeometry(HttpServletRequest request) {
         String geom = request.getParameter("geom");
         double distance = getDistance(request);
@@ -974,58 +835,60 @@ public class GetViewerDataAction extends BaseGisAction {
         return geometry;
     }
     //calculatie voor gebruik bij analyse tool
-    private double getSumOfGeometries(ArrayList<Feature> features,GeometryType gt) {
+
+    private double getSumOfGeometries(ArrayList<Feature> features, GeometryType gt) {
         Iterator<Feature> it = features.iterator();
         Class binding = gt.getBinding();
-        double d=0.0;
-        while(it.hasNext()){
+        double d = 0.0;
+        while (it.hasNext()) {
             Feature f = it.next();
-            Object o=f.getDefaultGeometryProperty().getValue();
-            if (o!=null){
-                Geometry geom = (Geometry)o;
-                if (binding == Polygon.class || binding == MultiPolygon.class){
-                    d+=geom.getArea();
-                }else if (binding == LineString.class || binding == MultiLineString.class){
-                    d+=geom.getLength();
-                }else if (binding == Point.class || binding == MultiPoint.class){
-                    d+=geom.getNumGeometries();
+            Object o = f.getDefaultGeometryProperty().getValue();
+            if (o != null) {
+                Geometry geom = (Geometry) o;
+                if (binding == Polygon.class || binding == MultiPolygon.class) {
+                    d += geom.getArea();
+                } else if (binding == LineString.class || binding == MultiLineString.class) {
+                    d += geom.getLength();
+                } else if (binding == Point.class || binding == MultiPoint.class) {
+                    d += geom.getNumGeometries();
                 }
             }
-        }       
+        }
         return d;
     }
-    private Feature getFeatureWithGeometry(ArrayList<Feature> features,GeometryType gt,String type){
+
+    private Feature getFeatureWithGeometry(ArrayList<Feature> features, GeometryType gt, String type) {
         Class binding = gt.getBinding();
-        if (binding == Point.class){
+        if (binding == Point.class) {
             return null;
         }
-        Iterator<Feature> it = features.iterator();        
-        Feature feature=null;
-        while(it.hasNext()){
+        Iterator<Feature> it = features.iterator();
+        Feature feature = null;
+        while (it.hasNext()) {
             Feature f = it.next();
-            double value=0.0;
-            Object o=f.getDefaultGeometryProperty().getValue();
-            if (o!=null){
-                if (feature==null){
-                    feature=f;
+            double value = 0.0;
+            Object o = f.getDefaultGeometryProperty().getValue();
+            if (o != null) {
+                if (feature == null) {
+                    feature = f;
                     continue;
                 }
-                Geometry featureGeom=(Geometry) feature.getDefaultGeometryProperty().getValue();
-                Geometry currentGeom=(Geometry) f.getDefaultGeometryProperty().getValue();
-                if (binding == Polygon.class || binding == MultiPolygon.class){
-                    if ((type.equalsIgnoreCase("max") && currentGeom.getArea() > featureGeom.getArea()) ||
-                            (type.equalsIgnoreCase("min") && currentGeom.getArea() < featureGeom.getArea())){
-                        feature=f;
+                Geometry featureGeom = (Geometry) feature.getDefaultGeometryProperty().getValue();
+                Geometry currentGeom = (Geometry) f.getDefaultGeometryProperty().getValue();
+                if (binding == Polygon.class || binding == MultiPolygon.class) {
+                    if ((type.equalsIgnoreCase("max") && currentGeom.getArea() > featureGeom.getArea())
+                            || (type.equalsIgnoreCase("min") && currentGeom.getArea() < featureGeom.getArea())) {
+                        feature = f;
                     }
-                }else if (binding == LineString.class ||binding == MultiLineString.class){
-                    if ((type.equalsIgnoreCase("max") && currentGeom.getLength() > featureGeom.getLength()) ||
-                            (type.equalsIgnoreCase("min") && currentGeom.getLength() < featureGeom.getLength())){
-                        feature=f;
+                } else if (binding == LineString.class || binding == MultiLineString.class) {
+                    if ((type.equalsIgnoreCase("max") && currentGeom.getLength() > featureGeom.getLength())
+                            || (type.equalsIgnoreCase("min") && currentGeom.getLength() < featureGeom.getLength())) {
+                        feature = f;
                     }
-                }else if (binding == MultiPoint.class){
-                    if ((type.equalsIgnoreCase("max") && currentGeom.getNumGeometries() > featureGeom.getNumGeometries()) ||
-                            (type.equalsIgnoreCase("min") && currentGeom.getNumGeometries() < featureGeom.getNumGeometries())){
-                        feature=f;
+                } else if (binding == MultiPoint.class) {
+                    if ((type.equalsIgnoreCase("max") && currentGeom.getNumGeometries() > featureGeom.getNumGeometries())
+                            || (type.equalsIgnoreCase("min") && currentGeom.getNumGeometries() < featureGeom.getNumGeometries())) {
+                        feature = f;
                     }
                 }
             }

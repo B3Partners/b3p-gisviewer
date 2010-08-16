@@ -88,7 +88,7 @@ public class DataStoreUtil {
      * @param maximum Het maximum aantal features die gereturned moeten worden. (default is geset op 1000)
      *
      */
-    public static ArrayList<Feature> getFeatures(Bron b, Themas t, Geometry geom, Filter extraFilter, ArrayList<String> propNames, Integer maximum) throws IOException, Exception {
+    public static ArrayList<Feature> getFeatures(Bron b, Themas t, Geometry geom, Filter extraFilter, List<String> propNames, Integer maximum) throws IOException, Exception {
         DataStore ds = b.toDatastore();
         try {
             Filter geomFilter = createIntersectFilter(t, ds, geom);
@@ -109,10 +109,6 @@ public class DataStoreUtil {
         } finally {
             ds.dispose();
         }
-    }
-
-    public static ArrayList<Feature> getFeatures(Bron b, Themas t, Geometry geom, Filter extraFilter, List<ThemaData> themaData, Integer maximum) throws IOException, Exception {
-        return getFeatures(b, t, geom, extraFilter, themaData2PropertyNames(themaData), maximum);
     }
 
     /**
@@ -182,8 +178,8 @@ public class DataStoreUtil {
         }
         if (propNames != null) {
             //zorg er voor dat de pk ook wordt opgehaald
-            if (t.getAdmin_pk() != null && !propNames.contains(t.getAdmin_pk())) {
-                propNames.add(t.getAdmin_pk());
+            if (ftName.getLocalPart() != null && !propNames.contains(ftName.getLocalPart())) {
+                propNames.add(ftName.getLocalPart());
             }
 
             // zorg ervoor dat de geometry wordt opgehaald, indien aanwezig.
@@ -204,10 +200,10 @@ public class DataStoreUtil {
                         //haal alle properties er uit.en stuur deze mee in de query
                         int beginIndex = commando.indexOf("[") + 1;
                         int endIndex = commando.indexOf("]");
-                        String property = commando.substring(beginIndex, endIndex);
+                        QName propName = convertFullnameToQName(commando.substring(beginIndex, endIndex));
                         //geen dubbele meegeven.
-                        if (!propNames.contains(property)) {
-                            propNames.add(property);
+                        if (!propNames.contains(propName.getLocalPart())) {
+                            propNames.add(propName.getLocalPart());
                         }
                         if (endIndex + 1 >= commando.length() - 1) {
                             commando = "";
@@ -302,7 +298,7 @@ public class DataStoreUtil {
 
     //Thema helpers
     public static String getGeometryAttributeName(DataStore ds, Themas t) throws Exception {
-        return getSchema(ds, t).getGeometryDescriptor().getName().toString();
+        return getSchema(ds, t).getGeometryDescriptor().getName().getLocalPart();
     }
 
     /**
@@ -360,12 +356,13 @@ public class DataStoreUtil {
      * Geeft een lijst terug met String objecten waarin de mogelijke attributeNames staan.
      */
     public static ArrayList<String> getAttributeNames(DataStore ds, String featureName) throws Exception {
-        SimpleFeatureType featureType = getSchema(ds, featureName);
+        QName ftName = convertFullnameToQName(featureName);
+        SimpleFeatureType featureType = getSchema(ds, ftName.getLocalPart());
         List<AttributeDescriptor> descriptors = featureType.getAttributeDescriptors();
         ArrayList<String> attributen = new ArrayList();
         //maak een lijst met mogelijke attributen en de binding class namen.
         for (int i = 0; i < descriptors.size(); i++) {
-            attributen.add(descriptors.get(i).getName().toString());
+            attributen.add(descriptors.get(i).getName().getLocalPart());
         }
         return attributen;
     }
@@ -374,8 +371,9 @@ public class DataStoreUtil {
         ArrayList<String> propNamesList = new ArrayList();
         for (int i = 0; i < themaData.size(); i++) {
             if (themaData.get(i).getKolomnaam() != null) {
-                if (!propNamesList.contains(themaData.get(i).getKolomnaam())) {
-                    propNamesList.add(themaData.get(i).getKolomnaam());
+                String prp = convertFullnameToQName(themaData.get(i).getKolomnaam()).getLocalPart();
+                if (!propNamesList.contains(prp)) {
+                    propNamesList.add(prp);
                 }
             }
         }

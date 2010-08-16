@@ -22,14 +22,15 @@
  */
 package nl.b3p.gis.viewer;
 
+import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.io.WKTWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,6 +41,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.NotSupportedException;
 import nl.b3p.commons.services.FormUtils;
+import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.DataTypen;
@@ -55,11 +57,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
 import org.opengis.filter.Filter;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 public abstract class BaseGisAction extends BaseHibernateAction {
 
@@ -380,36 +384,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     }
     // </editor-fold>
 
-    private String convertAttributeName(String rawName, Feature f) {
-        if (rawName == null || rawName.trim().length() == 0) {
-            return null;
-        }
-        String attName = rawName.trim();
-        if (f.getProperty(attName) != null) {
-            return attName;
-        }
-        attName = removeNamespace(attName);
-        if (f.getProperty(attName) != null) {
-            return attName;
-        }
-        return null;
-    }
-
-    public static String removeNamespace(String rawName) {
-        if (rawName == null) {
-            return rawName;
-        }
-        String returnValue = new String(rawName);
-        if (returnValue.indexOf("{") >= 0 && returnValue.indexOf("}") >= 0) {
-            returnValue = returnValue.substring(returnValue.indexOf("}") + 1);
-        }
-        if (returnValue.split(":").length > 1) {
-            returnValue = returnValue.split(":")[1];
-        }
-        return returnValue;
-    }
-
-    private String convertFeature2WKT(Feature f) {
+    protected String convertFeature2WKT(Feature f) {
         if (f == null || f.getDefaultGeometryProperty() == null) {
             return null;
         }
@@ -417,6 +392,21 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         if (geom != null && geom.isSimple() && geom.isValid()) {
             WKTWriter wktw = new WKTWriter();
             return wktw.write(geom);
+        }
+        return null;
+    }
+
+    protected ReferencedEnvelope convertFeature2Envelop(Feature f) {
+        if (f == null || f.getDefaultGeometryProperty() == null) {
+            return null;
+        }
+        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
+        if (geom != null && geom.isSimple() && geom.isValid()) {
+            if (!(geom instanceof Point)) {
+                Envelope env = geom.getEnvelopeInternal();
+                CoordinateReferenceSystem crs = f.getDefaultGeometryProperty().getDescriptor().getCoordinateReferenceSystem();
+                return new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
+            }
         }
         return null;
     }
@@ -435,10 +425,10 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      *
      * @see Themas
      */
-    protected AdminDataRowBean getRegel(Feature f, Themas t, List thema_items) throws SQLException, UnsupportedEncodingException, Exception {
+    protected AdminDataRowBean getRegel(Feature f, Themas t, List<ThemaData> thema_items) throws SQLException, UnsupportedEncodingException, Exception {
         AdminDataRowBean regel = new AdminDataRowBean();
 
-        String adminPk = convertAttributeName(t.getAdmin_pk(), f);
+        String adminPk = DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart();
         if (adminPk != null) {
             regel.setPrimaryKey(f.getProperty(adminPk).getValue());
         }
@@ -454,7 +444,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
              * zoniet kan het zijn dat er een prefix ns in staat. Die moet er dan van afgehaald worden. 
              * Als het dan nog steeds niet bestaat: een lege toevoegen.
              */
-            String kolomnaam = convertAttributeName(td.getKolomnaam(), f);
+            String kolomnaam = DataStoreUtil.convertFullnameToQName(td.getKolomnaam()).getLocalPart();
             /*
              * Controleer om welk datatype dit themadata object om draait.
              * Binnen het Datatype zijn er drie mogelijkheden, namelijk echt data,
@@ -536,7 +526,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                     if (commando.contains("[") || commando.contains("]")) {
                         //vervang de eventuele csv in 1 waarde van die csv
                         if (kolomnaam != null) {
-                            fhm.put(removeNamespace(kolomnaam), value);
+                            fhm.put(kolomnaam, value);
                         }
                         String newCommando = replaceValuesInString(commando, fhm);
                         regelValues.add(newCommando);
