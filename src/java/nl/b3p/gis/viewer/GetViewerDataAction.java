@@ -249,7 +249,6 @@ public class GetViewerDataAction extends BaseGisAction {
             /* init loop vars */
             String rolnaam = "";
             String inlogRol = "";
-            String cfg_rolnaam = "";
 
             Map map = null;
             boolean foundRole = false;
@@ -258,7 +257,6 @@ public class GetViewerDataAction extends BaseGisAction {
              * configuratie voorkomt. Hoogste rol wordt geladen */
             for (int i=0; i < configRollen.length; i++) {
 
-                /* al een rol gevonden breakie breakie */
                 if (foundRole)
                     break;
 
@@ -270,9 +268,6 @@ public class GetViewerDataAction extends BaseGisAction {
 
                 while (iter.hasNext()) {
                     inlogRol = iter.next().toString();
-
-                    /* rolnaam zetten. deze wordt gebruikt in jsp */
-                    cfg_rolnaam = inlogRol;
 
                     if (rolnaam.equals(inlogRol)) {
                         map = configKeeper.getConfigMap(rolnaam);

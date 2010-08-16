@@ -396,10 +396,8 @@ public class ViewerAction extends BaseGisAction {
         if (rollenPrio != null) {
             String[] configRollen = rollenPrio.getPropval().split(",");
 
-            /* init loop vars */
             String rolnaam = "";
             String inlogRol = "";
-            String cfg_rolnaam = "";
 
             Map map = null;
             boolean foundRole = false;
@@ -408,7 +406,6 @@ public class ViewerAction extends BaseGisAction {
              * configuratie voorkomt. Hoogste rol wordt geladen */
             for (int i=0; i < configRollen.length; i++) {
 
-                /* al een rol gevonden breakie breakie */
                 if (foundRole)
                     break;
 
@@ -420,9 +417,6 @@ public class ViewerAction extends BaseGisAction {
 
                 while (iter.hasNext()) {
                     inlogRol = iter.next().toString();
-
-                    /* rolnaam zetten. deze wordt gebruikt in jsp */
-                    cfg_rolnaam = inlogRol;
 
                     if (rolnaam.equals(inlogRol)) {
                         map = configKeeper.getConfigMap(rolnaam);
@@ -438,57 +432,7 @@ public class ViewerAction extends BaseGisAction {
                 map = configKeeper.getConfigMap("default");
             }
 
-            /* de getConfigMap geeft alle waardes terug volgens de types
-             * zoals deze gedefinieerd zijn in het type kolom van de configuratie */
-
-            // CvL aan Bdw: waarom niet simpelweg:
-             request.setAttribute("configMap", map);
-            // en dan in jsp ${configMap["useCookies"]} 
-
-            Boolean useCookies = (Boolean) map.get("useCookies");
-            Boolean multipleActiveThemas = (Boolean) map.get("multipleActiveThemas");
-            Boolean usePopup = (Boolean) map.get("usePopup");
-            Boolean useDivPopup = (Boolean) map.get("useDivPopup");
-            Boolean usePanelControls = (Boolean) map.get("usePanelControls");
-            Boolean showLeftPanel = (Boolean) map.get("showLeftPanel");
-            Integer autoRedirect = (Integer) map.get("autoRedirect");
-            Integer tolerance = (Integer) map.get("tolerance");
-            Boolean useSortableFunction = (Boolean) map.get("useSortableFunction");
-            Integer layerDelay = (Integer) map.get("layerDelay");
-            Integer refreshDelay = (Integer) map.get("refreshDelay");
-            String zoekConfigIds = (String) map.get("zoekConfigIds");
-            Integer minBboxZoeken = (Integer) map.get("minBboxZoeken");
-            Integer maxResults = (Integer) map.get("maxResults");
-            Boolean expandAll = (Boolean) map.get("expandAll");
-            String tabs = (String) map.get("tabs");
-            Boolean useInheritCheckbox = (Boolean) map.get("useInheritCheckbox");
-            Boolean showLegendInTree = (Boolean) map.get("showLegendInTree");
-            Boolean useMouseOverTabs = (Boolean) map.get("useMouseOverTabs");
-
-            /* rol klaarzetten voor tabblad config */
-            request.setAttribute("cfg_rolnaam", cfg_rolnaam);
-            request.setAttribute("cfg_tabs", tabs);
-
-            /* config klaarzetten voor de jsp */
-            request.setAttribute("cfg_useCookies", useCookies);
-            request.setAttribute("cfg_multipleActiveThemas", multipleActiveThemas);
-            request.setAttribute("cfg_usePopup", usePopup);
-            request.setAttribute("cfg_useDivPopup", useDivPopup);
-            request.setAttribute("cfg_dataframepopupHandle", "null");
-            request.setAttribute("cfg_usePanelControls", usePanelControls);
-            request.setAttribute("cfg_showLeftPanel", showLeftPanel);
-            request.setAttribute("cfg_autoRedirect", autoRedirect);
-            request.setAttribute("cfg_tolerance", tolerance);
-            request.setAttribute("cfg_useSortableFunction", useSortableFunction);
-            request.setAttribute("cfg_layerDelay", layerDelay);
-            request.setAttribute("cfg_refreshDelay", refreshDelay);
-            request.setAttribute("cfg_zoekConfigIds", zoekConfigIds);
-            request.setAttribute("cfg_minBboxZoeken", minBboxZoeken);
-            request.setAttribute("cfg_maxResults", maxResults);
-            request.setAttribute("cfg_expandAll", expandAll);
-            request.setAttribute("cfg_useInheritCheckbox", useInheritCheckbox);
-            request.setAttribute("cfg_showLegendInTree", showLegendInTree);
-            request.setAttribute("cfg_useMouseOverTabs", useMouseOverTabs);
+            request.setAttribute("configMap", map);
         }
     }
 
