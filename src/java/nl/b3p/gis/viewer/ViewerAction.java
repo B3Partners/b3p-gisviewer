@@ -400,7 +400,7 @@ public class ViewerAction extends BaseGisAction {
             String inlogRol = "";
 
             Map map = null;
-            boolean foundRole = false;
+            Boolean foundRole = false;
 
             /* Zoeken of gebruiker een rol heeft die in de rollen
              * configuratie voorkomt. Hoogste rol wordt geladen */
