@@ -33,6 +33,7 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.PrecisionModel;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -43,6 +44,7 @@ import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geotools.data.DataStore;
@@ -111,35 +113,6 @@ public class SpatialUtil {
         hquery += "ORDER BY belangnr DESC";
         Query q = sess.createQuery(hquery);
         return q.list();
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
-     * @param t Themas
-     * @param conn Connection
-     *
-     * @return int
-     *
-     */
-    static public String getThemaGeomName(Themas t, Bron bron) throws IOException {
-        QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel()) ;
-        if (n.getLocalPart() == null) {
-            n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
-        }
-        return getThemaGeomName(n.getLocalPart(), bron);
-    }
-
-    static public String getThemaGeomName(String featureType, Bron bron) throws IOException {
-        DataStore ds= bron.toDatastore();
-        try {
-            SimpleFeatureType sft=ds.getSchema(featureType);
-            if (sft.getGeometryDescriptor()!=null)
-                return sft.getGeometryDescriptor().getName().toString();
-        } finally {
-            ds.dispose();
-        }
-        return null;
     }
 
     /**

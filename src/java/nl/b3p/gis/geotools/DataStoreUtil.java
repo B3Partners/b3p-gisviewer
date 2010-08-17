@@ -178,8 +178,9 @@ public class DataStoreUtil {
         }
         if (propNames != null) {
             //zorg er voor dat de pk ook wordt opgehaald
-            if (ftName.getLocalPart() != null && !propNames.contains(ftName.getLocalPart())) {
-                propNames.add(ftName.getLocalPart());
+            String adminPk = DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart();
+            if (adminPk != null && !propNames.contains(adminPk)) {
+                propNames.add(adminPk);
             }
 
             // zorg ervoor dat de geometry wordt opgehaald, indien aanwezig.
@@ -391,6 +392,67 @@ public class DataStoreUtil {
             typeNames[i] = new NameImpl(qname.getNamespaceURI(), qname.getLocalPart());
         }
         return typeNames;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param t Themas
+     * @param conn Connection
+     *
+     * @return int
+     *
+     */
+    static public String getThemaGeomName(Themas t) throws IOException, Exception {
+        // wfs niet ondersteunt (te langzaam), dus kaartenbalie wfs is
+        // ook niet nodig en dus geen request om het te zoeken.
+        Bron b = t.getConnectie();
+        if (b == null || !b.checkType(Bron.TYPE_JDBC)) {
+            throw new UnsupportedOperationException("Only supported for JDBC connections (WFS too slow)");
+        }
+        QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel());
+        if (n.getLocalPart() == null) {
+            n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
+        }
+        if (n.getLocalPart() == null) {
+            return null;
+        }
+        DataStore ds = b.toDatastore();
+        try {
+            SimpleFeatureType sft = ds.getSchema(n.getLocalPart());
+            if (sft.getGeometryDescriptor() != null) {
+                return sft.getGeometryDescriptor().getName().toString();
+            }
+        } finally {
+            ds.dispose();
+        }
+        return null;
+    }
+
+    static public String getThemaGeomType(Themas t) throws IOException, Exception  {
+        // wfs niet ondersteunt (te langzaam), dus kaartenbalie wfs is
+        // ook niet nodig en dus geen request om het te zoeken.
+        Bron b = t.getConnectie();
+        if (b == null || !b.checkType(Bron.TYPE_JDBC)) {
+            throw new UnsupportedOperationException("Only supported for JDBC connections (WFS too slow)");
+        }
+        QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel());
+        if (n.getLocalPart() == null) {
+            n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
+        }
+        if (n.getLocalPart() == null) {
+            return null;
+        }
+        DataStore ds = b.toDatastore();
+        try {
+            SimpleFeatureType sft = ds.getSchema(n.getLocalPart());
+            if (sft.getGeometryDescriptor() != null) {
+                return sft.getGeometryDescriptor().getType().toString();
+            }
+        } finally {
+            ds.dispose();
+        }
+        return null;
     }
     
     /**

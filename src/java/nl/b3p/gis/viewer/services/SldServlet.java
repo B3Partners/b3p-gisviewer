@@ -18,6 +18,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import nl.b3p.commons.services.FormUtils;
+import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.zoeker.configuratie.Bron;
@@ -131,7 +132,7 @@ public class SldServlet extends HttpServlet {
                 Themas th = themaList.get(i);
                 String sldattribuut = th.getSldattribuut();
                 if (sldattribuut == null || sldattribuut.length() == 0) {
-                    sldattribuut = th.getAdmin_pk();
+                    sldattribuut = DataStoreUtil.convertFullnameToQName(th.getAdmin_pk()).getLocalPart();
                 }
                 if (sldattribuut == null || sldattribuut.length() == 0) {
                     log.debug("thema heeft geen sld attribuut");
@@ -178,15 +179,7 @@ public class SldServlet extends HttpServlet {
     }
 
     private String getGeomtryType(Themas t) throws Exception {
-        String geometryType = null;
-
-        Bron b = t.getConnectie();
-        if (b!=null && b.checkType(Bron.TYPE_JDBC)) {
-            geometryType = SpatialUtil.getThemaGeomType(t, b);
-        } else {
-            throw new UnsupportedOperationException("Not supported for other then JDBC themas");
-        }
-
+        String geometryType = DataStoreUtil.getThemaGeomType(t);
         return geometryType;
     }
 

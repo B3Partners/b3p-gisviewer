@@ -162,7 +162,7 @@ public class GetLocationData {
                 return returnValue;
             }
 
-            if (b.checkType(Bron.TYPE_JDBC) || b.checkType(Bron.TYPE_ORACLE)) {
+            if (b.checkType(Bron.TYPE_JDBC)) {
                 Connection conn = t.getJDBCConnection();
                 String tableName = t.getSpatial_tabel();
                 try {

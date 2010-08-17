@@ -444,7 +444,10 @@ public abstract class BaseGisAction extends BaseHibernateAction {
              * zoniet kan het zijn dat er een prefix ns in staat. Die moet er dan van afgehaald worden. 
              * Als het dan nog steeds niet bestaat: een lege toevoegen.
              */
-            String kolomnaam = DataStoreUtil.convertFullnameToQName(td.getKolomnaam()).getLocalPart();
+            String kolomnaam = td.getKolomnaam();
+            if (kolomnaam!=null && kolomnaam.length()>0) {
+                    kolomnaam = DataStoreUtil.convertFullnameToQName(td.getKolomnaam()).getLocalPart();
+            }
             /*
              * Controleer om welk datatype dit themadata object om draait.
              * Binnen het Datatype zijn er drie mogelijkheden, namelijk echt data,
