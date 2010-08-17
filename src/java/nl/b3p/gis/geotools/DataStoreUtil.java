@@ -359,12 +359,16 @@ public class DataStoreUtil {
      */
     public static List<String> getAttributeNames(DataStore ds, String featureName) throws Exception {
         QName ftName = convertFullnameToQName(featureName);
-        SimpleFeatureType featureType = getSchema(ds, ftName.getLocalPart());
-        List<AttributeDescriptor> descriptors = featureType.getAttributeDescriptors();
         ArrayList<String> attributen = new ArrayList();
-        //maak een lijst met mogelijke attributen en de binding class namen.
-        for (int i = 0; i < descriptors.size(); i++) {
-            attributen.add(descriptors.get(i).getName().getLocalPart());
+        try {
+            SimpleFeatureType featureType = getSchema(ds, ftName.getLocalPart());
+            List<AttributeDescriptor> descriptors = featureType.getAttributeDescriptors();
+            //maak een lijst met mogelijke attributen en de binding class namen.
+            for (int i = 0; i < descriptors.size(); i++) {
+                attributen.add(descriptors.get(i).getName().getLocalPart());
+            }
+        } catch (Exception e) {
+            // error reported earlier
         }
         return attributen;
     }
