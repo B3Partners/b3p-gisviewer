@@ -38,13 +38,17 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import javax.xml.namespace.QName;
+import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geotools.data.DataStore;
 import org.hibernate.Query;
 import org.hibernate.Session;
+import org.opengis.feature.simple.SimpleFeatureType;
 
 public class SpatialUtil {
 
@@ -109,7 +113,36 @@ public class SpatialUtil {
         return q.list();
     }
 
-     /**
+    /**
+     * DOCUMENT ME!
+     *
+     * @param t Themas
+     * @param conn Connection
+     *
+     * @return int
+     *
+     */
+    static public String getThemaGeomName(Themas t, Bron bron) throws IOException {
+        QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel()) ;
+        if (n.getLocalPart() == null) {
+            n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
+        }
+        return getThemaGeomName(n.getLocalPart(), bron);
+    }
+
+    static public String getThemaGeomName(String featureType, Bron bron) throws IOException {
+        DataStore ds= bron.toDatastore();
+        try {
+            SimpleFeatureType sft=ds.getSchema(featureType);
+            if (sft.getGeometryDescriptor()!=null)
+                return sft.getGeometryDescriptor().getName().toString();
+        } finally {
+            ds.dispose();
+        }
+        return null;
+    }
+
+    /**
      * DOCUMENT ME!
      *
      * @param t Themas

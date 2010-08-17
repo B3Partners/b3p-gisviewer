@@ -20,6 +20,7 @@ import javax.xml.transform.stream.StreamResult;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.Session;
@@ -177,15 +178,16 @@ public class SldServlet extends HttpServlet {
     }
 
     private String getGeomtryType(Themas t) throws Exception {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         String geometryType = null;
-        /*if (t.getConnectie() != null && Connecties.TYPE_JDBC.equals(t.getConnectie().getType())) {
-            geometryType = SpatialUtil.getThemaGeomType(t, t.getConnectie().getJdbcConnection());
-        } else {
-           */ throw new UnsupportedOperationException("Not supported for other then JDBC themas");
-        /*}
 
-        return geometryType;*/
+        Bron b = t.getConnectie();
+        if (b!=null && b.checkType(Bron.TYPE_JDBC)) {
+            geometryType = SpatialUtil.getThemaGeomType(t, b);
+        } else {
+            throw new UnsupportedOperationException("Not supported for other then JDBC themas");
+        }
+
+        return geometryType;
     }
 
     public Document getDefaultSld() throws Exception {
