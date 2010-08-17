@@ -67,7 +67,7 @@ public class SpatialUtil {
     public static List getValidClusters() {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         String hquery = "FROM Clusters WHERE default_cluster = false ";
-        hquery += "ORDER BY belangnr DESC";
+        hquery += "ORDER BY belangnr, naam DESC";
         Query q = sess.createQuery(hquery);
         return q.list();
     }
@@ -75,7 +75,7 @@ public class SpatialUtil {
     public static Clusters getDefaultCluster() {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         String hquery = "FROM Clusters WHERE default_cluster = true ";
-        hquery += "ORDER BY belangnr DESC";
+        hquery += "ORDER BY belangnr, naam DESC";
         Query q = sess.createQuery(hquery);
         List cl = q.list();
         if (cl != null && cl.size() > 0) {
@@ -110,7 +110,7 @@ public class SpatialUtil {
         if (locatie) {
             hquery += "WHERE locatie_thema = true ";
         }
-        hquery += "ORDER BY belangnr DESC";
+        hquery += "ORDER BY belangnr, naam DESC";
         Query q = sess.createQuery(hquery);
         return q.list();
     }
@@ -131,7 +131,7 @@ public class SpatialUtil {
         if (basisregel) {
             query += "and td.basisregel = :br ";
         }
-        query += " order by td.dataorder";
+        query += " order by td.dataorder, td.label";
         Query q = sess.createQuery(query);
         q.setInteger("tid", t.getId());
         if (basisregel) {

@@ -21,6 +21,7 @@ import nl.b3p.gis.viewer.GetViewerDataAction;
 import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
@@ -179,13 +180,13 @@ public class DataStoreUtil {
         if (propNames != null) {
             //zorg er voor dat de pk ook wordt opgehaald
             String adminPk = DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart();
-            if (adminPk != null && !propNames.contains(adminPk)) {
+            if (adminPk != null && adminPk.length()>0 && !propNames.contains(adminPk)) {
                 propNames.add(adminPk);
             }
 
             // zorg ervoor dat de geometry wordt opgehaald, indien aanwezig.
             String geomAttributeName = getGeometryAttributeName(ds, t);
-            if (geomAttributeName != null && geomAttributeName.length() > 0) {
+            if (geomAttributeName != null && geomAttributeName.length() > 0  && !propNames.contains(geomAttributeName)) {
                 propNames.add(geomAttributeName);
             }
             /*Als een themaDataObject van het type query is en er zitten [] in
@@ -203,7 +204,7 @@ public class DataStoreUtil {
                         int endIndex = commando.indexOf("]");
                         QName propName = convertFullnameToQName(commando.substring(beginIndex, endIndex));
                         //geen dubbele meegeven.
-                        if (!propNames.contains(propName.getLocalPart())) {
+                        if (propName!=null && !propNames.contains(propName.getLocalPart())) {
                             propNames.add(propName.getLocalPart());
                         }
                         if (endIndex + 1 >= commando.length() - 1) {
@@ -341,22 +342,22 @@ public class DataStoreUtil {
      * DataStore geopend hebt gebruik dan getAttributeNames(DataStore,String)! Dit
      * scheelt weer qua performance.
      */
-    public static ArrayList<String> getAttributeNames(Bron b, Themas t) throws Exception {
-        if (b != null) {
-            DataStore ds = b.toDatastore();
-            try {
-                return getAttributeNames(ds, t.getAdmin_tabel());
-            } finally {
-                ds.dispose();
-            }
+    public static List<String> getAttributeNames(Bron b, Themas t) throws Exception {
+        if (b == null) {
+            return new ArrayList<String>();
         }
-        return null;
+        DataStore ds = b.toDatastore();
+        try {
+            return getAttributeNames(ds, t.getAdmin_tabel());
+        } finally {
+            ds.dispose();
+        }
     }
 
     /**
      * Geeft een lijst terug met String objecten waarin de mogelijke attributeNames staan.
      */
-    public static ArrayList<String> getAttributeNames(DataStore ds, String featureName) throws Exception {
+    public static List<String> getAttributeNames(DataStore ds, String featureName) throws Exception {
         QName ftName = convertFullnameToQName(featureName);
         SimpleFeatureType featureType = getSchema(ds, ftName.getLocalPart());
         List<AttributeDescriptor> descriptors = featureType.getAttributeDescriptors();
@@ -368,7 +369,7 @@ public class DataStoreUtil {
         return attributen;
     }
 
-    public static ArrayList<String> themaData2PropertyNames(List<ThemaData> themaData) {
+    public static List<String> themaData2PropertyNames(List<ThemaData> themaData) {
         ArrayList<String> propNamesList = new ArrayList();
         for (int i = 0; i < themaData.size(); i++) {
             if (themaData.get(i).getKolomnaam() != null) {
@@ -389,7 +390,11 @@ public class DataStoreUtil {
         Name[] typeNames = new Name[tna.length];
         for (int i = 0; i < tna.length; i++) {
             QName qname = convertFullnameToQName(tna[i]);
-            typeNames[i] = new NameImpl(qname.getNamespaceURI(), qname.getLocalPart());
+            if (qname==null) {
+                typeNames[i] = new NameImpl("");
+            } else {
+                typeNames[i] = new NameImpl(qname.getNamespaceURI(), qname.getLocalPart());
+            }
         }
         return typeNames;
     }
@@ -403,25 +408,23 @@ public class DataStoreUtil {
      * @return int
      *
      */
-    static public String getThemaGeomName(Themas t) throws IOException, Exception {
-        // wfs niet ondersteunt (te langzaam), dus kaartenbalie wfs is
-        // ook niet nodig en dus geen request om het te zoeken.
-        Bron b = t.getConnectie();
-        if (b == null || !b.checkType(Bron.TYPE_JDBC)) {
-            throw new UnsupportedOperationException("Only supported for JDBC connections (WFS too slow)");
+    static public Name getThemaGeomName(Themas t, GisPrincipal user) throws IOException, Exception {
+        Bron b = t.getConnectie(user);
+        if (b == null) {
+            return null;
         }
         QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel());
-        if (n.getLocalPart() == null) {
+        if (n==null || n.getLocalPart() == null) {
             n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
         }
-        if (n.getLocalPart() == null) {
+        if (n==null || n.getLocalPart() == null) {
             return null;
         }
         DataStore ds = b.toDatastore();
         try {
             SimpleFeatureType sft = ds.getSchema(n.getLocalPart());
             if (sft.getGeometryDescriptor() != null) {
-                return sft.getGeometryDescriptor().getName().toString();
+                return sft.getGeometryDescriptor().getName();
             }
         } finally {
             ds.dispose();
@@ -429,18 +432,16 @@ public class DataStoreUtil {
         return null;
     }
 
-    static public String getThemaGeomType(Themas t) throws IOException, Exception  {
-        // wfs niet ondersteunt (te langzaam), dus kaartenbalie wfs is
-        // ook niet nodig en dus geen request om het te zoeken.
-        Bron b = t.getConnectie();
-        if (b == null || !b.checkType(Bron.TYPE_JDBC)) {
-            throw new UnsupportedOperationException("Only supported for JDBC connections (WFS too slow)");
+    static public String getThemaGeomType(Themas t, GisPrincipal user) throws IOException, Exception  {
+        Bron b = t.getConnectie(user);
+        if (b == null) {
+            return null;
         }
         QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel());
-        if (n.getLocalPart() == null) {
+        if (n==null || n.getLocalPart() == null) {
             n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
         }
-        if (n.getLocalPart() == null) {
+        if (n==null || n.getLocalPart() == null) {
             return null;
         }
         DataStore ds = b.toDatastore();
@@ -467,6 +468,9 @@ public class DataStoreUtil {
     }
 
     public static QName convertFullnameToQName(String ln) {
+        if (ln==null) {
+            return null;
+        }
         String localName = ln;
         String nsPrefix = "";
         String nsUriString = "";

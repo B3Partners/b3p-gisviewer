@@ -147,7 +147,7 @@ public class SldServlet extends HttpServlet {
                 featureType = featureType.substring(featureType.indexOf("_") + 1);
                 String geometryType = null;
                 try {
-                    geometryType = getGeomtryType(th);
+                    geometryType = getGeomtryType(th, request);
                 } catch (Exception e) {
                     log.debug("Error getting geometry type. Creating the style with a polygonsimbolizer.");
                 }
@@ -178,8 +178,9 @@ public class SldServlet extends HttpServlet {
         return sess.createQuery("from Themas where cluster=:p").setInteger("p", id).list();
     }
 
-    private String getGeomtryType(Themas t) throws Exception {
-        String geometryType = DataStoreUtil.getThemaGeomType(t);
+    private String getGeomtryType(Themas t, HttpServletRequest request) throws Exception {
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        String geometryType = DataStoreUtil.getThemaGeomType(t, user);
         return geometryType;
     }
 
