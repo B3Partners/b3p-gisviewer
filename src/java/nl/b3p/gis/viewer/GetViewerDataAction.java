@@ -450,105 +450,103 @@ public class GetViewerDataAction extends BaseGisAction {
             log.error("Er is geen analysegebied aangegeven!");
             throw new Exception("Er is geen analysegebied aangegeven!");
         }
-        String[] tokens = geselecteerdObject.split("_");
-        if (tokens.length != 3) {
-            log.error("Id van analysegebied verkeerd geformatteerd!");
-            throw new Exception("Id van analysegebied verkeerd geformatteerd!");
-        }
-        //haal het analyseObject thema en bron op.
-        Themas analyseObjectThema = SpatialUtil.getThema(tokens[1]);
-        if (analyseObjectThema == null) {
-            log.error("Kan het geselecteerde thema object niet vinden!");
-            throw new Exception("Kan het geselecteerde thema object niet vinden!");
-        }
-        String analyseGeomId = tokens[2];
-        //Haal de geometry binnen waarmee de analyse moet worden uitgevoerd.
-        String adminPk = DataStoreUtil.convertFullnameToQName(analyseObjectThema.getAdmin_pk()).getLocalPart();
-        Filter f = FilterBuilder.createEqualsFilter(adminPk, analyseGeomId);
-
-        ArrayList<Feature> analyseFeatures = null;
-        Bron ab = analyseObjectThema.getConnectie(request);
-        DataStore dsAnalyse = null;
-        if (ab != null) {
-            dsAnalyse = ab.toDatastore();
-        }
-        try {
-            String geometryName = DataStoreUtil.getSchema(dsAnalyse, t).getGeometryDescriptor().getLocalName();
-            ArrayList<String> propertyNames = new ArrayList();
-            propertyNames.add(geometryName);
-            analyseFeatures = DataStoreUtil.getFeatures(dsAnalyse, analyseObjectThema, f, propertyNames, 1);
-        } finally {
-            dsAnalyse.dispose();
-        }
-        if (analyseFeatures == null || analyseFeatures.size() == 0) {
-            log.error("De gekozen geometry kan niet worden gevonden");
-            request.setAttribute("waarde", "De gekozen geometry kan niet worden gevonden");
-        }
-        Geometry analyseGeometry = (Geometry) analyseFeatures.get(0).getDefaultGeometryProperty().getValue();
+        Geometry analyseGeometry = determineAnalyseGeometry(geselecteerdObject,request);
 
         DataStore ds = b.toDatastore();
         try {
-            GeometryType tgt = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getType();
 
             //Haal alle features op die binnen de analyseGeometry vallen:
-            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, t, analyseGeometry, extraFilter, thema_items, -1);
-            int zow = 0;
-            try {
-                zow = Integer.parseInt(dynaForm.getString("zoekopties_waarde"));
-            } catch (NumberFormatException nfe) {
-                log.debug("zoekopties_waarde fout: ", nfe);
-            }
+            List<String> propertyNames = DataStoreUtil.themaData2PropertyNames(thema_items);
+            List<Feature> features = DataStoreUtil.getFeatures(b, t, analyseGeometry, extraFilter, propertyNames, -1);
             double resultValue = 0.0;
             String analyseDescr = "";
-            switch (zow) {
-                case 1:
-                    //maximale waarde.
-                    Feature maxFeature = getFeatureWithGeometry(features, tgt, "max");
-                    Geometry maxgeom = (Geometry) maxFeature.getDefaultGeometryProperty().getValue();
-                    if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
-                        resultValue = maxgeom.getArea();
-                    } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
-                        resultValue = maxgeom.getLength();
-                    } else if (tgt.getBinding() == Point.class || tgt.getBinding() == MultiPoint.class) {
-                        resultValue += maxgeom.getNumGeometries();
-                    }
-                    break;
-                case 2:
-                    //minimale waarde
-                    Feature minFeature = getFeatureWithGeometry(features, tgt, "min");
-                    Geometry mingeom = (Geometry) minFeature.getDefaultGeometryProperty().getValue();
-                    if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
-                        resultValue = mingeom.getArea();
-                    } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
-                        resultValue = mingeom.getLength();
-                    } else if (tgt.getBinding() == Point.class || tgt.getBinding() == MultiPoint.class) {
-                        resultValue += mingeom.getNumGeometries();
-                    }
+            int analyseFactor = -1;
 
-                    break;
-                case 3:
-                    //gemiddelde waarde
-                    double sum = getSumOfGeometries(features, tgt);
-                    resultValue = sum / features.size();
-                    break;
-                case 4:
-                    //totaal lengte/oppervlakte/aantal
-                    resultValue = getSumOfGeometries(features, tgt);
-                    break;
-                default:
-                    log.error("Er is geen geldige selectie aangegeven door middel van de radio buttons!");
-                    throw new Exception("Er is geen geldige selectie aangegeven door middel van de radio buttons!");
+            if (features != null && !features.isEmpty()) {
+                // werkt niet omdat er altijd Geometry inzit, dus in eerste feature kijken en hopen
+                // dat ze allemaal het zelfde zijn :-(
+                // GeometryType tgt = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getType();
+                // GeometryType tgt = features.get(0).getDefaultGeometryProperty().getDescriptor().getType();
+                GeometryType tgt = getGeometryType(features.get(0));
+
+                int zow = 0;
+                try {
+                    zow = Integer.parseInt(dynaForm.getString("zoekopties_waarde"));
+                } catch (NumberFormatException nfe) {
+                    log.debug("zoekopties_waarde fout: ", nfe);
+                }
+                switch (zow) {
+                    case 1:
+                        //maximale waarde.
+                        analyseDescr = "Maximum";
+                        Feature maxFeature = getFeatureWithGeometry(features, tgt, "max");
+                        Geometry maxgeom = (Geometry) maxFeature.getDefaultGeometryProperty().getValue();
+                        if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
+                            resultValue = maxgeom.getArea();
+                            analyseFactor = 1000000;
+                        } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
+                            resultValue = maxgeom.getLength();
+                            analyseFactor = 1000;
+                        } else if (tgt.getBinding() == Point.class || tgt.getBinding() == MultiPoint.class) {
+                            resultValue += maxgeom.getNumGeometries();
+                        }
+                        break;
+                    case 2:
+                        //minimale waarde
+                        analyseDescr = "Minimum";
+                        Feature minFeature = getFeatureWithGeometry(features, tgt, "min");
+                        Geometry mingeom = (Geometry) minFeature.getDefaultGeometryProperty().getValue();
+                        if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
+                            resultValue = mingeom.getArea();
+                            analyseFactor = 1000000;
+                        } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
+                            resultValue = mingeom.getLength();
+                            analyseFactor = 1000;
+                        } else if (tgt.getBinding() == Point.class || tgt.getBinding() == MultiPoint.class) {
+                            resultValue += mingeom.getNumGeometries();
+                        }
+                        break;
+                    case 3:
+                        //gemiddelde waarde
+                        analyseDescr = "Gemiddelde";
+                        double sum = getSumOfGeometries(features, tgt);
+                        resultValue = sum / features.size();
+                        if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
+                            analyseFactor = 1000000;
+                        } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
+                            analyseFactor = 1000;
+                        }
+                        break;
+                    case 4:
+                        //totaal lengte/oppervlakte/aantal
+                        analyseDescr = "Totaal";
+                        resultValue = getSumOfGeometries(features, tgt);
+                        if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
+                            analyseFactor = 1000000;
+                        } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
+                            analyseFactor = 1000;
+                        }
+                        break;
+                    default:
+                        log.error("Er is geen geldige selectie aangegeven door middel van de radio buttons!");
+                        throw new Exception("Er is geen geldige selectie aangegeven door middel van de radio buttons!");
+                }
             }
-            /* Maak er een mooi getal van (km2 of km) en rond netjes af.*/
-            // TODO waar staat de eenheid?
-            if (tgt.getBinding() == Polygon.class || tgt.getBinding() == MultiPolygon.class) {
-                resultValue = Math.round(resultValue / 1000000000) * 1000;
-            } else if (tgt.getBinding() == LineString.class || tgt.getBinding() == MultiLineString.class) {
-                resultValue = Math.round(resultValue / 1000000) * 1000;
+            analyseDescr += " " + t.getNaam();
+
+            if (analyseFactor > 0) {
+                resultValue = Math.round((1000 * resultValue) / analyseFactor) / 1000;
+                if (analyseFactor == 1000) {
+                    analyseDescr += " [km]";
+                } else if (analyseFactor == 1000000) {
+                    analyseDescr += " [km2]";
+                } else {
+                    analyseDescr += " (x" + analyseFactor + ")";
+                }
             }
 
             StringBuffer result = new StringBuffer("");
-            result.append("<b>" + analyseDescr + " " + t.getNaam());
+            result.append("<b>" + analyseDescr);
             result.append(": ");
             result.append(resultValue);
             result.append("</b>");
@@ -607,28 +605,7 @@ public class GetViewerDataAction extends BaseGisAction {
             log.error("Er is geen analysegebied aangegeven!");
             throw new Exception("Er is geen analysegebied aangegeven!");
         }
-        String[] tokens = geselecteerdObject.split("_");
-        if (tokens.length != 3) {
-            log.error("Id van analysegebied verkeerd geformatteerd!");
-            throw new Exception("Id van analysegebied verkeerd geformatteerd!");
-        }
-        //haal het analyseObject thema en bron op.
-        Themas analyseObjectThema = SpatialUtil.getThema(tokens[1]);
-        if (analyseObjectThema == null) {
-            log.error("Kan het geselecteerde thema object niet vinden!");
-            throw new Exception("Kan het geselecteerde thema object niet vinden!");
-        }
-        String analyseGeomId = tokens[2];
-        //Haal de geometry binnen waarmee de analyse moet worden uitgevoerd.
-        String adminPk = DataStoreUtil.convertFullnameToQName(analyseObjectThema.getAdmin_pk()).getLocalPart();
-        Filter f = FilterBuilder.createEqualsFilter(adminPk, analyseGeomId);
-        Bron ab = analyseObjectThema.getConnectie(request);
-        ArrayList<Feature> analyseFeatures = DataStoreUtil.getFeatures(ab, analyseObjectThema, null, f, thema_items, 1);
-        if (analyseFeatures.size() == 0) {
-            log.error("De gekozen geometry kan niet worden gevonden");
-            request.setAttribute("waarde", "De gekozen geometry kan niet worden gevonden");
-        }
-        Geometry analyseGeometry = (Geometry) analyseFeatures.get(0).getDefaultGeometryProperty().getValue();
+        Geometry analyseGeometry = determineAnalyseGeometry(geselecteerdObject,request);
 
         DataStore ds = b.toDatastore();
         try {
@@ -674,6 +651,47 @@ public class GetViewerDataAction extends BaseGisAction {
         }
 
         return mapping.findForward("admindata");
+    }
+
+    private Geometry determineAnalyseGeometry(String geselecteerdObject, HttpServletRequest request) throws Exception {
+       //bepaal het geselecteerde analyse object (het object waar de analyse mee gedaan moet worden)
+
+        String[] tokens = geselecteerdObject.split("_");
+        if (tokens.length != 3) {
+            log.error("Id van analysegebied verkeerd geformatteerd!");
+            throw new Exception("Id van analysegebied verkeerd geformatteerd!");
+        }
+        //haal het analyseObject thema en bron op.
+        Themas analyseObjectThema = SpatialUtil.getThema(tokens[1]);
+        if (analyseObjectThema == null) {
+            log.error("Kan het geselecteerde thema object niet vinden!");
+            throw new Exception("Kan het geselecteerde thema object niet vinden!");
+        }
+
+        String analyseGeomId = tokens[2];
+        //Haal de geometry binnen waarmee de analyse moet worden uitgevoerd.
+        String adminPk = DataStoreUtil.convertFullnameToQName(analyseObjectThema.getAdmin_pk()).getLocalPart();
+        Filter f = FilterBuilder.createEqualsFilter(adminPk, analyseGeomId);
+
+        ArrayList<Feature> analyseFeatures = null;
+        Bron ab = analyseObjectThema.getConnectie(request);
+        DataStore dsAnalyse = null;
+        if (ab != null) {
+            dsAnalyse = ab.toDatastore();
+        }
+        try {
+            String geometryName = DataStoreUtil.getSchema(dsAnalyse, analyseObjectThema).getGeometryDescriptor().getLocalName();
+            List<String> propertyNames = new ArrayList();
+            propertyNames.add(geometryName);
+            analyseFeatures = DataStoreUtil.getFeatures(dsAnalyse, analyseObjectThema, f, propertyNames, 1);
+        } finally {
+            dsAnalyse.dispose();
+        }
+        if (analyseFeatures == null || analyseFeatures.size() == 0) {
+            log.error("De gekozen geometry kan niet worden gevonden");
+            request.setAttribute("waarde", "De gekozen geometry kan niet worden gevonden");
+        }
+        return (Geometry) analyseFeatures.get(0).getDefaultGeometryProperty().getValue();
     }
 
     public static Filter calculateExtraFilter(List thema_items, String extraCriterium,
@@ -834,7 +852,7 @@ public class GetViewerDataAction extends BaseGisAction {
     }
     //calculatie voor gebruik bij analyse tool
 
-    private double getSumOfGeometries(ArrayList<Feature> features, GeometryType gt) {
+    private double getSumOfGeometries(List<Feature> features, GeometryType gt) {
         Iterator<Feature> it = features.iterator();
         Class binding = gt.getBinding();
         double d = 0.0;
@@ -855,7 +873,7 @@ public class GetViewerDataAction extends BaseGisAction {
         return d;
     }
 
-    private Feature getFeatureWithGeometry(ArrayList<Feature> features, GeometryType gt, String type) {
+    private Feature getFeatureWithGeometry(List<Feature> features, GeometryType gt, String type) {
         Class binding = gt.getBinding();
         if (binding == Point.class) {
             return null;
@@ -864,7 +882,6 @@ public class GetViewerDataAction extends BaseGisAction {
         Feature feature = null;
         while (it.hasNext()) {
             Feature f = it.next();
-            double value = 0.0;
             Object o = f.getDefaultGeometryProperty().getValue();
             if (o != null) {
                 if (feature == null) {

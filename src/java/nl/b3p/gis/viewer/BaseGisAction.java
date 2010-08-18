@@ -24,7 +24,12 @@ package nl.b3p.gis.viewer;
 
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.LineString;
+import com.vividsolutions.jts.geom.MultiLineString;
+import com.vividsolutions.jts.geom.MultiPoint;
+import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.io.WKTWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -57,13 +62,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
+import org.geotools.feature.NameImpl;
+import org.geotools.feature.type.GeometryTypeImpl;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
+import org.opengis.feature.type.GeometryType;
 import org.opengis.feature.type.PropertyDescriptor;
 import org.opengis.filter.Filter;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.feature.type.Name;
 
 public abstract class BaseGisAction extends BaseHibernateAction {
 
@@ -395,6 +404,38 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         }
         return null;
     }
+
+    protected GeometryType getGeometryType(Feature f) {
+        if (f == null || f.getDefaultGeometryProperty() == null) {
+            return null;
+        }
+        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
+        Name name = null;
+        Class binding = null;
+        if (geom instanceof MultiPolygon) {
+            name = new NameImpl("MULTIPOLYGON");
+            binding = MultiPolygon.class;
+        } else if (geom instanceof Polygon) {
+            name = new NameImpl("POLYGON");
+            binding = Polygon.class;
+        } else if (geom instanceof MultiLineString) {
+            name = new NameImpl("MULTILINESTRING");
+            binding = MultiLineString.class;
+        } else if (geom instanceof LineString) {
+            name = new NameImpl("LINESTRING");
+            binding = LineString.class;
+        } else if (geom instanceof MultiPoint) {
+            name = new NameImpl("MULTIPOINT");
+            binding = MultiPoint.class;
+        } else if (geom instanceof Point) {
+            name = new NameImpl("POINT");
+            binding = Point.class;
+        } else {
+            name = new NameImpl("GEOMETRY");
+            binding = geom.getClass();
+        }
+        return new GeometryTypeImpl(name, binding, null, true, false, null, null, null);
+     }
 
     protected ReferencedEnvelope convertFeature2Envelop(Feature f) {
         if (f == null || f.getDefaultGeometryProperty() == null) {
