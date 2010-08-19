@@ -54,7 +54,7 @@ public class EditUtil {
         }
 
         String buffer = "";
-        Geometry geom = createGeomFromWKTString(wkt);
+        Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
 
         if (geom == null) {
             throw new Exception("Kan niet bufferen. Geometrie is incorrect.");
@@ -81,7 +81,7 @@ public class EditUtil {
         Transaction tx = sess.beginTransaction();
 
         try {
-            Geometry geom = createGeomFromWKTString(wktPoint);
+            Geometry geom = DataStoreUtil.createGeomFromWKTString(wktPoint);
 
             if (geom == null)
                 throw new Exception("Kan niet highlighten. Geometrie is incorrect.");
@@ -133,16 +133,6 @@ public class EditUtil {
         }
         
         return wktPoint;
-    }
-
-    private Geometry createGeomFromWKTString(String wktstring) throws Exception {
-        WKTReader wktreader = new WKTReader(new GeometryFactory(new PrecisionModel(), 28992));
-        try {
-            return wktreader.read(wktstring);
-        } catch (ParseException ex) {
-            throw new Exception(ex);
-        }
-
     }
 
     private Geometry getLargestPolygonFromMultiPolygon(Geometry multipolygon) {

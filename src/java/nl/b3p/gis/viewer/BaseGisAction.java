@@ -393,65 +393,6 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     }
     // </editor-fold>
 
-    protected String convertFeature2WKT(Feature f) {
-        if (f == null || f.getDefaultGeometryProperty() == null) {
-            return null;
-        }
-        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
-        if (geom != null && geom.isSimple() && geom.isValid()) {
-            WKTWriter wktw = new WKTWriter();
-            return wktw.write(geom);
-        }
-        return null;
-    }
-
-    protected GeometryType getGeometryType(Feature f) {
-        if (f == null || f.getDefaultGeometryProperty() == null) {
-            return null;
-        }
-        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
-        Name name = null;
-        Class binding = null;
-        if (geom instanceof MultiPolygon) {
-            name = new NameImpl("MULTIPOLYGON");
-            binding = MultiPolygon.class;
-        } else if (geom instanceof Polygon) {
-            name = new NameImpl("POLYGON");
-            binding = Polygon.class;
-        } else if (geom instanceof MultiLineString) {
-            name = new NameImpl("MULTILINESTRING");
-            binding = MultiLineString.class;
-        } else if (geom instanceof LineString) {
-            name = new NameImpl("LINESTRING");
-            binding = LineString.class;
-        } else if (geom instanceof MultiPoint) {
-            name = new NameImpl("MULTIPOINT");
-            binding = MultiPoint.class;
-        } else if (geom instanceof Point) {
-            name = new NameImpl("POINT");
-            binding = Point.class;
-        } else {
-            name = new NameImpl("GEOMETRY");
-            binding = geom.getClass();
-        }
-        return new GeometryTypeImpl(name, binding, null, true, false, null, null, null);
-     }
-
-    protected ReferencedEnvelope convertFeature2Envelop(Feature f) {
-        if (f == null || f.getDefaultGeometryProperty() == null) {
-            return null;
-        }
-        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
-        if (geom != null && geom.isSimple() && geom.isValid()) {
-            if (!(geom instanceof Point)) {
-                Envelope env = geom.getEnvelopeInternal();
-                CoordinateReferenceSystem crs = f.getDefaultGeometryProperty().getDescriptor().getCoordinateReferenceSystem();
-                return new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
-            }
-        }
-        return null;
-    }
-
     /**
      * Zelfde als getRegel met Resultset maar nu met Feature
      *
@@ -473,7 +414,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         if (adminPk != null) {
             regel.setPrimaryKey(f.getProperty(adminPk).getValue());
         }
-        String wkt = convertFeature2WKT(f);
+        String wkt = DataStoreUtil.convertFeature2WKT(f);
         if (wkt != null && wkt.length() != 0) {
             regel.setWkt(wkt);
         }

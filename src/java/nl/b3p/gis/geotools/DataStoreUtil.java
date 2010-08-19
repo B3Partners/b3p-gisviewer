@@ -6,7 +6,17 @@ package nl.b3p.gis.geotools;
 
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.LineString;
+import com.vividsolutions.jts.geom.MultiLineString;
+import com.vividsolutions.jts.geom.MultiPoint;
+import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.Polygon;
+import com.vividsolutions.jts.geom.PrecisionModel;
+import com.vividsolutions.jts.io.ParseException;
+import com.vividsolutions.jts.io.WKTReader;
+import com.vividsolutions.jts.io.WKTWriter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -40,6 +50,7 @@ import org.geotools.factory.GeoTools;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.feature.NameImpl;
+import org.geotools.feature.type.GeometryTypeImpl;
 import org.geotools.filter.FilterCapabilities;
 import org.geotools.filter.FilterTransformer;
 import org.geotools.filter.text.cql2.CQL;
@@ -52,6 +63,7 @@ import org.geotools.xml.schema.Schema;
 import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
+import org.opengis.feature.type.GeometryType;
 import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
@@ -506,6 +518,75 @@ public class DataStoreUtil {
             }
         }
         return new QName(nsUriString, localName, nsPrefix);
+    }
+
+    public static GeometryType getGeometryType(Feature f) {
+        if (f == null || f.getDefaultGeometryProperty() == null) {
+            return null;
+        }
+        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
+        Name name = null;
+        Class binding = null;
+        if (geom instanceof MultiPolygon) {
+            name = new NameImpl("MULTIPOLYGON");
+            binding = MultiPolygon.class;
+        } else if (geom instanceof Polygon) {
+            name = new NameImpl("POLYGON");
+            binding = Polygon.class;
+        } else if (geom instanceof MultiLineString) {
+            name = new NameImpl("MULTILINESTRING");
+            binding = MultiLineString.class;
+        } else if (geom instanceof LineString) {
+            name = new NameImpl("LINESTRING");
+            binding = LineString.class;
+        } else if (geom instanceof MultiPoint) {
+            name = new NameImpl("MULTIPOINT");
+            binding = MultiPoint.class;
+        } else if (geom instanceof Point) {
+            name = new NameImpl("POINT");
+            binding = Point.class;
+        } else {
+            name = new NameImpl("GEOMETRY");
+            binding = geom.getClass();
+        }
+        return new GeometryTypeImpl(name, binding, null, true, false, null, null, null);
+     }
+
+    public static ReferencedEnvelope convertFeature2Envelop(Feature f) {
+        if (f == null || f.getDefaultGeometryProperty() == null) {
+            return null;
+        }
+        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
+        if (geom != null && geom.isSimple() && geom.isValid()) {
+            if (!(geom instanceof Point)) {
+                Envelope env = geom.getEnvelopeInternal();
+                CoordinateReferenceSystem crs = f.getDefaultGeometryProperty().getDescriptor().getCoordinateReferenceSystem();
+                return new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
+            }
+        }
+        return null;
+    }
+
+    public static String convertFeature2WKT(Feature f) {
+        if (f == null || f.getDefaultGeometryProperty() == null) {
+            return null;
+        }
+        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
+        if (geom != null && geom.isSimple() && geom.isValid()) {
+            WKTWriter wktw = new WKTWriter();
+            return wktw.write(geom);
+        }
+        return null;
+    }
+
+    public static Geometry createGeomFromWKTString(String wktstring) throws Exception {
+        WKTReader wktreader = new WKTReader(new GeometryFactory(new PrecisionModel(), 28992));
+        try {
+            return wktreader.read(wktstring);
+        } catch (ParseException ex) {
+            throw new Exception(ex);
+        }
+
     }
 
     static public void main(String[] args) throws URISyntaxException, IOException, Exception {

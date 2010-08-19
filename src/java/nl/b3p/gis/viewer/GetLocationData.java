@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.FilterBuilder;
-import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
@@ -40,15 +39,29 @@ import org.apache.commons.logging.LogFactory;
 //import org.geotools.data.wfs.v1_1_0.WFSFeatureSource;
 import org.directwebremoting.WebContext;
 import org.directwebremoting.WebContextFactory;
-import org.geotools.data.DataStore;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+
+import com.vividsolutions.jts.geom.LineString;
+import com.vividsolutions.jts.geom.MultiLineString;
+import com.vividsolutions.jts.geom.MultiPoint;
+import com.vividsolutions.jts.geom.MultiPolygon;
+import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.Polygon;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import nl.b3p.gis.viewer.db.ThemaData;
+import org.geotools.data.DataStore;
 import org.opengis.feature.Feature;
+import org.opengis.feature.type.GeometryType;
+import org.opengis.filter.Filter;
 
 public class GetLocationData {
 
     private static final Log log = LogFactory.getLog(GetLocationData.class);
-    private static int maxSearchResults = 10000;
+    private static int maxFeatures = 10000;
 
     public GetLocationData() {
     }
@@ -75,20 +88,20 @@ public class GetLocationData {
                 return returnValue;
             }
             DataStore ds = b.toDatastore();
-            try{
+            try {
                 //haal alleen de geometry op.
-                String geometryName= DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
-                ArrayList<String> propertyNames=new ArrayList();
+                String geometryName = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
+                ArrayList<String> propertyNames = new ArrayList();
                 propertyNames.add(geometryName);
-                ArrayList<Feature> list=DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName,compareValue),propertyNames,1);
-                if (list.size()>=1){
+                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1);
+                if (list.size() >= 1) {
                     Feature f = list.get(0);
                     area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
                 }
-            }finally{
+            } finally {
                 ds.dispose();
             }
-            
+
         } catch (Exception ex) {
             log.error("", ex);
             return returnValue;
@@ -123,6 +136,316 @@ public class GetLocationData {
         returnValue[1] = value;
 
         return returnValue;
+    }
+
+    public Map getAnalyseData(String wkt, String activeThemaIds, String extraCriterium) throws Exception {
+        if (wkt == null || wkt.length() == 0 || activeThemaIds == null || activeThemaIds.length() == 0) {
+            return null;
+        }
+        Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
+        String[] themaIds = activeThemaIds.split(",");
+        if (themaIds == null || themaIds.length == 0) {
+            return null;
+        }
+
+        Map results = new HashMap();
+
+        try {
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+
+            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+            Transaction transaction = sess.beginTransaction();
+
+            for (int i = 0; i < themaIds.length; i++) {
+                Integer id = FormUtils.StringToInteger(themaIds[i].trim());
+                if (id == null) {
+                    continue;
+                }
+                Themas t = (Themas) sess.get(Themas.class, id);
+                if (t == null) {
+                    continue;
+                }
+
+                Bron b = (Bron) t.getConnectie(request);
+                if (b == null) {
+                    continue;
+                }
+                Map themaAnalyseData = calcThemaAnalyseData(b, t, extraCriterium, geom);
+                if (themaAnalyseData != null) {
+                    themaAnalyseData = formatResults(themaAnalyseData);
+                    results.put(t.getNaam(), themaAnalyseData);
+                }
+            }
+        } catch (Exception e) {
+            log.error("", e);
+        }
+        return results;
+    }
+
+    /**
+     * TODO vullen met properties
+     * @param results
+     * @return
+     */
+    private Map formatResults(Map results) {
+        String themaName = (String) results.get("themaName") + ": ";
+        String eenheid;
+        double analyseFactor;
+
+        eenheid = " [km2]";
+        analyseFactor = 1000000;
+        double sumPolygon = ((Double) results.get("sumPolygon")).doubleValue();
+        sumPolygon = Math.round((1000 * sumPolygon) / analyseFactor) / 1000;
+        results.put("sumPolygonFormatted", "Totaal oppervlak " + themaName + Double.toString(sumPolygon) + eenheid);
+
+        double maxPolygon = ((Double) results.get("maxPolygon")).doubleValue();
+        maxPolygon = Math.round((1000 * maxPolygon) / analyseFactor) / 1000;
+        results.put("maxPolygonFormatted", "Grootst oppervlak " + themaName + Double.toString(maxPolygon) + eenheid);
+
+        double minPolygon = ((Double) results.get("minPolygon")).doubleValue();
+        minPolygon = Math.round((1000 * minPolygon) / analyseFactor) / 1000;
+        results.put("minPolygonFormatted", "Kleinst oppervlak " + themaName + Double.toString(minPolygon) + eenheid);
+
+        double avgPolygon = ((Double) results.get("avgPolygon")).doubleValue();
+        avgPolygon = Math.round((1000 * avgPolygon) / analyseFactor) / 1000;
+        results.put("avgPolygonFormatted", "Gemiddeld oppervlak " + themaName + Double.toString(avgPolygon) + eenheid);
+
+        eenheid = " [km]";
+        analyseFactor = 1000;
+        double sumLineString = ((Double) results.get("sumLineString")).doubleValue();
+        sumLineString = Math.round((1000 * sumLineString) / analyseFactor) / 1000;
+        results.put("sumLineStringFormatted", "Totale lengte " + themaName + Double.toString(sumLineString) + eenheid);
+        double maxLineString = ((Double) results.get("maxLineString")).doubleValue();
+        maxLineString = Math.round((1000 * maxLineString) / analyseFactor) / 1000;
+        results.put("maxLineStringFormatted", "Grootste lengte " + themaName + Double.toString(maxLineString) + eenheid);
+        double minLineString = ((Double) results.get("minLineString")).doubleValue();
+        minLineString = Math.round((1000 * minLineString) / analyseFactor) / 1000;
+        results.put("minLineStringFormatted", "Kleinste lengte " + themaName + Double.toString(minLineString) + eenheid);
+        double avgLineString = ((Double) results.get("avgLineString")).doubleValue();
+        avgLineString = Math.round((1000 * avgLineString) / analyseFactor) / 1000;
+        results.put("avgLineStringFormatted", "Gemiddelde lengte " + themaName + Double.toString(avgLineString) + eenheid);
+
+        eenheid = " []";
+        analyseFactor = 1;
+        int countPolygon = ((Integer) results.get("countPolygon")).intValue();
+        results.put("countPolygonFormatted", "Aantal vlakken " + themaName + Integer.toString(countPolygon) + eenheid);
+        int countLineString = ((Integer) results.get("countLineString")).intValue();
+        results.put("countLineStringFormatted", "Aantal lijnen " + themaName + Integer.toString(countLineString) + eenheid);
+        int countPoint = ((Integer) results.get("countPoint")).intValue();
+        results.put("countPointFormatted", "Aantal punten" + themaName + Integer.toString(countPoint) + eenheid);
+        int countUnknownBinding = ((Integer) results.get("countUnknownBinding")).intValue();
+        results.put("countUnknownBindingFormatted", "Aantal onbekende objecten " + themaName + Integer.toString(countUnknownBinding) + eenheid);
+
+        return results;
+    }
+
+    /**
+     * Methode wordt aangeroepen door knop "analysewaarde" op tabblad "Analyse"
+     * en berekent een waarde op basis van actieve thema, plus evt. een
+     * extra zoekcriterium voor de administratieve waarde in de basisregel, en
+     * een gekozen gebied onder het klikpunt.
+     * @throws Exception exception
+     *
+     * waarde
+     */
+    private Map calcThemaAnalyseData(Bron b, Themas t, Geometry analyseGeometry) throws Exception {
+        return calcThemaAnalyseData(b, t, (Filter) null, analyseGeometry);
+    }
+
+    private Map calcThemaAnalyseData(Bron b, Themas t, String extraCriterium, Geometry analyseGeometry) throws Exception {
+        //maak het eventuele extra filter.
+        Filter extraFilter = null;
+        if (extraCriterium != null && extraCriterium.length() != 0) {
+            List thema_items = SpatialUtil.getThemaData(t, true);
+            extraFilter = calculateExtraFilter(thema_items, extraCriterium);
+        }
+        return calcThemaAnalyseData(b, t, extraFilter, analyseGeometry);
+    }
+
+    private Map calcThemaAnalyseData(Bron b, Themas t, Filter extraFilter, Geometry analyseGeometry) throws Exception {
+        DataStore ds = b.toDatastore();
+        try {
+
+            //Haal alle features op die binnen de analyseGeometry vallen:
+            List<Feature> features = DataStoreUtil.getFeatures(b, t, analyseGeometry, extraFilter, null, maxFeatures);
+
+            if (features == null || features.isEmpty()) {
+                return null;
+            }
+            // werkt niet omdat er altijd Geometry in zit, dus in eerste feature kijken en hopen
+            // dat ze allemaal het zelfde zijn :-(
+            // GeometryType tgt = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getType();
+            // GeometryType tgt = features.get(0).getDefaultGeometryProperty().getDescriptor().getType();
+            GeometryType tgt = DataStoreUtil.getGeometryType(features.get(0));
+            Class binding = tgt.getBinding();
+
+            double sumPolygon = 0.0; // surface
+            double sumLineString = 0.0; // length
+            double maxPolygon = 0.0;
+            double maxLineString = 0.0;
+            double minPolygon = 0.0;
+            double minLineString = 0.0;
+            double avgPolygon = 0.0;
+            double avgLineString = 0.0;
+            int countPolygon = 0;
+            int countLineString = 0;
+            int countPoint = 0;
+            int countUnknownBinding = 0;
+
+            for (Feature f : features) {
+                Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
+                if (geom == null) {
+                    countUnknownBinding += 1;
+                    continue;
+                }
+                double thisArea = geom.getArea();
+                double thisLength = geom.getLength();
+                int thisCount = geom.getNumGeometries();
+
+                if (binding == Polygon.class || binding == MultiPolygon.class) {
+                    if (thisArea > maxPolygon) {
+                        maxPolygon = thisArea;
+                    }
+                    if (thisArea < minPolygon || minPolygon <= 0) {
+                        minPolygon = thisArea;
+                    }
+                    sumPolygon += thisArea;
+                    countPolygon += thisCount;
+                } else if (binding == LineString.class || binding == MultiLineString.class) {
+                    if (thisLength > maxLineString) {
+                        maxLineString = thisLength;
+                    }
+                    if (thisLength < minLineString || minLineString <= 0) {
+                        minLineString = thisLength;
+                    }
+                    sumLineString += thisLength;
+                    countLineString += thisCount;
+                } else if (binding == Point.class || binding == MultiPoint.class) {
+                    countPoint += thisCount;
+                } else {
+                    countUnknownBinding += thisCount;
+                }
+            }
+            if (countPolygon > 0) {
+                avgPolygon = sumPolygon / countPolygon;
+            }
+            if (countLineString > 0) {
+                avgLineString = sumLineString / countLineString;
+            }
+
+            Map featureResults = new HashMap();
+            featureResults.put("themaName", t.getNaam());
+            featureResults.put("sumPolygon", Double.valueOf(sumPolygon));
+            featureResults.put("sumLineString", Double.valueOf(sumLineString));
+            featureResults.put("maxPolygon", Double.valueOf(maxPolygon));
+            featureResults.put("maxLineString", Double.valueOf(maxLineString));
+            featureResults.put("minPolygon", Double.valueOf(minPolygon));
+            featureResults.put("minLineString", Double.valueOf(minLineString));
+            featureResults.put("avgPolygon", Double.valueOf(avgPolygon));
+            featureResults.put("avgLineString", Double.valueOf(avgLineString));
+            featureResults.put("countPolygon", Integer.valueOf(countPolygon));
+            featureResults.put("countLineString", Integer.valueOf(countLineString));
+            featureResults.put("countPoint", Integer.valueOf(countPoint));
+            featureResults.put("countUnknownBinding", Integer.valueOf(countUnknownBinding));
+
+        } finally {
+            ds.dispose();
+        }
+        return null;
+    }
+
+    public static Filter calculateExtraFilter(List thema_items, String extraCriterium) {
+        ArrayList<Filter> andFilters = new ArrayList();
+        if (thema_items != null && thema_items.size() > 0
+                && extraCriterium != null && extraCriterium.length() > 0) {
+            extraCriterium = extraCriterium.replaceAll("\\'", "''");
+            Iterator it = thema_items.iterator();
+            ArrayList<Filter> filters = new ArrayList();
+            while (it.hasNext()) {
+                ThemaData td = (ThemaData) it.next();
+                Filter f = FilterBuilder.createLikeFilter(
+                        DataStoreUtil.convertFullnameToQName(td.getKolomnaam()).getLocalPart(),
+                        '%' + extraCriterium + '%');
+                if (f != null) {
+                    filters.add(f);
+                }
+            }
+            Filter f = FilterBuilder.getFactory().or(filters);
+            if (f != null) {
+                andFilters.add(f);
+            }
+        }
+
+        if (andFilters.size() == 0) {
+            return null;
+        }
+        if (andFilters.size() == 1) {
+            return andFilters.get(0);
+        } else {
+            return FilterBuilder.getFactory().and(andFilters);
+        }
+    }
+    //calculatie voor gebruik bij analyse tool
+
+    private double getSumOfGeometries(List<Feature> features, GeometryType gt) {
+        Iterator<Feature> it = features.iterator();
+        Class binding = gt.getBinding();
+        double d = 0.0;
+        while (it.hasNext()) {
+            Feature f = it.next();
+            Object o = f.getDefaultGeometryProperty().getValue();
+            if (o != null) {
+                Geometry geom = (Geometry) o;
+                if (binding == Polygon.class || binding == MultiPolygon.class) {
+                    d += geom.getArea();
+                } else if (binding == LineString.class || binding == MultiLineString.class) {
+                    d += geom.getLength();
+                } else if (binding == Point.class || binding == MultiPoint.class) {
+                    d += geom.getNumGeometries();
+                }
+            }
+        }
+        return d;
+    }
+
+    private Feature getFeatureWithGeometry(List<Feature> features, GeometryType gt, String type) {
+        Class binding = gt.getBinding();
+        if (binding == Point.class) {
+            return null;
+        }
+        Iterator<Feature> it = features.iterator();
+        Feature feature = null;
+        while (it.hasNext()) {
+            Feature f = it.next();
+            Object o = f.getDefaultGeometryProperty().getValue();
+            if (o != null) {
+                if (feature == null) {
+                    feature = f;
+                    continue;
+                }
+                Geometry featureGeom = (Geometry) feature.getDefaultGeometryProperty().getValue();
+                Geometry currentGeom = (Geometry) f.getDefaultGeometryProperty().getValue();
+                if (binding == Polygon.class || binding == MultiPolygon.class) {
+                    if ((type.equalsIgnoreCase("max") && currentGeom.getArea() > featureGeom.getArea())
+                            || (type.equalsIgnoreCase("min") && currentGeom.getArea() < featureGeom.getArea())) {
+                        feature = f;
+                    }
+                } else if (binding == LineString.class || binding == MultiLineString.class) {
+                    if ((type.equalsIgnoreCase("max") && currentGeom.getLength() > featureGeom.getLength())
+                            || (type.equalsIgnoreCase("min") && currentGeom.getLength() < featureGeom.getLength())) {
+                        feature = f;
+                    }
+                } else if (binding == MultiPoint.class) {
+                    if ((type.equalsIgnoreCase("max") && currentGeom.getNumGeometries() > featureGeom.getNumGeometries())
+                            || (type.equalsIgnoreCase("min") && currentGeom.getNumGeometries() < featureGeom.getNumGeometries())) {
+                        feature = f;
+                    }
+                }
+            }
+        }
+        return feature;
+
     }
 
     /**
@@ -204,77 +527,77 @@ public class GetLocationData {
         String[] results = new String[cols.length + 3];
         return new String[]{"Fout bij laden van data. Functie nog niet omgezet"};
         /*try {
-            double x, y;
-            String rdx, rdy;
-            try {
-                x = Double.parseDouble(x_input);
-                y = Double.parseDouble(y_input);
-                rdx = Long.toString(Math.round(x));
-                rdy = Long.toString(Math.round(y));
-            } catch (NumberFormatException nfe) {
-                return new String[]{nfe.getMessage()};
-            }
+        double x, y;
+        String rdx, rdy;
+        try {
+        x = Double.parseDouble(x_input);
+        y = Double.parseDouble(y_input);
+        rdx = Long.toString(Math.round(x));
+        rdy = Long.toString(Math.round(y));
+        } catch (NumberFormatException nfe) {
+        return new String[]{nfe.getMessage()};
+        }
 
-            if (cols == null || cols.length == 0) {
-                return new String[]{rdx, rdy, "No cols"};
-            }
-            if (srid == 0) {
-                srid = 28992; // RD-new
-            }
-            ArrayList columns = new ArrayList();
-            for (int i = 0; i < cols.length; i++) {
-                columns.add(cols[i]);
-            }
+        if (cols == null || cols.length == 0) {
+        return new String[]{rdx, rdy, "No cols"};
+        }
+        if (srid == 0) {
+        srid = 28992; // RD-new
+        }
+        ArrayList columns = new ArrayList();
+        for (int i = 0; i < cols.length; i++) {
+        columns.add(cols[i]);
+        }
 
-            results[0] = rdx;
-            results[1] = rdy;
-            results[2] = "";
+        results[0] = rdx;
+        results[1] = rdy;
+        results[2] = "";
 
-            Session sess = HibernateUtil.getSessionFactory().openSession();
-            Themas t = (Themas) sess.get(Themas.class, new Integer(themaId));
-            if (t == null) {
-                return results;
-            }
+        Session sess = HibernateUtil.getSessionFactory().openSession();
+        Themas t = (Themas) sess.get(Themas.class, new Integer(themaId));
+        if (t == null) {
+        return results;
+        }
 
-            WebContext ctx = WebContextFactory.get();
-            HttpServletRequest request = ctx.getHttpServletRequest();
-            Connecties c = (Connecties) t.getConnectie(request);
-            if (c == null) {
-                return results;
-            }
+        WebContext ctx = WebContextFactory.get();
+        HttpServletRequest request = ctx.getHttpServletRequest();
+        Connecties c = (Connecties) t.getConnectie(request);
+        if (c == null) {
+        return results;
+        }
 
-            String connectieType = c.getType();
-            if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
-                Connection conn = t.getJDBCConnection();
-                try {
-                    String geomColumn = SpatialUtil.getTableGeomName(t, conn);
-                    String sptn = t.getSpatial_tabel();
-                    if (sptn == null) {
-                        sptn = t.getAdmin_tabel();
-                    }
-                    String q = SpatialUtil.closestSelectQuery(columns, sptn, geomColumn, x, y, distance, srid);
-                    PreparedStatement statement = conn.prepareStatement(q);
-                    try {
-                        ResultSet rs = statement.executeQuery();
-                        if (rs.next()) {
-                            results[2] = rs.getString("dist");
-                            for (int i = 0; i < cols.length; i++) {
-                                results[i + 3] = rs.getString(cols[i]);
-                            }
-                        }
-                    } finally {
-                        statement.close();
-                    }
-                } catch (SQLException ex) {
-                    log.error("", ex);
-                } finally {
-                    sess.close();
-                }
-            } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
-                log.error("Thema heeft een WFS connectie: " + t.getNaam(), new UnsupportedOperationException("Only JDBC connection are supported by this method."));
-            }
+        String connectieType = c.getType();
+        if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
+        Connection conn = t.getJDBCConnection();
+        try {
+        String geomColumn = SpatialUtil.getTableGeomName(t, conn);
+        String sptn = t.getSpatial_tabel();
+        if (sptn == null) {
+        sptn = t.getAdmin_tabel();
+        }
+        String q = SpatialUtil.closestSelectQuery(columns, sptn, geomColumn, x, y, distance, srid);
+        PreparedStatement statement = conn.prepareStatement(q);
+        try {
+        ResultSet rs = statement.executeQuery();
+        if (rs.next()) {
+        results[2] = rs.getString("dist");
+        for (int i = 0; i < cols.length; i++) {
+        results[i + 3] = rs.getString(cols[i]);
+        }
+        }
+        } finally {
+        statement.close();
+        }
+        } catch (SQLException ex) {
+        log.error("", ex);
+        } finally {
+        sess.close();
+        }
+        } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
+        log.error("Thema heeft een WFS connectie: " + t.getNaam(), new UnsupportedOperationException("Only JDBC connection are supported by this method."));
+        }
         } catch (Exception e) {
-            log.error("", e);
+        log.error("", e);
         }*/
 
 
