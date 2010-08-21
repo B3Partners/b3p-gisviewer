@@ -150,39 +150,38 @@ public class GetLocationData {
 
         Map results = new HashMap();
 
-        try {
-            WebContext ctx = WebContextFactory.get();
-            HttpServletRequest request = ctx.getHttpServletRequest();
+        WebContext ctx = WebContextFactory.get();
+        HttpServletRequest request = ctx.getHttpServletRequest();
 
-            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-            Transaction transaction = sess.beginTransaction();
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Transaction transaction = sess.beginTransaction();
 
-            for (int i = 0; i < themaIds.length; i++) {
-                Integer id = FormUtils.StringToInteger(themaIds[i].trim());
-                if (id == null) {
-                    continue;
-                }
-                Themas t = (Themas) sess.get(Themas.class, id);
-                if (t == null) {
-                    continue;
-                }
-
-                Bron b = (Bron) t.getConnectie(request);
-                if (b == null) {
-                    continue;
-                }
-                Map themaAnalyseData = calcThemaAnalyseData(b, t, extraCriterium, geom);
-                if (themaAnalyseData != null) {
-                    themaAnalyseData = formatResults(themaAnalyseData);
-                    results.put(t.getNaam(), themaAnalyseData);
-                }
+        for (int i = 0; i < themaIds.length; i++) {
+            Integer id = FormUtils.StringToInteger(themaIds[i].trim());
+            if (id == null) {
+                continue;
             }
-        } catch (Exception e) {
-            log.error("", e);
+            Themas t = (Themas) sess.get(Themas.class, id);
+            if (t == null) {
+                continue;
+            }
+
+            Bron b = (Bron) t.getConnectie(request);
+            if (b == null) {
+                continue;
+            }
+            Map themaAnalyseData = calcThemaAnalyseData(b, t, extraCriterium, geom);
+            if (themaAnalyseData != null) {
+                themaAnalyseData = formatResults(themaAnalyseData);
+                results.put(t.getNaam(), themaAnalyseData);
+            }
         }
         return results;
     }
 
+    private double roundOneDigit(double val) {
+        return Math.round(10.0 * val) / 10.0;
+    }
     /**
      * TODO vullen met properties
      * @param results
@@ -190,52 +189,85 @@ public class GetLocationData {
      */
     private Map formatResults(Map results) {
         String themaName = (String) results.get("themaName") + ": ";
+        results.remove("themaName");
         String eenheid;
         double analyseFactor;
 
         eenheid = " [km2]";
-        analyseFactor = 1000000;
-        double sumPolygon = ((Double) results.get("sumPolygon")).doubleValue();
-        sumPolygon = Math.round((1000 * sumPolygon) / analyseFactor) / 1000;
-        results.put("sumPolygonFormatted", "Totaal oppervlak " + themaName + Double.toString(sumPolygon) + eenheid);
-
-        double maxPolygon = ((Double) results.get("maxPolygon")).doubleValue();
-        maxPolygon = Math.round((1000 * maxPolygon) / analyseFactor) / 1000;
-        results.put("maxPolygonFormatted", "Grootst oppervlak " + themaName + Double.toString(maxPolygon) + eenheid);
-
-        double minPolygon = ((Double) results.get("minPolygon")).doubleValue();
-        minPolygon = Math.round((1000 * minPolygon) / analyseFactor) / 1000;
-        results.put("minPolygonFormatted", "Kleinst oppervlak " + themaName + Double.toString(minPolygon) + eenheid);
-
-        double avgPolygon = ((Double) results.get("avgPolygon")).doubleValue();
-        avgPolygon = Math.round((1000 * avgPolygon) / analyseFactor) / 1000;
-        results.put("avgPolygonFormatted", "Gemiddeld oppervlak " + themaName + Double.toString(avgPolygon) + eenheid);
-
+        analyseFactor = 1000000.0;
+        if (results.get("sumPolygon") != null) {
+            double sumPolygon = ((Double) results.get("sumPolygon")).doubleValue();
+            sumPolygon = roundOneDigit(sumPolygon / analyseFactor);
+            results.put("sumPolygonFormatted", "Totaal oppervlak " + themaName + Double.toString(sumPolygon) + eenheid);
+            results.remove("sumPolygon");
+        }
+        if (results.get("maxPolygon") != null) {
+            double maxPolygon = ((Double) results.get("maxPolygon")).doubleValue();
+            maxPolygon =  roundOneDigit(maxPolygon / analyseFactor);
+            results.put("maxPolygonFormatted", "Grootst oppervlak " + themaName + Double.toString(maxPolygon) + eenheid);
+            results.remove("maxPolygon");
+        }
+        if (results.get("minPolygon") != null) {
+            double minPolygon = ((Double) results.get("minPolygon")).doubleValue();
+            minPolygon =  roundOneDigit(minPolygon / analyseFactor);
+            results.put("minPolygonFormatted", "Kleinst oppervlak " + themaName + Double.toString(minPolygon) + eenheid);
+            results.remove("minPolygon");
+        }
+        if (results.get("avgPolygon") != null) {
+            double avgPolygon = ((Double) results.get("avgPolygon")).doubleValue();
+            avgPolygon =  roundOneDigit(avgPolygon / analyseFactor);
+            results.put("avgPolygonFormatted", "Gemiddeld oppervlak " + themaName + Double.toString(avgPolygon) + eenheid);
+            results.remove("avgPolygon");
+        }
         eenheid = " [km]";
-        analyseFactor = 1000;
-        double sumLineString = ((Double) results.get("sumLineString")).doubleValue();
-        sumLineString = Math.round((1000 * sumLineString) / analyseFactor) / 1000;
-        results.put("sumLineStringFormatted", "Totale lengte " + themaName + Double.toString(sumLineString) + eenheid);
-        double maxLineString = ((Double) results.get("maxLineString")).doubleValue();
-        maxLineString = Math.round((1000 * maxLineString) / analyseFactor) / 1000;
-        results.put("maxLineStringFormatted", "Grootste lengte " + themaName + Double.toString(maxLineString) + eenheid);
-        double minLineString = ((Double) results.get("minLineString")).doubleValue();
-        minLineString = Math.round((1000 * minLineString) / analyseFactor) / 1000;
-        results.put("minLineStringFormatted", "Kleinste lengte " + themaName + Double.toString(minLineString) + eenheid);
-        double avgLineString = ((Double) results.get("avgLineString")).doubleValue();
-        avgLineString = Math.round((1000 * avgLineString) / analyseFactor) / 1000;
-        results.put("avgLineStringFormatted", "Gemiddelde lengte " + themaName + Double.toString(avgLineString) + eenheid);
+        analyseFactor = 1000.0;
+        if (results.get("sumLineString") != null) {
+            double sumLineString = ((Double) results.get("sumLineString")).doubleValue();
+            sumLineString =  roundOneDigit(sumLineString / analyseFactor);
+            results.put("sumLineStringFormatted", "Totale lengte " + themaName + Double.toString(sumLineString) + eenheid);
+            results.remove("sumLineString");
+        }
+        if (results.get("maxLineString") != null) {
+            double maxLineString = ((Double) results.get("maxLineString")).doubleValue();
+            maxLineString =  roundOneDigit(maxLineString / analyseFactor);
+            results.put("maxLineStringFormatted", "Grootste lengte " + themaName + Double.toString(maxLineString) + eenheid);
+            results.remove("maxLineString");
+        }
+        if (results.get("minLineString") != null) {
+            double minLineString = ((Double) results.get("minLineString")).doubleValue();
+            minLineString =  roundOneDigit(minLineString / analyseFactor);
+            results.put("minLineStringFormatted", "Kleinste lengte " + themaName + Double.toString(minLineString) + eenheid);
+            results.remove("minLineString");
+        }
+        if (results.get("avgLineString") != null) {
+            double avgLineString = ((Double) results.get("avgLineString")).doubleValue();
+            avgLineString =  roundOneDigit(avgLineString / analyseFactor);
+            results.put("avgLineStringFormatted", "Gemiddelde lengte " + themaName + Double.toString(avgLineString) + eenheid);
+            results.remove("avgLineString");
+        }
 
         eenheid = " []";
-        analyseFactor = 1;
-        int countPolygon = ((Integer) results.get("countPolygon")).intValue();
-        results.put("countPolygonFormatted", "Aantal vlakken " + themaName + Integer.toString(countPolygon) + eenheid);
-        int countLineString = ((Integer) results.get("countLineString")).intValue();
-        results.put("countLineStringFormatted", "Aantal lijnen " + themaName + Integer.toString(countLineString) + eenheid);
-        int countPoint = ((Integer) results.get("countPoint")).intValue();
-        results.put("countPointFormatted", "Aantal punten" + themaName + Integer.toString(countPoint) + eenheid);
-        int countUnknownBinding = ((Integer) results.get("countUnknownBinding")).intValue();
-        results.put("countUnknownBindingFormatted", "Aantal onbekende objecten " + themaName + Integer.toString(countUnknownBinding) + eenheid);
+        analyseFactor = 1.0;
+        if (results.get("countPolygon") != null) {
+            int countPolygon = ((Integer) results.get("countPolygon")).intValue();
+            results.put("countPolygonFormatted", "Aantal vlakken " + themaName + Integer.toString(countPolygon) + eenheid);
+            results.remove("countPolygon");
+        }
+        if (results.get("countLineString") != null) {
+            int countLineString = ((Integer) results.get("countLineString")).intValue();
+            results.put("countLineStringFormatted", "Aantal lijnen " + themaName + Integer.toString(countLineString) + eenheid);
+            results.remove("countLineString");
+        }
+        if (results.get("countPoint") != null) {
+            int countPoint = ((Integer) results.get("countPoint")).intValue();
+            results.put("countPointFormatted", "Aantal punten" + themaName + Integer.toString(countPoint) + eenheid);
+            results.remove("countPoint");
+        }
+        if (results.get("countUnknownBinding") != null) {
+            int countUnknownBinding = ((Integer) results.get("countUnknownBinding")).intValue();
+            results.put("countUnknownBindingFormatted", "Aantal onbekende objecten " + themaName + Integer.toString(countUnknownBinding) + eenheid);
+            results.remove("countUnknownBinding");
+        }
 
         return results;
     }
@@ -296,7 +328,6 @@ public class GetLocationData {
             for (Feature f : features) {
                 Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
                 if (geom == null) {
-                    countUnknownBinding += 1;
                     continue;
                 }
                 double thisArea = geom.getArea();
@@ -336,23 +367,28 @@ public class GetLocationData {
 
             Map featureResults = new HashMap();
             featureResults.put("themaName", t.getNaam());
-            featureResults.put("sumPolygon", Double.valueOf(sumPolygon));
-            featureResults.put("sumLineString", Double.valueOf(sumLineString));
-            featureResults.put("maxPolygon", Double.valueOf(maxPolygon));
-            featureResults.put("maxLineString", Double.valueOf(maxLineString));
-            featureResults.put("minPolygon", Double.valueOf(minPolygon));
-            featureResults.put("minLineString", Double.valueOf(minLineString));
-            featureResults.put("avgPolygon", Double.valueOf(avgPolygon));
-            featureResults.put("avgLineString", Double.valueOf(avgLineString));
-            featureResults.put("countPolygon", Integer.valueOf(countPolygon));
-            featureResults.put("countLineString", Integer.valueOf(countLineString));
-            featureResults.put("countPoint", Integer.valueOf(countPoint));
-            featureResults.put("countUnknownBinding", Integer.valueOf(countUnknownBinding));
+            if (binding == Polygon.class || binding == MultiPolygon.class) {
+                featureResults.put("sumPolygon", Double.valueOf(sumPolygon));
+                featureResults.put("maxPolygon", Double.valueOf(maxPolygon));
+                featureResults.put("minPolygon", Double.valueOf(minPolygon));
+                featureResults.put("avgPolygon", Double.valueOf(avgPolygon));
+                featureResults.put("countPolygon", Integer.valueOf(countPolygon));
+            } else if (binding == LineString.class || binding == MultiLineString.class) {
+                featureResults.put("sumLineString", Double.valueOf(sumLineString));
+                featureResults.put("maxLineString", Double.valueOf(maxLineString));
+                featureResults.put("minLineString", Double.valueOf(minLineString));
+                featureResults.put("avgLineString", Double.valueOf(avgLineString));
+                featureResults.put("countLineString", Integer.valueOf(countLineString));
+            } else if (binding == Point.class || binding == MultiPoint.class) {
+                featureResults.put("countPoint", Integer.valueOf(countPoint));
+            } else {
+                featureResults.put("countUnknownBinding", Integer.valueOf(countUnknownBinding));
+            }
 
+            return featureResults;
         } finally {
             ds.dispose();
         }
-        return null;
     }
 
     public static Filter calculateExtraFilter(List thema_items, String extraCriterium) {
