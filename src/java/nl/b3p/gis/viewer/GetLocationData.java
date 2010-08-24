@@ -523,7 +523,14 @@ public class GetLocationData {
 
             if (b.checkType(Bron.TYPE_JDBC)) {
                 Connection conn = t.getJDBCConnection();
+
+                /*let op indien table een view is dan kan deze alleen geupdate worden indien
+                 * er een UPDATE INSTEAD rule is aangemaakt */
                 String tableName = t.getSpatial_tabel();
+                
+                if (tableName == null)
+                    tableName = t.getAdmin_tabel();
+
                 try {
                     String retVal = SpatialUtil.setAttributeValue(conn, tableName, keyName, keyValueInt, attributeName, newValue);
                     returnValue[1] = retVal;
