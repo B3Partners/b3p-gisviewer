@@ -24,8 +24,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
 -->
 <hibernate-mapping>
   <class name="nl.b3p.gis.viewer.db.Clusters">
-    <id name="id" type="int">
-      <column name="id" not-null="true"/>
+    <id name="id">
       <generator class="identity"/>
     </id>
     <property name="naam"/>
@@ -50,8 +49,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     </set>
   </class>
   <class name="nl.b3p.gis.viewer.db.Connecties" table="bron">
-    <id name="id" type="int">
-      <column name="id" not-null="true"/>
+    <id name="id">
       <generator class="identity"/>
     </id>
     <property name="naam"/>
@@ -61,15 +59,13 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="volgorde"/>
   </class>
   <class name="nl.b3p.gis.viewer.db.DataTypen">
-    <id name="id" type="int">
-      <column name="id" not-null="true"/>
+    <id name="id">
       <generator class="identity"/>
     </id>
     <property name="naam"/>
   </class>
   <class name="nl.b3p.gis.viewer.db.ThemaData">
-    <id name="id" type="int">
-      <column name="id" not-null="true"/>
+    <id name="id">
       <generator class="identity"/>
     </id>
     <property name="label"/>
@@ -86,8 +82,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="dataorder"/>
   </class>
   <class name="nl.b3p.gis.viewer.db.Themas">
-    <id name="id" type="int">
-      <column name="id" not-null="true"/>
+    <id name="id">
       <generator class="identity"/>
     </id>
     <property name="code"/>
@@ -132,20 +127,16 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     </set>
   </class>
   <class name="nl.b3p.gis.viewer.db.WaardeTypen">
-    <id name="id" type="int">
-      <column name="id" not-null="true"/>
+    <id name="id">
       <generator class="identity"/>
     </id>
     <property name="naam"/>
   </class>
 
     <class name="nl.b3p.gis.viewer.db.Configuratie">
-        <id name="id">
-            <column name="id" sql-type="serial"/>
-            <generator class="native">
-                <param name="sequence">configuratie_id_seq</param>
-            </generator>
-        </id>
+    <id name="id">
+      <generator class="identity"/>
+    </id>
         <property name="property"/>
         <property name="propval"/>
         <property name="setting"/>

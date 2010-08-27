@@ -7,7 +7,9 @@
 	<session-factory>
 		<property name="connection.datasource">java:comp/env/jdbc/gisviewer</property>
 
-		<property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property>
+		<!--property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property-->
+		<property name="dialect">org.hibernate.dialect.Oracle10gDialect</property>
+		<property name="globally_quoted_identifiers">true</property>
 
 		<property name="show_sql">false</property>
 		<property name="format_sql">true</property>
@@ -18,9 +20,13 @@
 
 		<property name="jdbc.batch_size">20</property>
 
-		<!-- Mapping files -->
+		<!-- Mapping files pg 
 		<mapping resource="gisviewer.hbm.xml"/>
-                <mapping resource="zoeker.hbm.xml"/>
+    <mapping resource="zoeker.hbm.xml"/> -->
+    
+		<!-- Mapping files oracle -->
+		<mapping resource="gisviewer.hbm.oracle.xml"/>
+    <mapping resource="zoeker.hbm.oracle.xml"/>
 	</session-factory>
 </hibernate-configuration>
 
