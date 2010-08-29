@@ -1,5 +1,15 @@
 
-    create table Clusters (
+    create table bron (
+        id number(10,0) not null,
+        naam varchar2(255 char),
+        url varchar2(255 char),
+        gebruikersnaam varchar2(255 char),
+        wachtwoord varchar2(255 char),
+        volgorde number(10,0),
+        primary key (id)
+    );
+
+    create table clusters (
         id number(10,0) not null,
         naam varchar2(255 char),
         omschrijving varchar2(255 char),
@@ -16,22 +26,33 @@
         primary key (id)
     );
 
-    create table Configuratie (
+    create table configuratie (
         id number(10,0) not null,
         property varchar2(255 char),
         propval varchar2(255 char),
         setting varchar2(255 char),
-        type varchar2(255 char),
+        soort varchar2(255 char),
         primary key (id)
     );
 
-    create table DataTypen (
+    create table data_typen (
         id number(10,0) not null,
         naam varchar2(255 char),
         primary key (id)
     );
 
-    create table ThemaData (
+    create table resultaatveld (
+        id number(10,0) not null,
+        naam varchar2(255 char),
+        label varchar2(255 char),
+        volgorde number(10,0),
+        attribuutnaam varchar2(255 char),
+        soort number(10,0),
+        zoekconfiguratie number(10,0),
+        primary key (id)
+    );
+
+    create table thema_data (
         id number(10,0) not null,
         label varchar2(255 char),
         eenheid varchar2(255 char),
@@ -40,22 +61,22 @@
         voorbeelden varchar2(255 char),
         kolombreedte number(10,0) not null,
         thema number(10,0),
-        waardeType number(10,0),
-        dataType number(10,0),
+        waarde_type number(10,0),
+        data_type number(10,0),
         commando varchar2(255 char),
         kolomnaam varchar2(255 char),
         dataorder number(10,0),
         primary key (id)
     );
 
-    create table Themas (
+    create table themas (
         id number(10,0) not null,
         code varchar2(255 char),
         naam varchar2(255 char),
         metadata_link varchar2(255 char),
         connectie number(10,0),
         belangnr number(10,0) not null,
-        "CLUSTER" number(10,0) not null,
+        clusters number(10,0) not null,
         opmerkingen clob,
         analyse_thema number(1,0) not null,
         locatie_thema number(1,0) not null,
@@ -87,30 +108,9 @@
         primary key (id)
     );
 
-    create table WaardeTypen (
+    create table waarde_typen (
         id number(10,0) not null,
         naam varchar2(255 char),
-        primary key (id)
-    );
-
-    create table bron (
-        id number(10,0) not null,
-        naam varchar2(255 char),
-        url varchar2(255 char),
-        gebruikersnaam varchar2(255 char),
-        wachtwoord varchar2(255 char),
-        volgorde number(10,0),
-        primary key (id)
-    );
-
-    create table resultaatveld (
-        id number(10,0) not null,
-        naam varchar2(255 char),
-        label varchar2(255 char),
-        volgorde number(10,0),
-        attribuutnaam varchar2(255 char),
-        typen number(10,0),
-        zoekconfiguratie number(10,0),
         primary key (id)
     );
 
@@ -128,46 +128,46 @@
         naam varchar2(255 char),
         label varchar2(255 char),
         attribuutnaam varchar2(255 char),
-        typen number(10,0),
+        soort number(10,0),
         volgorde number(10,0),
         zoekconfiguratie number(10,0),
         primary key (id)
     );
 
-    alter table Clusters 
-        add constraint FK4F4191D9213F33D3 
+    alter table clusters 
+        add constraint FK4B672DB9213F33D3 
         foreign key (parent) 
-        references Clusters;
-
-    alter table ThemaData 
-        add constraint FK783B8EEF68E2FD5E 
-        foreign key (dataType) 
-        references DataTypen;
-
-    alter table ThemaData 
-        add constraint FK783B8EEFAB554B9E 
-        foreign key (waardeType) 
-        references WaardeTypen;
-
-    alter table ThemaData 
-        add constraint FK783B8EEFB89C5283 
-        foreign key (thema) 
-        references Themas;
-
-    alter table Themas 
-        add constraint FK95402F6E908F3D23 
-        foreign key ("CLUSTER") 
-        references Clusters;
-
-    alter table Themas 
-        add constraint FK95402F6E9CEEC42E 
-        foreign key (connectie) 
-        references bron;
+        references clusters;
 
     alter table resultaatveld 
         add constraint FK1DFFA7FE7EE6CA2B 
         foreign key (zoekconfiguratie) 
         references zoekconfiguratie;
+
+    alter table thema_data 
+        add constraint FK19E205E4E888F629 
+        foreign key (data_type) 
+        references data_typen;
+
+    alter table thema_data 
+        add constraint FK19E205E4E611B385 
+        foreign key (waarde_type) 
+        references waarde_typen;
+
+    alter table thema_data 
+        add constraint FK19E205E4B89C5283 
+        foreign key (thema) 
+        references themas;
+
+    alter table themas 
+        add constraint FKCBDB434EA7FB58E2 
+        foreign key (clusters) 
+        references clusters;
+
+    alter table themas 
+        add constraint FKCBDB434E9CEEC42E 
+        foreign key (connectie) 
+        references bron;
 
     alter table zoekconfiguratie 
         add constraint FK88B2EC896D4F3ED5 
@@ -189,8 +189,6 @@
     create sequence clusters_id_seq;
 
     create sequence configuratie_id_seq;
-
-    create sequence connecties_id_seq;
 
     create sequence data_typen_id_seq;
 

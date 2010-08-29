@@ -5,12 +5,11 @@
 	"http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
 <hibernate-configuration>
 	<session-factory>
+	
+		<!-- set correct datasource for Oracle or PG in context.xml -->
 		<property name="connection.datasource">java:comp/env/jdbc/gisviewer</property>
-
-		<!--property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property-->
-		<property name="dialect">org.hibernate.dialect.Oracle10gDialect</property>
+		
 		<property name="globally_quoted_identifiers">true</property>
-
 		<property name="show_sql">false</property>
 		<property name="format_sql">true</property>
 		<property name="use_sql_comments">true</property>
@@ -20,13 +19,16 @@
 
 		<property name="jdbc.batch_size">20</property>
 
-		<!-- Mapping files pg 
-		<mapping resource="gisviewer.hbm.xml"/>
-    <mapping resource="zoeker.hbm.xml"/> -->
-    
-		<!-- Mapping files oracle -->
+		<!-- Mapping files pg  -->
+		<property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property>
+		<mapping resource="gisviewer.hbm.pg.xml"/>
+    <mapping resource="zoeker.hbm.pg.xml"/>
+		
+		<!-- Mapping files oracle 
+		<property name="dialect">org.hibernate.dialect.Oracle10gDialect</property>
 		<mapping resource="gisviewer.hbm.oracle.xml"/>
-    <mapping resource="zoeker.hbm.oracle.xml"/>
+    <mapping resource="zoeker.hbm.oracle.xml"/>-->
+		
 	</session-factory>
 </hibernate-configuration>
 

@@ -32,7 +32,6 @@ import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import nl.b3p.gis.viewer.BaseGisAction;
-import nl.b3p.gis.viewer.db.Connecties;
 import nl.b3p.wms.capabilities.Layer;
 import nl.b3p.wms.capabilities.Roles;
 import nl.b3p.wms.capabilities.ServiceProvider;

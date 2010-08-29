@@ -7,7 +7,7 @@ public class Configuratie {
 
     private static final Log log = LogFactory.getLog(Configuratie.class);
 
-    private Long id;
+    private Integer id;
     private String property;
     private String propval;
     private String setting;
@@ -16,11 +16,11 @@ public class Configuratie {
     public Configuratie() {
     }
 
-    public Long getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 

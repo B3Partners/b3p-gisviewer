@@ -43,20 +43,10 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
       <key column="parent"/>
       <one-to-many class="nl.b3p.gis.viewer.db.Clusters"/>
     </set>
-        <set name="themas" cascade="all-delete-orphan">
-      <key column="cluster"/>
+    <set name="themas" cascade="all-delete-orphan">
+      <key column="clusters"/>
       <one-to-many class="nl.b3p.gis.viewer.db.Themas"/>
     </set>
-  </class>
-  <class name="nl.b3p.gis.viewer.db.Connecties" table="bron">
-    <id name="id">
-      <generator class="identity"/>
-    </id>
-    <property name="naam"/>
-    <property name="url"/>
-    <property name="gebruikersnaam"/>
-    <property name="wachtwoord"/>
-    <property name="volgorde"/>
   </class>
   <class name="nl.b3p.gis.viewer.db.DataTypen">
     <id name="id">
@@ -90,9 +80,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="metadata_link"/>
         <many-to-one name="connectie" lazy="false"/>
     <property name="belangnr" not-null="true"/>
-        <many-to-one name="cluster" lazy="false">
-      <column name="cluster" not-null="true"/>
-    </many-to-one>
+    <many-to-one name="cluster" lazy="false" column="clusters" not-null="true"/>
     <property name="opmerkingen" type="text"/>
     <property name="analyse_thema" not-null="true"/>
     <property name="locatie_thema" not-null="true"/>
@@ -140,6 +128,6 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="property"/>
         <property name="propval"/>
         <property name="setting"/>
-        <property name="type"/>
+        <property name="type" column="soort"/>
     </class>
 </hibernate-mapping>

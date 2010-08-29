@@ -25,7 +25,6 @@ package nl.b3p.gis.viewer.services;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
-import nl.b3p.gis.viewer.db.Connecties;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.SessionFactory;

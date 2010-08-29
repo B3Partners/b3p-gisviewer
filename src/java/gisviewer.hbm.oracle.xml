@@ -46,23 +46,10 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
       <key column="parent"/>
       <one-to-many class="nl.b3p.gis.viewer.db.Clusters"/>
     </set>
-        <set name="themas" cascade="all-delete-orphan">
-      <key column="cluster"/>
+    <set name="themas" cascade="all-delete-orphan">
+      <key column="clusters"/>
       <one-to-many class="nl.b3p.gis.viewer.db.Themas"/>
     </set>
-  </class>
-  <class name="nl.b3p.gis.viewer.db.Connecties" table="bron">
-    <id name="id" type="int">
-      <column name="id" not-null="true"/>
-      <generator class="sequence">
-        <param name="sequence">connecties_id_seq</param>
-      </generator>
-    </id>
-    <property name="naam"/>
-    <property name="url"/>
-    <property name="gebruikersnaam"/>
-    <property name="wachtwoord"/>
-    <property name="volgorde"/>
   </class>
   <class name="nl.b3p.gis.viewer.db.DataTypen">
     <id name="id" type="int">
@@ -103,11 +90,9 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="code"/>
     <property name="naam"/>
     <property name="metadata_link"/>
-        <many-to-one name="connectie" lazy="false"/>
+    <many-to-one name="connectie" lazy="false"/>
     <property name="belangnr" not-null="true"/>
-        <many-to-one name="cluster" lazy="false">
-      <column name="cluster" not-null="true"/>
-    </many-to-one>
+    <many-to-one name="cluster" lazy="false" column="clusters" not-null="true"/>
     <property name="opmerkingen" type="text"/>
     <property name="analyse_thema" not-null="true"/>
     <property name="locatie_thema" not-null="true"/>
@@ -136,7 +121,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="maptipstring"/>
     <property name="sldattribuut"/>
     <property name="layoutadmindata"/>
-        <set name="themaData" lazy="false" cascade="all-delete-orphan" order-by="dataorder, basisregel desc, label">
+    <set name="themaData" lazy="false" cascade="all-delete-orphan" order-by="dataorder, basisregel desc, label">
       <key column="thema"/>
       <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
     </set>
@@ -161,6 +146,6 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="property"/>
         <property name="propval"/>
         <property name="setting"/>
-        <property name="type"/>
+        <property name="type" column="soort"/>
     </class>
 </hibernate-mapping>
