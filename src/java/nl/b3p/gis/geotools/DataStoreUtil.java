@@ -54,6 +54,7 @@ import org.geotools.feature.type.GeometryTypeImpl;
 import org.geotools.filter.FilterCapabilities;
 import org.geotools.filter.FilterTransformer;
 import org.geotools.filter.text.cql2.CQL;
+import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.util.logging.Log4JLoggerFactory;
 import org.geotools.util.logging.Logging;
@@ -63,6 +64,7 @@ import org.geotools.xml.schema.Schema;
 import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
+import org.opengis.feature.type.GeometryDescriptor;
 import org.opengis.feature.type.GeometryType;
 import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
@@ -131,13 +133,24 @@ public class DataStoreUtil {
      */
     public static ArrayList<Feature> getFeatures(DataStore ds, Themas t, Filter f, List<String> propNames, Integer maximum) throws IOException, Exception {
         ArrayList<Filter> filters = new ArrayList();
-        Filter adminFilter = getThemaFilter(t);
-        if (adminFilter != null) {
-            filters.add(adminFilter);
-        }
         if (f != null) {
             filters.add(f);
         }
+
+        Filter adminFilter = null;
+        try {
+            adminFilter = getThemaFilter(t);
+        } catch (CQLException cqle) {
+            if (filters.size() == 0) {
+                String msg = cqle.getLocalizedMessage();
+                throw new Exception ("Error creating filter: " + msg, cqle);
+            }
+            log.debug("error creating filter: ", cqle);
+        }
+        if (adminFilter != null) {
+            filters.add(adminFilter);
+        }
+
         Filter filter = null;
         if (filters.size() == 1) {
             filter = filters.get(0);
@@ -146,6 +159,7 @@ public class DataStoreUtil {
         } else {
             throw new Exception("Geen filter gemaakt. Data wordt niet getoond");
         }
+
         if (log.isDebugEnabled()) {
             try {
                 FilterTransformer ft = new FilterTransformer();
@@ -192,13 +206,13 @@ public class DataStoreUtil {
         if (propNames != null) {
             //zorg er voor dat de pk ook wordt opgehaald
             String adminPk = DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart();
-            if (adminPk != null && adminPk.length()>0 && !propNames.contains(adminPk)) {
+            if (adminPk != null && adminPk.length() > 0 && !propNames.contains(adminPk)) {
                 propNames.add(adminPk);
             }
 
             // zorg ervoor dat de geometry wordt opgehaald, indien aanwezig.
             String geomAttributeName = getGeometryAttributeName(ds, t);
-            if (geomAttributeName != null && geomAttributeName.length() > 0  && !propNames.contains(geomAttributeName)) {
+            if (geomAttributeName != null && geomAttributeName.length() > 0 && !propNames.contains(geomAttributeName)) {
                 propNames.add(geomAttributeName);
             }
             /*Als een themaDataObject van het type query is en er zitten [] in
@@ -216,7 +230,7 @@ public class DataStoreUtil {
                         int endIndex = commando.indexOf("]");
                         QName propName = convertFullnameToQName(commando.substring(beginIndex, endIndex));
                         //geen dubbele meegeven.
-                        if (propName!=null && !propNames.contains(propName.getLocalPart())) {
+                        if (propName != null && !propNames.contains(propName.getLocalPart())) {
                             propNames.add(propName.getLocalPart());
                         }
                         if (endIndex + 1 >= commando.length() - 1) {
@@ -248,7 +262,7 @@ public class DataStoreUtil {
         String geomAttributeName = getGeometryAttributeName(ds, t);
         if (geomAttributeName == null) {
             log.error("Thema heeft geen geometry");
-            return null;
+            throw new Exception("Thema heeft geen geometry");
         }
         Filter filter = ff.intersects(ff.property(geomAttributeName), ff.literal(geom));
         if (ds instanceof WFS_1_0_0_DataStore) {
@@ -279,40 +293,26 @@ public class DataStoreUtil {
         return ds.getCapabilities().getFilterCapabilities().fullySupports(filter);
     }
 
-    public static Filter getThemaFilter(Themas t) {
+    public static Filter getThemaFilter(Themas t) throws CQLException {
         String adminQuery = t.getAdmin_query();
-        if (adminQuery != null && !adminQuery.equals("")) {
-            //als er select in de query staat dan dat stukje er afhalen.
-            //Alleen het where stukje is nodig voor een cql filter.
-            if (adminQuery.toLowerCase().startsWith("select")) {
-                int beginIndex = adminQuery.toLowerCase().indexOf(" where ");
-                if (beginIndex > 0) {
-                    beginIndex += 7;
-                    adminQuery = adminQuery.substring(beginIndex).trim();
-                    if (adminQuery.indexOf("?") >= 0 && adminQuery.indexOf("?") <= 8) {
-                        adminQuery = adminQuery.substring(adminQuery.indexOf("?") + 1).trim();
-                    }
-                    if (adminQuery.toLowerCase().startsWith("and")) {
-                        adminQuery = adminQuery.substring(3).trim();
-                    }
-                } else {
-                    adminQuery = null;
-                }
-            }
-        }
         if ((adminQuery != null) && (adminQuery.length() > 0)) {
-            try {
-                return CQL.toFilter(adminQuery);
-            } catch (Exception e) {
-                log.error("Fout bij maken van filter: ", e);
-            }
+            // Als er nog een oude select staat met ? dan maar fout laten gaan
+            return CQL.toFilter(adminQuery);
         }
         return null;
     }
 
     //Thema helpers
     public static String getGeometryAttributeName(DataStore ds, Themas t) throws Exception {
-        return getSchema(ds, t).getGeometryDescriptor().getName().getLocalPart();
+        SimpleFeatureType schema = getSchema(ds, t);
+        if (schema == null) {
+            return null;
+        }
+        GeometryDescriptor gd = schema.getGeometryDescriptor();
+        if (gd == null) {
+            return null;
+        }
+        return gd.getName().getLocalPart();
     }
 
     /**
@@ -406,7 +406,7 @@ public class DataStoreUtil {
         Name[] typeNames = new Name[tna.length];
         for (int i = 0; i < tna.length; i++) {
             QName qname = convertFullnameToQName(tna[i]);
-            if (qname==null) {
+            if (qname == null) {
                 typeNames[i] = new NameImpl("");
             } else {
                 typeNames[i] = new NameImpl(qname.getNamespaceURI(), qname.getLocalPart());
@@ -430,10 +430,10 @@ public class DataStoreUtil {
             return null;
         }
         QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel());
-        if (n==null || n.getLocalPart() == null) {
+        if (n == null || n.getLocalPart() == null) {
             n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
         }
-        if (n==null || n.getLocalPart() == null) {
+        if (n == null || n.getLocalPart() == null) {
             return null;
         }
         DataStore ds = b.toDatastore();
@@ -448,16 +448,16 @@ public class DataStoreUtil {
         return null;
     }
 
-    static public String getThemaGeomType(Themas t, GisPrincipal user) throws IOException, Exception  {
+    static public String getThemaGeomType(Themas t, GisPrincipal user) throws IOException, Exception {
         Bron b = t.getConnectie(user);
         if (b == null) {
             return null;
         }
         QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel());
-        if (n==null || n.getLocalPart() == null) {
+        if (n == null || n.getLocalPart() == null) {
             n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
         }
-        if (n==null || n.getLocalPart() == null) {
+        if (n == null || n.getLocalPart() == null) {
             return null;
         }
         DataStore ds = b.toDatastore();
@@ -471,7 +471,7 @@ public class DataStoreUtil {
         }
         return null;
     }
-    
+
     /**
      * Wordt nu niet gebruikt, maar dit is wel de best plaats voor later
      * 
@@ -484,7 +484,7 @@ public class DataStoreUtil {
     }
 
     public static QName convertFullnameToQName(String ln) {
-        if (ln==null) {
+        if (ln == null) {
             return null;
         }
         String localName = ln;
@@ -550,7 +550,7 @@ public class DataStoreUtil {
             binding = geom.getClass();
         }
         return new GeometryTypeImpl(name, binding, null, true, false, null, null, null);
-     }
+    }
 
     public static ReferencedEnvelope convertFeature2Envelop(Feature f) {
         if (f == null || f.getDefaultGeometryProperty() == null) {
@@ -600,7 +600,7 @@ public class DataStoreUtil {
         params.put(WFSDataStoreFactory.TIMEOUT.key, 60000);
         params.put(WFSDataStoreFactory.USERNAME.key, "Beheerder");
         params.put(WFSDataStoreFactory.PASSWORD.key, "***REMOVED***");
-         DataStore ds = DataStoreFinder.getDataStore(params);
+        DataStore ds = DataStoreFinder.getDataStore(params);
 
         /*omdat de WFS_1_0_0_Datastore niet met de opengis filters werkt even toevoegen dat
         er simpelle vergelijkingen kunnen worden gedaan. (de meeste servers kunnen dit natuurlijk);*/
@@ -611,7 +611,7 @@ public class DataStoreUtil {
             // wfs 1.1.0 doet dit wel en hier fixen we dit.
             List<FeatureSetDescription> fdsl = wfscap.getFeatureTypes();
             for (FeatureSetDescription fds : fdsl) {
-                if (fds.getNamespace()!=null) {
+                if (fds.getNamespace() != null) {
                     continue;
                 }
                 QName qname = convertFullnameToQName(fds.getName());
@@ -646,7 +646,7 @@ public class DataStoreUtil {
         }
 
         String ftNaam = sft.getTypeName();
-        Name name  = sft.getName();
+        Name name = sft.getName();
         String ftNaam2 = sft.getName().getLocalPart();
         String ftNs = sft.getName().getNamespaceURI();
         String geomAttributeName = sft.getGeometryDescriptor().getLocalName();

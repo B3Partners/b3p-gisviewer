@@ -179,8 +179,13 @@ public class GetViewerDataAction extends BaseGisAction {
                     if (mapserver4Hack.equalsIgnoreCase(e.getMessage())) {
                         // mapserver 4 returns service exception when no hits, this is not compliant.
                     } else {
+                        String msg = e.getMessage();
+                        if (msg.contains("PropertyDescriptor is null - did you request a property that does not exist?")) {
+                            msg = "U vraagt een attribuut op dat niet bestaat, waarschijnlijk is de configuratie niet in orde, raadpleeg de beheerder!";
+                        }
+
                         log.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
-                        addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + e.getMessage());
+                        addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + msg);
                     }
                 }
             }
@@ -210,7 +215,7 @@ public class GetViewerDataAction extends BaseGisAction {
         }
 
         /* alleen doen als configuratie tabel bestaat */
-        if (rollenPrio != null) {
+        if (rollenPrio != null && rollenPrio.getPropval()!=null) {
             String[] configRollen = rollenPrio.getPropval().split(",");
 
             /* init loop vars */

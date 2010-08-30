@@ -76,16 +76,12 @@ public class ConfigKeeper {
     }
 
     public Configuratie getConfiguratie(String property, String setting) {
-        String hql = "from Configuratie";
-
-        if (property != null && property.length() != 0) {
-            hql += " where property = '" + property + "'";
+        if (property == null || property.length() == 0
+                || setting == null || setting.length() == 0) {
+            return null;
         }
 
-        if (setting != null && setting.length() != 0) {
-            hql += " and setting = '" + setting + "'";
-        }
-
+        String hql = "from Configuratie where property = :property and setting = :setting";
         Session sess = null;
         Transaction tx = null;
         Configuratie configuratie = null;
@@ -94,7 +90,7 @@ public class ConfigKeeper {
             sess = HibernateUtil.getSessionFactory().openSession();
             tx = sess.beginTransaction();
 
-            Query q = sess.createQuery(hql);
+            Query q = sess.createQuery(hql).setParameter("setting", setting).setParameter("property", property);
             configuratie = (Configuratie) q.uniqueResult();
 
             tx.commit();
@@ -102,6 +98,12 @@ public class ConfigKeeper {
         } catch (Exception ex) {
             log.error("Fout tijdens getConfiguratie: " + ex.getLocalizedMessage());
             tx.rollback();
+        }
+
+        if (configuratie == null) {
+            configuratie = new Configuratie();
+            configuratie.setProperty(property);
+            configuratie.setSetting(setting);
         }
 
         return configuratie;

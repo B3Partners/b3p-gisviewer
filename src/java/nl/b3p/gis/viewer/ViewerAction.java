@@ -393,7 +393,7 @@ public class ViewerAction extends BaseGisAction {
         }
 
         /* alleen doen als configuratie tabel bestaat */
-        if (rollenPrio != null) {
+        if (rollenPrio != null && rollenPrio.getPropval()!=null) {
             String[] configRollen = rollenPrio.getPropval().split(",");
 
             String rolnaam = "";
