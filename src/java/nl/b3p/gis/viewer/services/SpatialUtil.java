@@ -33,24 +33,18 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.PrecisionModel;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
-import javax.xml.namespace.QName;
-import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
-import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.geotools.data.DataStore;
 import org.hibernate.Query;
 import org.hibernate.Session;
-import org.opengis.feature.simple.SimpleFeatureType;
 
 public class SpatialUtil {
 

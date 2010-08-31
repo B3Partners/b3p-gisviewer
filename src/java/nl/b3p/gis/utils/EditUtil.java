@@ -43,31 +43,38 @@ public class EditUtil {
     public EditUtil() throws Exception {
     }
 
-    public String buffer(String wkt, double bufferafstand) throws Exception {
+    public String buffer(String wkt, Double bufferafstand) throws Exception {
 
         if ( (wkt == null) || (wkt.length() < 1) ) {
             throw new Exception("Kan niet bufferen. Er is nog geen handeling geselecteerd.");
         }
 
-        if (bufferafstand == 0) {
+        if (bufferafstand == null || bufferafstand == 0)
             throw new Exception("De bufferafstand mag niet 0 zijn.");
-        }
 
         String buffer = "";
         Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
 
-        if (geom == null) {
+        if (geom == null || geom.isEmpty() ) {
             throw new Exception("Kan niet bufferen. Geometrie is incorrect.");
         }
- 
-        Geometry result = geom.buffer(bufferafstand, QUAD_SEGS, BufferOp.CAP_BUTT);
 
-        if (result == null)
+        if (geom.toString().indexOf("POINT") != -1 && bufferafstand < 0)
+            throw new Exception("De bufferafstand moet groter dan 0 zijn.");
+
+        Geometry result = null;
+
+        if (geom.toString().indexOf("POINT") != -1)
+            result = geom.buffer(bufferafstand);
+        else
+            result = geom.buffer(bufferafstand, QUAD_SEGS, BufferOp.CAP_BUTT);
+
+        if (result == null || result.isEmpty())
             throw new Exception("Resultaat buffer geeft incorrecte geometrie.");
    
         Geometry poly = getLargestPolygonFromMultiPolygon(result);
 
-        if (poly == null)
+        if (poly == null || poly.isEmpty())
             throw new Exception("Bufferfout bij omzetten MultiPolygon naar grootste Polygon.");
 
         buffer = poly.toText();
