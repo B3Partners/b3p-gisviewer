@@ -416,14 +416,21 @@ public class GetViewerDataAction extends BaseGisAction {
 
         String adminPk = DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart();
         String id = null;
+        Filter filter = null;
         if (adminPk != null) {
             id = request.getParameter(adminPk);
-        }
-        if (id == null) {
-            return null;
+            if (id != null) {
+                filter = FilterBuilder.createEqualsFilter(adminPk, id);
+            } else {
+                // tbv data2info meerdere id's
+                String primaryKeys = request.getParameter("primaryKeys");
+                if (primaryKeys != null) {
+                    String[] primaryKeysArray = primaryKeys.split(",");
+                    filter = FilterBuilder.createOrEqualsFilter(adminPk, primaryKeysArray);
+                }
+            }
         }
 
-        Filter filter = FilterBuilder.createEqualsFilter(adminPk, id);
         List regels = new ArrayList();
 
         boolean addKaart = false;
