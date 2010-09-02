@@ -320,6 +320,10 @@ public class DataStoreUtil {
      * als Admin_tabel is ingevuld. zie ook getSchema(DataStore,String);
      */
     public static SimpleFeatureType getSchema(DataStore ds, Themas t) throws Exception {
+
+        /* TODO
+         * spatial tabel indien null check ?
+        */
         return getSchema(ds, t.getAdmin_tabel());
     }
 
