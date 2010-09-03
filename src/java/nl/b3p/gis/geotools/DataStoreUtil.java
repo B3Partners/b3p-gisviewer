@@ -402,6 +402,19 @@ public class DataStoreUtil {
         return propNamesList;
     }
 
+    public static List<String> basisRegelThemaData2PropertyNames(List<ThemaData> themaData) {
+        ArrayList<String> propNamesList = new ArrayList();
+        for (int i = 0; i < themaData.size(); i++) {
+            if (themaData.get(i).getKolomnaam() != null && themaData.get(i).isBasisregel()) {
+                String prp = convertFullnameToQName(themaData.get(i).getKolomnaam()).getLocalPart();
+                if (!propNamesList.contains(prp)) {
+                    propNamesList.add(prp);
+                }
+            }
+        }
+        return propNamesList;
+    }
+
     public static Name[] getTypeNames(DataStore ds) throws IOException {
         String[] tna = ds.getTypeNames();
         if (tna == null || tna.length == 0) {

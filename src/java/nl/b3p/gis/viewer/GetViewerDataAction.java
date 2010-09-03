@@ -132,64 +132,14 @@ public class GetViewerDataAction extends BaseGisAction {
     public ActionForward admindata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         ArrayList themas = getThemas(mapping, dynaForm, request);
         ArrayList regels = new ArrayList();
-        ArrayList ti = null;
+        ArrayList ti = new ArrayList();
         if (themas == null) {
             request.setAttribute("regels_list", regels);
             request.setAttribute("thema_items_list", ti);
             return mapping.findForward("admindata");
         }
 
-        for (int i = 0; i < themas.size(); i++) {
-            Themas t = (Themas) themas.get(i);
-            if (t.getAdmin_tabel() != null) {
-                try {
-                    List thema_items = SpatialUtil.getThemaData(t, true);
-                    int themadatanummer = 0;
-                    if (ti != null) {
-                        themadatanummer = ti.size();
-                    }
-                    if (ti != null) {
-                        for (int a = 0; a < ti.size(); a++) {
-                            if (compareThemaDataLists((List) ti.get(a), thema_items)) {
-                                themadatanummer = a;
-                                break;
-                            }
-                        }
-                    }
-
-                    Bron b = t.getConnectie(request);
-                    List l = null;
-                    if (b != null) {
-                        if (themadatanummer == regels.size()) {
-                            regels.add(new ArrayList());
-                        }
-                        l = getThemaObjectsWithGeom(t, thema_items, request);
-                    }
-                    if (l != null && l.size() > 0) {
-                        ((ArrayList) regels.get(themadatanummer)).addAll(l);
-                        if (ti == null) {
-                            ti = new ArrayList();
-                        }
-                        if (themadatanummer == ti.size()) {
-                            ti.add(thema_items);
-                        }
-                    }
-                } catch (Exception e) {
-                    String mapserver4Hack = "msQueryByRect(): Search returned no results. No matching record(s) found.";
-                    if (mapserver4Hack.equalsIgnoreCase(e.getMessage())) {
-                        // mapserver 4 returns service exception when no hits, this is not compliant.
-                    } else {
-                        String msg = e.getMessage();
-                        if (msg.contains("PropertyDescriptor is null - did you request a property that does not exist?")) {
-                            msg = "U vraagt een attribuut op dat niet bestaat, waarschijnlijk is de configuratie niet in orde, raadpleeg de beheerder!";
-                        }
-
-                        log.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
-                        addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + msg);
-                    }
-                }
-            }
-        }
+        collectThemaRegels(mapping, request, themas, regels, ti, false);
         request.setAttribute("regels_list", regels);
         request.setAttribute("thema_items_list", ti);
 
@@ -215,7 +165,7 @@ public class GetViewerDataAction extends BaseGisAction {
         }
 
         /* alleen doen als configuratie tabel bestaat */
-        if (rollenPrio != null && rollenPrio.getPropval()!=null) {
+        if (rollenPrio != null && rollenPrio.getPropval() != null) {
             String[] configRollen = rollenPrio.getPropval().split(",");
 
             /* init loop vars */
@@ -278,6 +228,58 @@ public class GetViewerDataAction extends BaseGisAction {
 
         /* geen config gevonden of ingesteld pak de uitgebreide versie */
         return mapping.findForward("admindata1");
+    }
+
+    protected void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
+            ArrayList themas, ArrayList regels, ArrayList ti, boolean locatie) {
+        for (int i = 0; i < themas.size(); i++) {
+            Themas t = (Themas) themas.get(i);
+            if (locatie && !t.isLocatie_thema()) {
+                continue;
+            }
+            if (t.getAdmin_tabel() != null) {
+                try {
+                    List thema_items = SpatialUtil.getThemaData(t, true);
+                    int themadatanummer = 0;
+                    themadatanummer = ti.size();
+                    for (int a = 0; a < ti.size(); a++) {
+                        if (compareThemaDataLists((List) ti.get(a), thema_items)) {
+                            themadatanummer = a;
+                            break;
+                        }
+                    }
+
+                    Bron b = t.getConnectie(request);
+                    List l = null;
+                    if (b != null) {
+                        if (themadatanummer == regels.size()) {
+                            regels.add(new ArrayList());
+                        }
+                        l = getThemaObjectsWithGeom(t, thema_items, request);
+                    }
+                    if (l != null && l.size() > 0) {
+                        ((ArrayList) regels.get(themadatanummer)).addAll(l);
+                        if (themadatanummer == ti.size()) {
+                            ti.add(thema_items);
+                        }
+                    }
+                } catch (Exception e) {
+                    String mapserver4Hack = "msQueryByRect(): Search returned no results. No matching record(s) found.";
+                    if (mapserver4Hack.equalsIgnoreCase(e.getMessage())) {
+                        // mapserver 4 returns service exception when no hits, this is not compliant.
+                    } else {
+                        String msg = e.getMessage();
+                        if (msg.contains("PropertyDescriptor is null - did you request a property that does not exist?")) {
+                            msg = "U vraagt een attribuut op dat niet bestaat, waarschijnlijk is de configuratie niet in orde, raadpleeg de beheerder!";
+                        }
+
+                        log.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
+                        addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + msg);
+                    }
+                }
+            }
+        }
+
     }
 
     /**
@@ -347,42 +349,19 @@ public class GetViewerDataAction extends BaseGisAction {
      *
      */
     public ActionForward objectdata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        Themas t = getThema(mapping, dynaForm, request, true);
-        if (t == null) {
-            return mapping.findForward("objectdata");
+        ArrayList themas = getThemas(mapping, dynaForm, request);
+        ArrayList regels = new ArrayList();
+        ArrayList ti = new ArrayList();
+        if (themas == null) {
+            request.setAttribute("regels_list", regels);
+            return mapping.findForward("admindata");
         }
-        Bron b = t.getConnectie(request);
-        if (b != null) {
-            List tol = createLocatieThemaList(mapping, dynaForm, request);
-            request.setAttribute("object_data", tol);
-        }
+
+        collectThemaRegels(mapping, request, themas, regels, ti, true);
+        request.setAttribute("regels_list", regels);
+        request.setAttribute("thema_items_list", ti);
+
         return mapping.findForward("objectdata");
-    }
-
-    protected List createLocatieThemaList(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
-
-        ArrayList objectdata = new ArrayList();
-        List ctl = getValidThemas(true, null, request);
-        if (ctl == null || ctl.isEmpty()) {
-            return null;
-        }
-
-        Iterator it = ctl.iterator();
-        while (it.hasNext()) {
-            Themas t = (Themas) it.next();
-            List thema_items = SpatialUtil.getThemaData(t, true);
-            //List pks = findPks(t, mapping, dynaForm, request);
-            List ao = getThemaObjectsWithGeom(t, thema_items, request);
-            if (ao == null || ao.isEmpty()) {
-                continue;
-            }
-            ArrayList thema = new ArrayList();
-            thema.add(t.getId());
-            thema.add(t.getNaam());
-            thema.add(ao);
-            objectdata.add(thema);
-        }
-        return objectdata;
     }
 
     protected List<AdminDataRowBean> getThemaObjectsWithGeom(Themas t, List<ThemaData> thema_items, HttpServletRequest request) throws Exception {
@@ -395,8 +374,11 @@ public class GetViewerDataAction extends BaseGisAction {
         }
         Geometry geom = getGeometry(request);
         Filter extraFilter = getExtraFilter(t, request);
+
+        // filter op locatie thema's
+
         Bron b = t.getConnectie(request);
-        List<String> propnames = DataStoreUtil.themaData2PropertyNames(thema_items);
+        List<String> propnames = DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items);
         List<Feature> features = DataStoreUtil.getFeatures(b, t, geom, extraFilter, propnames, null);
         List<AdminDataRowBean> regels = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
