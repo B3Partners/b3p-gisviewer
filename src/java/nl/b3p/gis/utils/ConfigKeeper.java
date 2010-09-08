@@ -4,14 +4,13 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hibernate.Query;
 import org.hibernate.Session;
-import org.hibernate.Transaction;
 
 public class ConfigKeeper {
 
@@ -21,33 +20,40 @@ public class ConfigKeeper {
     }
 
     public Collection<Configuratie> getConfig(String setting) {
-        String hql = "from Configuratie";
 
-        if (setting != null && setting.length() != 0) {
-            hql += " where setting = '" + setting + "'";
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        List results = sess.createQuery("from Configuratie where setting = :setting ORDER BY id")
+                .setParameter("setting", setting).list();
+
+        return results;
+    }
+
+    public Configuratie getConfiguratie(String property, String setting) {
+
+        if (property == null || property.length() == 0
+                || setting == null || setting.length() == 0) {
+            return null;
+        }
+        
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        List results = sess.createQuery("from Configuratie where property = :prop"
+                + " AND setting = :setting")
+                .setParameter("prop", property)
+                .setParameter("setting", setting).list();
+        
+        Configuratie configuratie = null;
+
+        if (results.size() == 1) {
+            configuratie = (Configuratie) results.get(0);
         }
 
-        hql += " order by id";
-
-        Session sess = null;
-        Transaction tx = null;
-        Collection allResults = null;
-
-        try {
-            sess = HibernateUtil.getSessionFactory().openSession();
-            tx = sess.beginTransaction();
-
-            Query q = sess.createQuery(hql);
-            allResults = q.list();
-
-            tx.commit();
-
-        } catch (Exception ex) {
-            log.error("Fout tijdens ConfigKeeper constructor: " + ex.getLocalizedMessage());
-            tx.rollback();
+        if (results.size() < 1) {
+            configuratie = new Configuratie();
+            configuratie.setProperty(property);
+            configuratie.setSetting(setting);
         }
 
-        return allResults;
+        return configuratie;
     }
 
     public Map<String, Object> getConfigMap(String setting)
@@ -71,41 +77,7 @@ public class ConfigKeeper {
 
             dbconfig.put(property, propvalObject);
         }
-        
+
         return dbconfig;
-    }
-
-    public Configuratie getConfiguratie(String property, String setting) {
-        if (property == null || property.length() == 0
-                || setting == null || setting.length() == 0) {
-            return null;
-        }
-
-        String hql = "from Configuratie where property = :property and setting = :setting";
-        Session sess = null;
-        Transaction tx = null;
-        Configuratie configuratie = null;
-
-        try {
-            sess = HibernateUtil.getSessionFactory().openSession();
-            tx = sess.beginTransaction();
-
-            Query q = sess.createQuery(hql).setParameter("setting", setting).setParameter("property", property);
-            configuratie = (Configuratie) q.uniqueResult();
-
-            tx.commit();
-
-        } catch (Exception ex) {
-            log.error("Fout tijdens getConfiguratie: " + ex.getLocalizedMessage());
-            tx.rollback();
-        }
-
-        if (configuratie == null) {
-            configuratie = new Configuratie();
-            configuratie.setProperty(property);
-            configuratie.setSetting(setting);
-        }
-
-        return configuratie;
     }
 }
