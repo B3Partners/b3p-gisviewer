@@ -45,12 +45,14 @@ public class HibernateUtil extends HttpServlet {
     private static String kaartenbalieCluster = "Extra";
     private static boolean useKaartenbalieCluster = true;
     public static String kbWfsConnectieNaam = "Kaartenbalie WFS";
+    public static String hibernateDialect = null;
 
     static {
         try {
             Configuration config = new Configuration();
             config.setNamingStrategy(org.hibernate.cfg.ImprovedNamingStrategy.INSTANCE);
             sessionFactory = config.configure().buildSessionFactory();
+            hibernateDialect = config.getProperty("dialect");
         } catch (Throwable ex) {
             log.error("Initial SessionFactory creation failed", ex);
             throw new ExceptionInInitializerError(ex);
