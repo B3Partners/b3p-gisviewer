@@ -170,10 +170,14 @@ public class GetLocationData {
             if (b == null) {
                 continue;
             }
-            Map themaAnalyseData = calcThemaAnalyseData(b, t, extraCriterium, geom);
-            if (themaAnalyseData != null) {
-                themaAnalyseData = formatResults(themaAnalyseData);
-                results.put(t.getNaam(), themaAnalyseData);
+            try {
+                Map themaAnalyseData = calcThemaAnalyseData(b, t, extraCriterium, geom);
+                if (themaAnalyseData != null) {
+                    themaAnalyseData = formatResults(themaAnalyseData);
+                    results.put(t.getNaam(), themaAnalyseData);
+                }
+            } catch (Exception e) {
+                log.debug("analyse data error:", e);
             }
         }
         return results;
