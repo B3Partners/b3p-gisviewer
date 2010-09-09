@@ -188,19 +188,15 @@ public class IndexAction extends BaseGisAction {
      */
     public ActionForward list(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {        
         List validThemas = getValidThemas(false, null, request);
-        ArrayList themalist=new ArrayList();
-        ArrayList clusterlist=new ArrayList();
+        List themalist=new ArrayList();
+        List clusterlist=new ArrayList();
         if (validThemas!=null){
             for (int i=0; i < validThemas.size(); i++){
                 Themas t= (Themas) validThemas.get(i);
                 Clusters c = t.getCluster();
+                clusterlist = findParentClusters(c, clusterlist);
                 if (!c.isHide_tree() && !c.isBackground_cluster()){
                     themalist.add(t);
-                }
-                if (c.isCallable() && !c.isBackground_cluster()){
-                    if(!clusterlist.contains(c)){
-                        clusterlist.add(c);
-                    }
                 }
             }
         }
@@ -210,6 +206,19 @@ public class IndexAction extends BaseGisAction {
         addDefaultMessage(mapping, request);
         createLists(dynaForm, request);
         return getDefaultForward(mapping, request);
+    }
+
+    private List findParentClusters(Clusters c, List parents) {
+        if (parents==null) {
+            return null;
+        }
+        if (c==null || !c.isCallable() || c.isBackground_cluster()) {
+            return parents;
+        }
+        if (!parents.contains(c)) {
+            parents.add(c);
+        }
+        return findParentClusters(c.getParent(), parents);
     }
 }
 
