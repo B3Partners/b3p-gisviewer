@@ -269,8 +269,13 @@ public class GetViewerDataAction extends BaseGisAction {
                         // mapserver 4 returns service exception when no hits, this is not compliant.
                     } else {
                         String msg = e.getMessage();
-                        if (msg.contains("PropertyDescriptor is null - did you request a property that does not exist?")) {
-                            msg = "U vraagt een attribuut op dat niet bestaat, waarschijnlijk is de configuratie niet in orde, raadpleeg de beheerder!";
+
+                        if (msg != null) {
+                            if (msg.contains("PropertyDescriptor is null - did you request a property that does not exist?")) {
+                                msg = "U vraagt een attribuut op dat niet bestaat, waarschijnlijk is de configuratie niet in orde, raadpleeg de beheerder!";
+                            }
+                        } else {
+                            msg = "Kon objectinfo niet ophalen.";
                         }
 
                         log.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
