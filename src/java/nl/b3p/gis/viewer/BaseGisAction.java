@@ -22,15 +22,6 @@
  */
 package nl.b3p.gis.viewer;
 
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.LineString;
-import com.vividsolutions.jts.geom.MultiLineString;
-import com.vividsolutions.jts.geom.MultiPoint;
-import com.vividsolutions.jts.geom.MultiPolygon;
-import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.geom.Polygon;
-import com.vividsolutions.jts.io.WKTWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.Connection;
@@ -62,23 +53,18 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
-import org.geotools.feature.NameImpl;
-import org.geotools.feature.type.GeometryTypeImpl;
-import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryType;
 import org.opengis.feature.type.PropertyDescriptor;
 import org.opengis.filter.Filter;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.feature.type.Name;
 
 public abstract class BaseGisAction extends BaseHibernateAction {
 
     private static final Log log = LogFactory.getLog(BaseGisAction.class);
     public static final String URL_AUTH = "code";
     protected static final double DEFAULTTOLERANCE = 5.0;
+    protected static final String ACKNOWLEDGE_MESSAGES = "acknowledgeMessages";
 
     protected String getOrganizationCode(HttpServletRequest request) {
         GisPrincipal gp = GisPrincipal.getGisPrincipal(request);

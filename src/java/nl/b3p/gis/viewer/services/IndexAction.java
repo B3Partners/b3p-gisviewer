@@ -152,14 +152,14 @@ public class IndexAction extends BaseGisAction {
             }
         }
 
-        addDefaultMessage(mapping, request);
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
         return getDefaultForward(mapping, request);
     }
 
     public ActionForward loginError(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        addDefaultMessage(mapping, request);
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
 
@@ -170,7 +170,7 @@ public class IndexAction extends BaseGisAction {
         session.invalidate();
         log.info("Logged out from session: " + sesId);
 
-        addDefaultMessage(mapping, request);
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
 
@@ -203,7 +203,7 @@ public class IndexAction extends BaseGisAction {
         request.setAttribute("themalist", themalist);
         request.setAttribute("clusterlist", clusterlist);
 
-        addDefaultMessage(mapping, request);
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
         return getDefaultForward(mapping, request);
     }

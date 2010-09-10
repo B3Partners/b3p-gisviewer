@@ -135,7 +135,7 @@ public class ViewerAction extends BaseGisAction {
         List themalist = getValidThemas(false, null, request);
         request.setAttribute("themalist", themalist);
 
-        addDefaultMessage(mapping, request);
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
     // </editor-fold>

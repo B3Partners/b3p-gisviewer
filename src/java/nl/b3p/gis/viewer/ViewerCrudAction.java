@@ -42,6 +42,7 @@ import org.hibernate.Transaction;
 public class ViewerCrudAction extends CrudAction {
 
     private static Log log = LogFactory.getLog(ViewerCrudAction.class);
+    protected static final String ACKNOWLEDGE_MESSAGES = "acknowledgeMessages";
 
     protected ActionForward getUnspecifiedAlternateForward(ActionMapping mapping, HttpServletRequest request) {
         return mapping.findForward(FAILURE);
