@@ -786,4 +786,19 @@ public class Themas implements Comparable {
     public void setLayoutadmindata(String layoutadmindata) {
         this.layoutadmindata = layoutadmindata;
     }
+
+    public boolean hasValidAdmindataSource(GisPrincipal user) {
+        if (getAdmin_tabel() == null || getAdmin_tabel().length() == 0) {
+            return false;
+        }
+        Bron b = getConnectie();
+        if (b == null) {
+            // moet kaartenbalie wfs zijn want geen bron
+            // we zoeken naar featuretype met zelfde naam
+            return user.acceptWfsFeatureType(getAdmin_tabel());
+        } else {
+            // andere externe bronnen checken we niet, mogelijk later
+            return true;
+        }
+    }
 }

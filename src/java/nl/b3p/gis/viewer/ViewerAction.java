@@ -561,7 +561,7 @@ public class ViewerAction extends BaseGisAction {
         return clusterArray;
     }
 
-    private JSONArray getChildren(List children, List actieveThemas,GisPrincipal user) throws JSONException {
+    private JSONArray getChildren(List children, List actieveThemas, GisPrincipal user) throws JSONException {
         if (children == null) {
             return null;
         }
@@ -569,6 +569,15 @@ public class ViewerAction extends BaseGisAction {
         Iterator it = children.iterator();
         while (it.hasNext()) {
             Themas th = (Themas) it.next();
+
+            // Check of er een admin source is met rechten
+            boolean validAdmindataSource = th.hasValidAdmindataSource(user);
+            if (th.isAnalyse_thema() && !validAdmindataSource) {
+                logger.error("Thema '" + th.getNaam()
+                        + "' is analyse thema, maar heeft geen geldige admindata connectie "
+                        + "(mogelijk geen rechten op wfs featuretype).");
+            }
+
             Integer themaId = th.getId();
             String ttitel = th.getNaam();
             JSONObject jsonCluster = new JSONObject().put("id", themaId).put("type", "child").put("title", ttitel).put("cluster", false);
@@ -585,7 +594,7 @@ public class ViewerAction extends BaseGisAction {
 
             if (actieveThemas != null && themaId != null && actieveThemas.contains(themaId)) {
                 jsonCluster.put("visible", "on");
-                if (th.isAnalyse_thema()) {
+                if (th.isAnalyse_thema() && validAdmindataSource) {
                     jsonCluster.put("analyse", "active");
                 } else {
                     jsonCluster.put("analyse", "off");
@@ -597,7 +606,7 @@ public class ViewerAction extends BaseGisAction {
                 } else {
                     jsonCluster.put("visible", "off");
                 }
-                if (th.isAnalyse_thema()) {
+                if (th.isAnalyse_thema() && validAdmindataSource) {
                     jsonCluster.put("analyse", "on");
                 } else {
                     jsonCluster.put("analyse", "off");
@@ -610,7 +619,7 @@ public class ViewerAction extends BaseGisAction {
             if (th.getWms_layers_real() != null) {
                 jsonCluster.put("wmslayers", th.getWms_layers_real());
                 //if admintable is set then don't add the queryLayer
-                if (th.getWms_querylayers_real()!=null && (th.getAdmin_tabel()==null || th.getAdmin_tabel().length()==0)){
+                if (th.getWms_querylayers_real()!=null && !validAdmindataSource){
                     jsonCluster.put("wmsquerylayers", th.getWms_querylayers_real());
                 }
                 if (th.getWms_legendlayer_real()!=null){
@@ -619,7 +628,7 @@ public class ViewerAction extends BaseGisAction {
             } else {
                 jsonCluster.put("wmslayers", th.getWms_layers());
                 //if admintable is set then don't add the queryLayer
-                if (th.getWms_querylayers()!=null && th.getAdmin_tabel()==null){
+                if (th.getWms_querylayers()!=null && !validAdmindataSource){
                     jsonCluster.put("wmsquerylayers", th.getWms_querylayers());
                 }
                 if (th.getWms_legendlayer()!=null){

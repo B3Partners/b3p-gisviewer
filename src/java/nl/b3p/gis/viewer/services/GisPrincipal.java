@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import nl.b3p.gis.utils.ConfigListsUtil;
 import nl.b3p.gis.viewer.BaseGisAction;
 import nl.b3p.wms.capabilities.Layer;
 import nl.b3p.wms.capabilities.Roles;
@@ -52,6 +53,7 @@ public class GisPrincipal implements Principal {
     private Set roles;
     private ServiceProvider sp;
     private Bron kbWfsConnectie;
+    private List kbWfsFeatures;
 
     public GisPrincipal(String name, List roles) {
         this.name = name;
@@ -64,12 +66,14 @@ public class GisPrincipal implements Principal {
         this.password = password;
         this.code = code;
         this.sp = sp;
+
         //create wfs connectie object.
         kbWfsConnectie = new Bron();
         kbWfsConnectie.setUrl(HibernateUtil.createPersonalKbUrl(code));
         kbWfsConnectie.setNaam(HibernateUtil.kbWfsConnectieNaam);
         kbWfsConnectie.setGebruikersnaam(name);
         kbWfsConnectie.setWachtwoord(password);
+
         if (sp == null) {
             return;
         }
@@ -85,6 +89,11 @@ public class GisPrincipal implements Principal {
             if (sprole != null && sprole.length() > 0) {
                 roles.add(sprole);
             }
+        }
+        try {
+            kbWfsFeatures = ConfigListsUtil.getPossibleFeatures(kbWfsConnectie);
+        } catch (Exception ex) {
+            log.info("Cannot collect Kaartenbalie WFS features, cause: ", ex);
         }
     }
 
@@ -239,6 +248,19 @@ public class GisPrincipal implements Principal {
         return layer.getTitle();
     }
 
+    public boolean acceptWfsFeatureType(String ftn) {
+        if (kbWfsFeatures == null) {
+            return false;
+        }
+        for (int i=0; i<kbWfsFeatures.size(); i++) {
+            String[] fna = (String[])kbWfsFeatures.get(i);
+            if (fna != null && fna[1] != null && fna[1].equals(ftn)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static GisPrincipal getGisPrincipal(HttpServletRequest request) {
         Principal user = request.getUserPrincipal();
         if (!(user instanceof GisPrincipal && request instanceof SecurityRequestWrapper)) {
@@ -287,5 +309,19 @@ public class GisPrincipal implements Principal {
      */
     public void setKbWfsConnectie(Bron kbWfsConnectie) {
         this.kbWfsConnectie = kbWfsConnectie;
+    }
+
+    /**
+     * @return the kbWfsFeatures
+     */
+    public List getKbWfsFeatures() {
+        return kbWfsFeatures;
+    }
+
+    /**
+     * @param kbWfsFeatures the kbWfsFeatures to set
+     */
+    public void setKbWfsFeatures(List kbWfsFeatures) {
+        this.kbWfsFeatures = kbWfsFeatures;
     }
 }

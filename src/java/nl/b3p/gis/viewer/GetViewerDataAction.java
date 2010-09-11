@@ -237,7 +237,9 @@ public class GetViewerDataAction extends BaseGisAction {
             if (locatie && !t.isLocatie_thema()) {
                 continue;
             }
-            if (t.getAdmin_tabel() != null) {
+
+            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+            if (t.hasValidAdmindataSource(user)) {
                 try {
                     List thema_items = SpatialUtil.getThemaData(t, true);
                     int themadatanummer = 0;
