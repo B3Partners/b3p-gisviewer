@@ -49,7 +49,9 @@ import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
+import org.geotools.feature.FeatureTypeBuilder;
 import org.geotools.feature.NameImpl;
+import org.geotools.feature.simple.SimpleFeatureTypeImpl;
 import org.geotools.feature.type.GeometryTypeImpl;
 import org.geotools.filter.FilterCapabilities;
 import org.geotools.filter.FilterTransformer;
@@ -348,7 +350,12 @@ public class DataStoreUtil {
                 }
                 log.debug(schemas);
             }
-            throw e;
+            // NPE indien schema niet opgehaald kan worden,
+            // wij maken er een leeg schema van
+            FeatureTypeBuilder ftb = FeatureTypeBuilder.newInstance(ftName.getLocalPart());
+            ftb.setName(ftName.getLocalPart());
+            return ftb.getFeatureType();
+            //  throw e;
         }
     }
 
@@ -584,12 +591,16 @@ public class DataStoreUtil {
         return null;
     }
 
-    public static String convertFeature2WKT(Feature f) {
+    public static final int MAX_COORDS_WKT = 250;
+    public static String convertFeature2WKT(Feature f, boolean fallback) {
         if (f == null || f.getDefaultGeometryProperty() == null) {
             return null;
         }
         Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
         if (geom != null && geom.isSimple() && geom.isValid()) {
+            if (geom.getCoordinates()!=null && geom.getCoordinates().length>MAX_COORDS_WKT && fallback) {
+                geom = geom.getEnvelope();
+            }
             WKTWriter wktw = new WKTWriter();
             return wktw.write(geom);
         }

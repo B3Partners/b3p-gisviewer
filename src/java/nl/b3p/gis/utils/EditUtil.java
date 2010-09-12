@@ -17,6 +17,7 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.zoeker.configuratie.Bron;
@@ -109,7 +110,12 @@ public class EditUtil {
             if (b == null) {
                throw new Exception("Kan niet highlighten. Geen connectie gevonden.");
             }
-            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, thema, geom, null, DataStoreUtil.themaData2PropertyNames(thema_items), null);
+
+            GisPrincipal user  = GisPrincipal.getGisPrincipal(request);
+            if (!thema.hasValidAdmindataSource(user))
+                throw new Exception("Kan niet highlighten. Geen geldige datasource gevonden.");
+
+            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, thema, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null);
 
             if ( (features == null) || (features.size() < 1) )
                 throw new Exception("Kan niet highlighten. Geen features gevonden.");
@@ -124,12 +130,7 @@ public class EditUtil {
                 return null;
             }
 
-            Geometry object = (Geometry) f.getDefaultGeometryProperty().getValue();
-            if (object != null && object.isSimple() && object.isValid()) {
-                WKTWriter wktw = new WKTWriter();
-
-                return wktw.write(object);
-            }
+            return DataStoreUtil.convertFeature2WKT(f, true);
 
         } catch (Exception ex) {
 

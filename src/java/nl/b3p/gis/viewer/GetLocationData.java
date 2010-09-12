@@ -285,10 +285,6 @@ public class GetLocationData {
      *
      * waarde
      */
-    private Map calcThemaAnalyseData(Bron b, Themas t, Geometry analyseGeometry) throws Exception {
-        return calcThemaAnalyseData(b, t, (Filter) null, analyseGeometry);
-    }
-
     private Map calcThemaAnalyseData(Bron b, Themas t, String extraCriterium, Geometry analyseGeometry) throws Exception {
         //maak het eventuele extra filter.
         Filter extraFilter = null;
@@ -426,67 +422,6 @@ public class GetLocationData {
             return FilterBuilder.getFactory().and(andFilters);
         }
     }
-    //calculatie voor gebruik bij analyse tool
-
-    private double getSumOfGeometries(List<Feature> features, GeometryType gt) {
-        Iterator<Feature> it = features.iterator();
-        Class binding = gt.getBinding();
-        double d = 0.0;
-        while (it.hasNext()) {
-            Feature f = it.next();
-            Object o = f.getDefaultGeometryProperty().getValue();
-            if (o != null) {
-                Geometry geom = (Geometry) o;
-                if (binding == Polygon.class || binding == MultiPolygon.class) {
-                    d += geom.getArea();
-                } else if (binding == LineString.class || binding == MultiLineString.class) {
-                    d += geom.getLength();
-                } else if (binding == Point.class || binding == MultiPoint.class) {
-                    d += geom.getNumGeometries();
-                }
-            }
-        }
-        return d;
-    }
-
-    private Feature getFeatureWithGeometry(List<Feature> features, GeometryType gt, String type) {
-        Class binding = gt.getBinding();
-        if (binding == Point.class) {
-            return null;
-        }
-        Iterator<Feature> it = features.iterator();
-        Feature feature = null;
-        while (it.hasNext()) {
-            Feature f = it.next();
-            Object o = f.getDefaultGeometryProperty().getValue();
-            if (o != null) {
-                if (feature == null) {
-                    feature = f;
-                    continue;
-                }
-                Geometry featureGeom = (Geometry) feature.getDefaultGeometryProperty().getValue();
-                Geometry currentGeom = (Geometry) f.getDefaultGeometryProperty().getValue();
-                if (binding == Polygon.class || binding == MultiPolygon.class) {
-                    if ((type.equalsIgnoreCase("max") && currentGeom.getArea() > featureGeom.getArea())
-                            || (type.equalsIgnoreCase("min") && currentGeom.getArea() < featureGeom.getArea())) {
-                        feature = f;
-                    }
-                } else if (binding == LineString.class || binding == MultiLineString.class) {
-                    if ((type.equalsIgnoreCase("max") && currentGeom.getLength() > featureGeom.getLength())
-                            || (type.equalsIgnoreCase("min") && currentGeom.getLength() < featureGeom.getLength())) {
-                        feature = f;
-                    }
-                } else if (binding == MultiPoint.class) {
-                    if ((type.equalsIgnoreCase("max") && currentGeom.getNumGeometries() > featureGeom.getNumGeometries())
-                            || (type.equalsIgnoreCase("min") && currentGeom.getNumGeometries() < featureGeom.getNumGeometries())) {
-                        feature = f;
-                    }
-                }
-            }
-        }
-        return feature;
-
-    }
 
     /**
      *
@@ -573,80 +508,6 @@ public class GetLocationData {
     public String[] getData(String x_input, String y_input, String[] cols, int themaId, double distance, int srid) throws SQLException {
         String[] results = new String[cols.length + 3];
         return new String[]{"Fout bij laden van data. Functie nog niet omgezet"};
-        /*try {
-        double x, y;
-        String rdx, rdy;
-        try {
-        x = Double.parseDouble(x_input);
-        y = Double.parseDouble(y_input);
-        rdx = Long.toString(Math.round(x));
-        rdy = Long.toString(Math.round(y));
-        } catch (NumberFormatException nfe) {
-        return new String[]{nfe.getMessage()};
-        }
-
-        if (cols == null || cols.length == 0) {
-        return new String[]{rdx, rdy, "No cols"};
-        }
-        if (srid == 0) {
-        srid = 28992; // RD-new
-        }
-        ArrayList columns = new ArrayList();
-        for (int i = 0; i < cols.length; i++) {
-        columns.add(cols[i]);
-        }
-
-        results[0] = rdx;
-        results[1] = rdy;
-        results[2] = "";
-
-        Session sess = HibernateUtil.getSessionFactory().openSession();
-        Themas t = (Themas) sess.get(Themas.class, new Integer(themaId));
-        if (t == null) {
-        return results;
-        }
-
-        WebContext ctx = WebContextFactory.get();
-        HttpServletRequest request = ctx.getHttpServletRequest();
-        Connecties c = (Connecties) t.getConnectie(request);
-        if (c == null) {
-        return results;
-        }
-
-        String connectieType = c.getType();
-        if (Connecties.TYPE_JDBC.equalsIgnoreCase(connectieType)) {
-        Connection conn = t.getJDBCConnection();
-        try {
-        String geomColumn = SpatialUtil.getTableGeomName(t, conn);
-        String sptn = t.getSpatial_tabel();
-        if (sptn == null) {
-        sptn = t.getAdmin_tabel();
-        }
-        String q = SpatialUtil.closestSelectQuery(columns, sptn, geomColumn, x, y, distance, srid);
-        PreparedStatement statement = conn.prepareStatement(q);
-        try {
-        ResultSet rs = statement.executeQuery();
-        if (rs.next()) {
-        results[2] = rs.getString("dist");
-        for (int i = 0; i < cols.length; i++) {
-        results[i + 3] = rs.getString(cols[i]);
-        }
-        }
-        } finally {
-        statement.close();
-        }
-        } catch (SQLException ex) {
-        log.error("", ex);
-        } finally {
-        sess.close();
-        }
-        } else if (Connecties.TYPE_WFS.equalsIgnoreCase(connectieType)) {
-        log.error("Thema heeft een WFS connectie: " + t.getNaam(), new UnsupportedOperationException("Only JDBC connection are supported by this method."));
-        }
-        } catch (Exception e) {
-        log.error("", e);
-        }*/
-
 
     }
 }
