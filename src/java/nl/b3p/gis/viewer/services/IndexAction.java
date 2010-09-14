@@ -37,6 +37,8 @@ import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.viewer.BaseGisAction;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.wms.capabilities.Roles;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.*;
@@ -140,6 +142,12 @@ public class IndexAction extends BaseGisAction {
             }
 
             if (user != null) {
+                // Als beheerder inlogt dan wordt wfs cache geleegd, hiermee wordt
+                // geforceerd dat veranderingen in de config worden doorgevoerd.
+                if (user instanceof GisPrincipal && ((GisPrincipal)user).isInRole(Roles.ADMIN)) {
+                    Bron.flushWfsCache();
+                }
+
                 // invalidate old session if the user was already authenticated, and they logged in as a different user
                 if (request.getUserPrincipal() != null && false == request.getUserPrincipal().equals(user)) {
                     request.getSession().invalidate();
