@@ -25,10 +25,15 @@ package nl.b3p.gis.viewer.services;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import nl.b3p.commons.security.XmlSecurityDatabase;
 import nl.b3p.commons.services.FormUtils;
+import nl.b3p.ogc.utils.OGCConstants;
+import nl.b3p.wms.capabilities.ServiceDomainResource;
 import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.wms.capabilities.WMSCapabilitiesReader;
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.securityfilter.filter.SecurityRequestWrapper;
@@ -117,6 +122,39 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                 //return null;
             }
         }
+
+        // haal code op uit capabilities, zodat gisviewer deze kan gebruiken
+        // om in te loggen, werkt dan ook zonder cookies
+        if (code == null) {
+            Set<ServiceDomainResource> sdrs = sp.getDomainResource();
+            if (sdrs != null) {
+                for (ServiceDomainResource sdr : sdrs) {
+                    if (OGCConstants.WMS_REQUEST_GetMap.equalsIgnoreCase(sdr.getDomain())) {
+                        String url = sdr.getGetUrl();
+                        if (url != null) {
+                            // http://localhost:8084/kaartenbalie/services/8245d06ebf78d86c2030837df6ec48c2
+                            String[] pcodes = url.split("[\\?/]");
+                            if (pcodes != null && pcodes.length > 0) {
+                                for (int i = 0; i < pcodes.length; i++) {
+                                    String pcode = pcodes[i];
+                                    if (pcode != null && pcode.length() == 32) {
+                                        try {
+                                            Hex.decodeHex(pcode.toCharArray());
+                                            code = pcode;
+                                            break;
+                                        } catch (DecoderException ex) {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (code != null) {
+                        break;
+                    }
+                }
+            }
+        }
+        
         if (username==null || username.length()==0) {
             username = HibernateUtil.ANONYMOUS_USER;
         }
