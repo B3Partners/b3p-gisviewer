@@ -65,6 +65,8 @@ public class ViewerAction extends BaseGisAction {
     private static final Log logger = LogFactory.getLog(ViewerAction.class);
     protected static final String LIST = "list";
     protected static final String LOGIN = "login";
+    protected static final String SIMPLE_VIEWER_FW = "simpleviewer";
+
     /*Mogelijke request waarden*/
     //De themaid's die zichtbaar moeten zijn in de kaart en aangevinkt moeten zijn. Komma gescheiden
     public static final String ID="id";
@@ -159,6 +161,18 @@ public class ViewerAction extends BaseGisAction {
             return mapping.findForward(LOGIN);
         }
         createLists(dynaForm, request);
+
+        // tijdelijke hack om simple viewer te tonen, later als echte instelling
+        Map configMap = (Map) request.getAttribute("configMap");
+        if (configMap != null) {
+            Boolean usePopup = (Boolean) configMap.get("usePopup");
+            Boolean usePanelControls = (Boolean) configMap.get("usePanelControls");
+            if (usePopup == null || !usePopup) {
+                if (usePanelControls == null || !usePanelControls) {
+                 return mapping.findForward(SIMPLE_VIEWER_FW);
+                }
+            }
+        }
         return mapping.findForward(SUCCESS);
     }
 

@@ -55,13 +55,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         String password = FormUtils.nullIfEmpty(request.getParameter(FORM_PASSWORD));
         String code = FormUtils.nullIfEmpty(request.getParameter(FORM_CODE));
 
-        // Eventueel fake Principal aanmaken
-        if (!HibernateUtil.isCheckLoginKaartenbalie()) {
-            return authenticateFake(username);
-        }
-        String url = createCapabilitiesURL(code);
-        return authenticateHttp(url, username, password, code);
-    }
+        return authenticate(username, password, code);
+     }
 
     public Principal getAuthenticatedPrincipal(String username, String password) {
         return authenticate(username, password);
@@ -132,7 +127,6 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                     if (OGCConstants.WMS_REQUEST_GetMap.equalsIgnoreCase(sdr.getDomain())) {
                         String url = sdr.getGetUrl();
                         if (url != null) {
-                            // http://localhost:8084/kaartenbalie/services/8245d06ebf78d86c2030837df6ec48c2
                             String[] pcodes = url.split("[\\?/]");
                             if (pcodes != null && pcodes.length > 0) {
                                 for (int i = 0; i < pcodes.length; i++) {
@@ -163,13 +157,17 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     }
 
     public Principal authenticate(String username, String password) {
+        return authenticate(username, password, null);
+    }
+
+    public static Principal authenticate(String username, String password, String code) {
 
         // Eventueel fake Principal aanmaken
         if (!HibernateUtil.isCheckLoginKaartenbalie()) {
             return authenticateFake(username);
         }
-        String url = createCapabilitiesURL(null);
-        return authenticateHttp(url, username, password, null);
+        String url = createCapabilitiesURL(code);
+        return authenticateHttp(url, username, password, code);
     }
 
     public Principal getAuthenticatedPrincipal(String username) {

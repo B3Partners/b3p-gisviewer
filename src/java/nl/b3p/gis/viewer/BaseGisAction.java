@@ -480,37 +480,41 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 StringBuffer url;
                 if (td.getCommando() != null) {
                     url = new StringBuffer(td.getCommando());
-                } else {
-                    url = new StringBuffer();
-                }
-                String commando = url.toString();
-                //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
-                Object valueToSplit = null;
-                if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
-                    valueToSplit = f.getProperty(kolomnaam).getValue();
-                }
-                HashMap fhm = toHashMap(f);
-                List values = splitObject(valueToSplit, ",");
-                List regelValues = new ArrayList();
-                for (int i = 0; i < values.size(); i++) {
-                    Object value = values.get(i);
-                    if (commando.contains("[") || commando.contains("]")) {
-                        //vervang de eventuele csv in 1 waarde van die csv
-                        if (kolomnaam != null) {
-                            fhm.put(kolomnaam, value);
-                        }
-                        String newCommando = replaceValuesInString(commando, fhm);
-                        regelValues.add(newCommando);
-                    } else {
-                        if (value != null) {
-                            url.append(value.toString().trim());
-                            regelValues.add(url.toString());
+                    String commando = url.toString();
+                    //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
+                    Object valueToSplit = null;
+                    if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
+                        valueToSplit = f.getProperty(kolomnaam).getValue();
+                    }
+                    HashMap fhm = toHashMap(f);
+                    List values = splitObject(valueToSplit, ",");
+                    List regelValues = new ArrayList();
+                    for (int i = 0; i < values.size(); i++) {
+                        Object value = values.get(i);
+                        if (commando.contains("[") || commando.contains("]")) {
+                            //vervang de eventuele csv in 1 waarde van die csv
+                            if (kolomnaam != null) {
+                                fhm.put(kolomnaam, value);
+                            }
+                            String newCommando = replaceValuesInString(commando, fhm);
+                            regelValues.add(newCommando);
                         } else {
-                            regelValues.add("");
+                            if (value != null) {
+                                url.append(value.toString().trim());
+                                regelValues.add(url.toString());
+                            } else {
+                                regelValues.add("");
+                            }
                         }
                     }
+                    regel.addValue(regelValues);
+                } else {
+                    if (f.getProperty(kolomnaam).getValue() == null) {
+                        regel.addValue(null);
+                    } else {
+                        regel.addValue(f.getProperty(kolomnaam).getValue().toString());
+                    }
                 }
-                regel.addValue(regelValues);
             } else if (td.getDataType().getId() == DataTypen.FUNCTION) {
                 Object keyValue = null;
                 if (adminPk != null) {

@@ -32,7 +32,6 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.viewer.BaseGisAction;
 import nl.b3p.gis.viewer.db.Clusters;
@@ -56,6 +55,7 @@ public class IndexAction extends BaseGisAction {
     protected static final String LOGINERROR = "loginError";
     protected static final String LOGOUT = "logout";
     protected static final String LIST = "list";
+    protected static final String RESET_CACHE = "resetCache";
 
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
@@ -82,6 +82,13 @@ public class IndexAction extends BaseGisAction {
         hibProp.setDefaultForwardName(SUCCESS);
         hibProp.setAlternateForwardName(FAILURE);
         map.put(LIST, hibProp);
+
+        hibProp = new ExtendedMethodProperties(RESET_CACHE);
+        hibProp.setDefaultMessageKey("algemeen.resetcache.success");
+        hibProp.setDefaultForwardName(SUCCESS);
+        hibProp.setAlternateMessageKey("algemeen.resetcache.failure");
+        hibProp.setAlternateForwardName(SUCCESS);
+        map.put(RESET_CACHE, hibProp);
 
         return map;
     }
@@ -142,12 +149,6 @@ public class IndexAction extends BaseGisAction {
             }
 
             if (user != null) {
-                // Als beheerder inlogt dan wordt wfs cache geleegd, hiermee wordt
-                // geforceerd dat veranderingen in de config worden doorgevoerd.
-                if (user instanceof GisPrincipal && ((GisPrincipal)user).isInRole(Roles.ADMIN)) {
-                    Bron.flushWfsCache();
-                }
-
                 // invalidate old session if the user was already authenticated, and they logged in as a different user
                 if (request.getUserPrincipal() != null && false == request.getUserPrincipal().equals(user)) {
                     request.getSession().invalidate();
@@ -228,5 +229,31 @@ public class IndexAction extends BaseGisAction {
         }
         return findParentClusters(c.getParent(), parents);
     }
+
+    public ActionForward resetCache(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request, true);
+        if (user==null) {
+            addAlternateMessage(mapping, request, null, "no user found!");
+            return getAlternateForward(mapping, request);
+        }
+        if (user.isInRole(Roles.ADMIN)) {
+            String lcvs = request.getParameter(Bron.LIFECYCLE_CACHE_PARAM);
+            long lcl = 0l;
+            try {
+                lcl = Long.parseLong(lcvs);
+            } catch (NumberFormatException nfe) {}
+
+            if (lcl>0l) {
+                Bron.setDataStoreLifecycle(lcl);
+            }
+            Bron.flushWfsCache();
+        }
+
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
+        createLists(dynaForm, request);
+        return getDefaultForward(mapping, request);
+    }
+
 }
 

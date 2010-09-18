@@ -90,6 +90,7 @@ public class GisPrincipal implements Principal {
                 roles.add(sprole);
             }
         }
+
         try {
             kbWfsFeatures = ConfigListsUtil.getPossibleFeatures(kbWfsConnectie);
         } catch (Exception ex) {
@@ -113,7 +114,7 @@ public class GisPrincipal implements Principal {
         this.code = code;
     }
 
-    public boolean isInRole(String role) {
+    public final boolean isInRole(String role) {
         return roles.contains(role);
     }
 
@@ -262,36 +263,44 @@ public class GisPrincipal implements Principal {
     }
 
     public static GisPrincipal getGisPrincipal(HttpServletRequest request) {
+        return getGisPrincipal(request, false);
+    }
+
+    public static GisPrincipal getGisPrincipal(HttpServletRequest request, boolean flushCache) {
         Principal user = request.getUserPrincipal();
         if (!(user instanceof GisPrincipal && request instanceof SecurityRequestWrapper)) {
             return null;
         }
+
+        String gpCode = null;
+        String gpUsername = HibernateUtil.ANONYMOUS_USER;
+        String gpPassword = null;
+//        boolean isAdmin = false;
         GisPrincipal gp = (GisPrincipal) user;
+        if (gp != null) {
+            gpCode = gp.getCode();
+            gpUsername = gp.getName();
+            gpPassword = gp.getPassword();
+//            isAdmin = gp.isInRole(Roles.ADMIN);
+        }
 
         String code = request.getParameter(BaseGisAction.URL_AUTH);
         if (code != null && code.length() != 0) {
-            if (gp!=null && code.equals(gp.getCode())) {
-                return gp;
+            if (gpCode != null && !code.equals(gpCode)) {
+                // user is using different code, so invalidate session and login again
+                HttpSession session = request.getSession();
+                session.invalidate();
+                gp = null;
+                gpCode = code;
             }
-
-            // user is using different code, so invalidate session and login again
-            HttpSession session = request.getSession();
-            session.invalidate();
-            String url = GisSecurityRealm.createCapabilitiesURL(code);
-            gp = GisSecurityRealm.authenticateHttp(url, HibernateUtil.ANONYMOUS_USER, null, code);
         }
 
-        // no principal, is login required?
-        if (gp == null && !HibernateUtil.isCheckLoginKaartenbalie()) {
-            // Fake Principal aanmaken
-            gp = GisSecurityRealm.authenticateFake(HibernateUtil.ANONYMOUS_USER);
-        }
-        
-        // log in found principal
-        if (gp != null) {
+
+         if (gp == null || (flushCache)) { //(flushCache && isAdmin)
+            // log in new principal
             SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
-            srw.setUserPrincipal(gp);
-            log.debug("Automatic login for user: " + gp.name);
+            srw.setUserPrincipal(GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode));
+            log.debug("Refresh login for user: " + gpUsername);
         }
 
         return gp;
