@@ -77,7 +77,7 @@ public class HibernateUtil extends HttpServlet {
         String url = getKbUrl();
         url = url.trim();
         if (code != null && code.length()>0) {
-            String reqparam = "";
+            String reqparam = "?";
             int pos = url.indexOf("?");
             if (pos>=0) {
                 reqparam = url.substring(pos);
