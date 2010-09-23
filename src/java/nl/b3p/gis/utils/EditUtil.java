@@ -54,7 +54,8 @@ public class EditUtil {
             throw new Exception("De bufferafstand mag niet 0 zijn.");
 
         String buffer = "";
-        Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
+        Geometry geom = null;
+        geom = DataStoreUtil.createGeomFromWKTString(wkt);
 
         if (geom == null || geom.isEmpty() ) {
             throw new Exception("Kan niet bufferen. Geometrie is incorrect.");
