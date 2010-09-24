@@ -508,9 +508,6 @@ public class ViewerAction extends BaseGisAction {
                 children.add(thema);
             }
         }
-        if (children != null) {
-            Collections.reverse(children);
-        }
         return children;
     }
 

@@ -15,10 +15,12 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.html.HtmlWriter;
+import com.lowagie.text.pdf.PdfCopy;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.rtf.RtfWriter2;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -51,6 +53,7 @@ public class CreateMapPDF extends HttpServlet {
     private static final Log log = LogFactory.getLog(CreateMapPDF.class);
     private static final String METADATA_TITLE = "Kaartexport B3P Gisviewer";
     private static final String METADATA_AUTHOR = "B3P Gisviewer";
+    private static final String OUTPUT_PDF_PRINT = "PDF_PRINT";
     private static final String OUTPUT_PDF = "PDF";
     private static final String OUTPUT_RTF = "RTF";
     private static final int MAXSIZE = 2048;
@@ -76,7 +79,7 @@ public class CreateMapPDF extends HttpServlet {
         String mapUrl = FormUtils.nullIfEmpty(request.getParameter("mapUrl"));
         String pageSize = FormUtils.nullIfEmpty(request.getParameter("pageSize"));
         boolean landscape = new Boolean(request.getParameter("landscape")).booleanValue();
-        String outputType = OUTPUT_PDF;
+        String outputType = OUTPUT_PDF_PRINT;
         if(FormUtils.nullIfEmpty(request.getParameter("outputType"))!=null){
             outputType=FormUtils.nullIfEmpty(request.getParameter("outputType"));
         }
@@ -102,7 +105,8 @@ public class CreateMapPDF extends HttpServlet {
                 filename="kaartexport";
             }
             //Maak writer set response headers en maak de filenaam.
-            if (outputType.equalsIgnoreCase(OUTPUT_PDF)) {
+            if (outputType.equalsIgnoreCase(OUTPUT_PDF)
+                    || outputType.equalsIgnoreCase(OUTPUT_PDF_PRINT)) {
                 dw = PdfWriter.getInstance(doc, response.getOutputStream());
                 response.setContentType("application/pdf");
                 filename += ".pdf";
@@ -115,7 +119,7 @@ public class CreateMapPDF extends HttpServlet {
                 response.setContentType("text/html");
                 filename += ".html";
             }
-            response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\";");
+            response.setHeader("Content-Disposition", "inline; filename=\"" + filename + "\";");
 
             doc.open();
             setDocumentMetadata(doc);
@@ -194,6 +198,13 @@ public class CreateMapPDF extends HttpServlet {
             if (remark != null) {
                 doc.add(new Phrase(remark));
             }
+
+            if (dw instanceof PdfWriter
+                    && outputType.equalsIgnoreCase(OUTPUT_PDF_PRINT)) {
+                PdfWriter dwpdf = (PdfWriter)dw;
+                dwpdf.addJavaScript("this.print({bSilent:true,bShrinkToFit:true});");
+            }
+
 
         } catch (DocumentException de) {
             log.error("Fout bij het maken van een document. Reden: ", de);
