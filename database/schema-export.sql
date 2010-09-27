@@ -131,6 +131,8 @@
         soort number(10,0),
         volgorde number(10,0),
         zoekconfiguratie number(10,0),
+        inputtype number(10,0),
+        inputsize number(10,0),
         primary key (id)
     );
 
