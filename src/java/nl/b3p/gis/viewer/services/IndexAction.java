@@ -32,12 +32,14 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.viewer.BaseGisAction;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.wms.capabilities.Roles;
 import nl.b3p.zoeker.configuratie.Bron;
+import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.*;
@@ -195,16 +197,16 @@ public class IndexAction extends BaseGisAction {
      *
      * @throws Exception
      */
-    public ActionForward list(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {        
+    public ActionForward list(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         List validThemas = getValidThemas(false, null, request);
-        List themalist=new ArrayList();
-        List clusterlist=new ArrayList();
-        if (validThemas!=null){
-            for (int i=0; i < validThemas.size(); i++){
-                Themas t= (Themas) validThemas.get(i);
+        List themalist = new ArrayList();
+        List clusterlist = new ArrayList();
+        if (validThemas != null) {
+            for (int i = 0; i < validThemas.size(); i++) {
+                Themas t = (Themas) validThemas.get(i);
                 Clusters c = t.getCluster();
                 clusterlist = findParentClusters(c, clusterlist);
-                if (!c.isHide_tree() && !c.isBackground_cluster()){
+                if (!c.isHide_tree() && !c.isBackground_cluster()) {
                     themalist.add(t);
                 }
             }
@@ -218,10 +220,10 @@ public class IndexAction extends BaseGisAction {
     }
 
     private List findParentClusters(Clusters c, List parents) {
-        if (parents==null) {
+        if (parents == null) {
             return null;
         }
-        if (c==null || !c.isCallable() || c.isBackground_cluster()) {
+        if (c == null || !c.isCallable() || c.isBackground_cluster()) {
             return parents;
         }
         if (!parents.contains(c)) {
@@ -233,27 +235,28 @@ public class IndexAction extends BaseGisAction {
     public ActionForward resetCache(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         GisPrincipal user = GisPrincipal.getGisPrincipal(request, true);
-        if (user==null) {
+        if (user == null) {
             addAlternateMessage(mapping, request, null, "no user found!");
             return getAlternateForward(mapping, request);
         }
         if (user.isInRole(Roles.ADMIN)) {
-            String lcvs = request.getParameter(Bron.LIFECYCLE_CACHE_PARAM);
-            long lcl = 0l;
-            try {
-                lcl = Long.parseLong(lcvs);
-            } catch (NumberFormatException nfe) {}
-
-            if (lcl>0l) {
-                Bron.setDataStoreLifecycle(lcl);
+            String rlc = FormUtils.nullIfEmpty(request.getParameter(ZoekConfiguratie.FLUSH_CACHE_PARAM));
+            if (rlc != null && rlc.equalsIgnoreCase("true")) {
+                ZoekConfiguratie.flushCachedResultListCache();
             }
-            Bron.flushWfsCache();
+
+            String lcvs = FormUtils.nullIfEmpty(request.getParameter(Bron.LIFECYCLE_CACHE_PARAM));
+            try {
+                long lcl = Long.parseLong(lcvs);
+                Bron.setDataStoreLifecycle(lcl);
+                Bron.flushWfsCache();
+            } catch (NumberFormatException nfe) {
+            }
+
         }
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
         return getDefaultForward(mapping, request);
     }
-
 }
-
