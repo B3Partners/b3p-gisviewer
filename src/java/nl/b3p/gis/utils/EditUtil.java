@@ -116,7 +116,7 @@ public class EditUtil {
             if (!thema.hasValidAdmindataSource(user))
                 throw new Exception("Kan niet highlighten. Geen geldige datasource gevonden.");
 
-            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, thema, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null);
+            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, thema, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
 
             if ( (features == null) || (features.size() < 1) )
                 throw new Exception("Kan niet highlighten. Geen features gevonden.");

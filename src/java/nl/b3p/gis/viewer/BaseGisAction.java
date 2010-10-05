@@ -400,10 +400,6 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         if (adminPk != null) {
             regel.setPrimaryKey(f.getProperty(adminPk).getValue());
         }
-        String wkt = DataStoreUtil.convertFeature2WKT(f, true);
-        if (wkt != null && wkt.length() != 0) {
-            regel.setWkt(wkt);
-        }
         Iterator it = thema_items.iterator();
         while (it.hasNext()) {
             ThemaData td = (ThemaData) it.next();

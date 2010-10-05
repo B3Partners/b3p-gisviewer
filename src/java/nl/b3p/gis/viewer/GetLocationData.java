@@ -66,6 +66,48 @@ public class GetLocationData {
     public GetLocationData() {
     }
 
+    public String getWkt(String themaId, String attributeName, String compareValue) throws SQLException {
+        Session sess = null;
+        String wkt = "";
+
+        try {
+            sess = HibernateUtil.getSessionFactory().getCurrentSession();
+            sess.beginTransaction();
+            Themas t = (Themas) sess.get(Themas.class, new Integer(themaId));
+            if (t == null) {
+                return wkt;
+            }
+
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+            Bron b = (Bron) t.getConnectie(request);
+            if (b == null) {
+                return wkt;
+            }
+            DataStore ds = b.toDatastore();
+            try {
+                //haal alleen de geometry op.
+                String geometryName = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
+                ArrayList<String> propertyNames = new ArrayList();
+                propertyNames.add(geometryName);
+                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
+                if (list.size() >= 1) {
+                    Feature f = list.get(0);
+                    wkt = DataStoreUtil.convertFeature2WKT(f, true);
+                }
+            } finally {
+                ds.dispose();
+            }
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            return wkt;
+        } finally {
+            sess.close();
+        }
+        return wkt;
+    }
+
     public String[] getArea(String elementId, String themaId, String attributeName, String compareValue, String eenheid) throws SQLException {
         Session sess = null;
         double area = 0.0;
@@ -93,7 +135,7 @@ public class GetLocationData {
                 String geometryName = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
                 ArrayList<String> propertyNames = new ArrayList();
                 propertyNames.add(geometryName);
-                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1);
+                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
                 if (list.size() >= 1) {
                     Feature f = list.get(0);
                     area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
@@ -300,7 +342,7 @@ public class GetLocationData {
         try {
 
             //Haal alle features op die binnen de analyseGeometry vallen:
-            List<Feature> features = DataStoreUtil.getFeatures(b, t, analyseGeometry, extraFilter, null, maxFeatures);
+            List<Feature> features = DataStoreUtil.getFeatures(b, t, analyseGeometry, extraFilter, null, maxFeatures, true);
 
             if (features == null || features.isEmpty()) {
                 return null;

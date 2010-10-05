@@ -386,7 +386,7 @@ public class GetViewerDataAction extends BaseGisAction {
 
         Bron b = t.getConnectie(request);
         List<String> propnames = DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items);
-        List<Feature> features = DataStoreUtil.getFeatures(b, t, geom, extraFilter, propnames, null);
+        List<Feature> features = DataStoreUtil.getFeatures(b, t, geom, extraFilter, propnames, null, false);
         List<AdminDataRowBean> regels = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
@@ -430,7 +430,7 @@ public class GetViewerDataAction extends BaseGisAction {
         List<ReferencedEnvelope> kaartEnvelopes = new ArrayList<ReferencedEnvelope>();
         Bron b = t.getConnectie(request);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(thema_items);
-        List<Feature> features = DataStoreUtil.getFeatures(b, t, null, filter, propnames, null);
+        List<Feature> features = DataStoreUtil.getFeatures(b, t, null, filter, propnames, null, true);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             if (addKaart) {

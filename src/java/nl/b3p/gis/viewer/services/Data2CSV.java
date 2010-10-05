@@ -141,7 +141,7 @@ public class Data2CSV extends HttpServlet {
                 DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart(), pks);
         List<ThemaData> items = SpatialUtil.getThemaData(t, false);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
-        ArrayList<Feature> features=DataStoreUtil.getFeatures(b, t, null, filter, propnames, null);
+        ArrayList<Feature> features=DataStoreUtil.getFeatures(b, t, null, filter, propnames, null, false);
         ArrayList result = new ArrayList();
         for (int i=0; i < features.size(); i++) {
             Feature f = features.get(i);
