@@ -30,7 +30,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import nl.b3p.combineimages.CombineImagesServlet;
 import nl.b3p.commons.services.FormUtils;
+import nl.b3p.imagetool.CombineImageSettings;
 import nl.b3p.ogc.utils.OGCRequest;
 import org.apache.commons.httpclient.Credentials;
 import org.apache.commons.httpclient.HttpClient;
@@ -204,6 +206,15 @@ public class CreateMapPDF extends HttpServlet {
                 PdfWriter dwpdf = (PdfWriter)dw;
                 dwpdf.addJavaScript("this.print({bSilent:true,bShrinkToFit:true});");
             }
+
+
+            CombineImageSettings settings = CombineImagesServlet.getCombineImageSettings(request);
+            String imageId = CombineImagesServlet.uniqueName("");
+            request.getSession().setAttribute(imageId, settings);
+            String servletUrl = request.getRequestURL().toString();
+            String servletName = this.getServletName().substring(0, this.getServletName().length() - 7);
+            servletUrl = servletUrl.substring(0, servletUrl.length() - servletName.length()) + "CreateImage";
+            String imageSource = servletUrl + "?imageId=" + imageId;
 
 
         } catch (DocumentException de) {
