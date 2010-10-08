@@ -254,11 +254,15 @@ public class DataStoreUtil {
         FeatureCollection fc = fs.getFeatures(query);
         FeatureIterator fi = fc.features();
         ArrayList<Feature> features = new ArrayList();
-        while (fi.hasNext()) {
-            features.add(fi.next());
+        try {
+            while (fi.hasNext()) {
+                features.add(fi.next());
+            }
+        } finally {
+            fc.close(fi);
         }
         return features;
-    }
+     }
 
     public static Filter createIntersectFilter(Themas t, DataStore ds, Geometry geom) throws Exception {
         if (geom == null) {

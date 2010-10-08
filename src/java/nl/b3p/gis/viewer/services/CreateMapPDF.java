@@ -22,9 +22,12 @@ import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.rtf.RtfWriter2;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -59,12 +62,13 @@ public class CreateMapPDF extends HttpServlet {
     private static final String OUTPUT_PDF = "PDF";
     private static final String OUTPUT_RTF = "RTF";
     private static final int MAXSIZE = 2048;
-    private static String logoPath=null;
-    private static String extraImagePath=null;
-    private static String disclaimer=null;
+    private static String logoPath = null;
+    private static String extraImagePath = null;
+    private static String disclaimer = null;
     private static SimpleDateFormat sdf = null;
-    private static float footerHeight=25;
-    private static boolean addFooter=true;
+    private static float footerHeight = 25;
+    private static boolean addFooter = true;
+
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
      * @param request servlet request
@@ -78,12 +82,27 @@ public class CreateMapPDF extends HttpServlet {
          * Haal alle form properties op.
          */
         String remark = FormUtils.nullIfEmpty(request.getParameter("remark"));
-        String mapUrl = FormUtils.nullIfEmpty(request.getParameter("mapUrl"));
+
+        CombineImageSettings settings = null;
+        String imageSource =  null;
+        String imageId = FormUtils.nullIfEmpty(request.getParameter("imageId"));
+        if (imageId != null && request.getSession().getAttribute(imageId) != null) {
+            settings = (CombineImageSettings) request.getSession().getAttribute(imageId);
+
+            String servletUrl = request.getRequestURL().toString();
+            String servletName = this.getServletName();
+            String servletPath = request.getServletPath();
+            servletUrl = servletUrl.substring(0, servletUrl.length() - servletPath.length()) + "/CreateImage";
+            imageSource = servletUrl + "?imageId=" + imageId;
+        }
+
+//        String mapUrl = FormUtils.nullIfEmpty(request.getParameter("mapUrl"));
+
         String pageSize = FormUtils.nullIfEmpty(request.getParameter("pageSize"));
         boolean landscape = new Boolean(request.getParameter("landscape")).booleanValue();
         String outputType = OUTPUT_PDF_PRINT;
-        if(FormUtils.nullIfEmpty(request.getParameter("outputType"))!=null){
-            outputType=FormUtils.nullIfEmpty(request.getParameter("outputType"));
+        if (FormUtils.nullIfEmpty(request.getParameter("outputType")) != null) {
+            outputType = FormUtils.nullIfEmpty(request.getParameter("outputType"));
         }
         int imageSize = 0;
         if (FormUtils.nullIfEmpty(request.getParameter("imageSize")) != null) {
@@ -94,17 +113,18 @@ public class CreateMapPDF extends HttpServlet {
             }
         }
         //return error als mapUrl null is.
-        if (mapUrl == null || mapUrl.length() == 0) {
+        if (imageId == null || imageId.length() == 0) {
             throw new ServletException("Geen kaart om te plaatsen in de pdf.");
         }
-        OGCRequest ogcr = new OGCRequest(mapUrl);
+//        OGCRequest ogcr = new OGCRequest(mapUrl);
+
         Document doc = null;
         try {
             DocWriter dw = null;
             doc = createDocument(pageSize, landscape);
             String filename = title;
-            if (filename==null){
-                filename="kaartexport";
+            if (filename == null) {
+                filename = "kaartexport";
             }
             //Maak writer set response headers en maak de filenaam.
             if (outputType.equalsIgnoreCase(OUTPUT_PDF)
@@ -126,7 +146,7 @@ public class CreateMapPDF extends HttpServlet {
             doc.open();
             setDocumentMetadata(doc);
             //set title
-            if (title!=null){
+            if (title != null) {
                 Paragraph titleParagraph = new Paragraph(title);
                 titleParagraph.setAlignment(Paragraph.ALIGN_CENTER);
                 doc.add(titleParagraph);
@@ -137,8 +157,8 @@ public class CreateMapPDF extends HttpServlet {
              */
             int width = 0;
             int height = 0;
-            width = Integer.parseInt(ogcr.getParameter(ogcr.WMS_PARAM_WIDTH));
-            height = Integer.parseInt(ogcr.getParameter(ogcr.WMS_PARAM_HEIGHT));
+//            width = Integer.parseInt(ogcr.getParameter(ogcr.WMS_PARAM_WIDTH));
+//            height = Integer.parseInt(ogcr.getParameter(ogcr.WMS_PARAM_HEIGHT));
             if (imageSize == 0) {
                 imageSize = MAXSIZE;
             }
@@ -150,15 +170,14 @@ public class CreateMapPDF extends HttpServlet {
             }
             width = new Double(Math.floor(width * factor)).intValue();
             height = new Double(Math.floor(height * factor)).intValue();
-            ogcr.addOrReplaceParameter(ogcr.WMS_PARAM_WIDTH, "" + width);
-            ogcr.addOrReplaceParameter(ogcr.WMS_PARAM_HEIGHT, "" + height);
+//            ogcr.addOrReplaceParameter(ogcr.WMS_PARAM_WIDTH, "" + width);
+//            ogcr.addOrReplaceParameter(ogcr.WMS_PARAM_HEIGHT, "" + height);
             /*zorg er voor dat het plaatje binnen de marging van het document komt.
              */
             float imageWidth = doc.getPageSize().getWidth() - doc.leftMargin() - doc.rightMargin();
             float imageHeight = doc.getPageSize().getHeight() - doc.topMargin() - doc.bottomMargin();
             try {
-                String url = ogcr.getUrl();
-                Image map = getImage(url, request);
+                Image map = getImage(imageSource, request);
                 map.setAlignment(Image.ALIGN_CENTER);
 
                 /* indien liggend dan plaatje wat verkleinen zodat opmerking er
@@ -169,30 +188,30 @@ public class CreateMapPDF extends HttpServlet {
                     imageHeight -= resize;
                     imageWidth -= Math.round(resize * factor);
                 }
-                if (landscape && addFooter){
+                if (landscape && addFooter) {
                     imageHeight -= resize;
                     imageWidth -= Math.round(resize * factor);
                 }
-                if (landscape && title!=null){
+                if (landscape && title != null) {
                     imageHeight -= resize;
                     imageWidth -= Math.round(resize * factor);
                 }
-                
+
                 map.scaleToFit(imageWidth, imageHeight);
                 doc.add(map);
             } catch (Exception ex) {
                 log.error("Kan kaart image niet toevoegen.", ex);
                 doc.add(new Phrase("Kan kaart image niet toevoegen."));
             }
-            if (addFooter){
-                Element footer =createfooter(doc,outputType);
+            if (addFooter) {
+                Element footer = createfooter(doc, outputType);
                 //als het een table is dan goed uitlijnen
-                if (footer instanceof PdfPTable){
-                    PdfPTable table=(PdfPTable)footer;
-                    table.setTotalWidth(new float[]{80,imageWidth-107,25});
+                if (footer instanceof PdfPTable) {
+                    PdfPTable table = (PdfPTable) footer;
+                    table.setTotalWidth(new float[]{80, imageWidth - 107, 25});
                     table.setLockedWidth(true);
                     doc.add(table);
-                }else{
+                } else {
                     doc.add(footer);
                 }
             }
@@ -203,19 +222,9 @@ public class CreateMapPDF extends HttpServlet {
 
             if (dw instanceof PdfWriter
                     && outputType.equalsIgnoreCase(OUTPUT_PDF_PRINT)) {
-                PdfWriter dwpdf = (PdfWriter)dw;
+                PdfWriter dwpdf = (PdfWriter) dw;
                 dwpdf.addJavaScript("this.print({bSilent:true,bShrinkToFit:true});");
             }
-
-
-            CombineImageSettings settings = CombineImagesServlet.getCombineImageSettings(request);
-            String imageId = CombineImagesServlet.uniqueName("");
-            request.getSession().setAttribute(imageId, settings);
-            String servletUrl = request.getRequestURL().toString();
-            String servletName = this.getServletName().substring(0, this.getServletName().length() - 7);
-            servletUrl = servletUrl.substring(0, servletUrl.length() - servletName.length()) + "CreateImage";
-            String imageSource = servletUrl + "?imageId=" + imageId;
-
 
         } catch (DocumentException de) {
             log.error("Fout bij het maken van een document. Reden: ", de);
@@ -241,12 +250,13 @@ public class CreateMapPDF extends HttpServlet {
             if (config.getInitParameter("addFooter") != null) {
                 addFooter = "true".equalsIgnoreCase(config.getInitParameter("addFooter"));
             }
-            sdf=new SimpleDateFormat("dd-MMMM-yyyy",new Locale("NL"));
+            sdf = new SimpleDateFormat("dd-MMMM-yyyy", new Locale("NL"));
 
         } catch (Exception e) {
             throw new ServletException(e);
         }
     }
+
     public Document createDocument(String pageSize, boolean landscape) {
         Rectangle ps = PageSize.A4;
         if (pageSize != null) {
@@ -261,53 +271,53 @@ public class CreateMapPDF extends HttpServlet {
         return doc;
     }
 
-    private Element createfooter(Document doc,String outputType){
-        Image logo=null;
-        Image extraImage=null;
-        if (logoPath!=null){
-            try{
+    private Element createfooter(Document doc, String outputType) {
+        Image logo = null;
+        Image extraImage = null;
+        if (logoPath != null) {
+            try {
                 logo = Image.getInstance(logoPath);
-            }catch(Exception e){
-                log.error("Fout bij ophalen export logo: ",e);
+            } catch (Exception e) {
+                log.error("Fout bij ophalen export logo: ", e);
             }
         }
-        if (extraImagePath!=null){
-            try{
-                extraImage= Image.getInstance(extraImagePath);
-            }catch(Exception e){
-                log.error("Fout bij ophalen van de noord pijl: ",e);
+        if (extraImagePath != null) {
+            try {
+                extraImage = Image.getInstance(extraImagePath);
+            } catch (Exception e) {
+                log.error("Fout bij ophalen van de noord pijl: ", e);
             }
         }
         if (outputType.equalsIgnoreCase(OUTPUT_PDF)) {
-            PdfPTable mainTable= new PdfPTable(3);
-            if (logo!=null){
-                PdfPCell logoCell= new PdfPCell();
+            PdfPTable mainTable = new PdfPTable(3);
+            if (logo != null) {
+                PdfPCell logoCell = new PdfPCell();
                 logoCell.setFixedHeight(footerHeight);
                 logoCell.setImage(logo);
                 mainTable.addCell(logoCell);
             }
-            Font font=new Font(Font.TIMES_ROMAN, 8,Font.BOLD);
-            PdfPTable nestedTable=new PdfPTable(1);
-            PdfPCell dateCell = new PdfPCell(new Phrase(sdf.format(new Date()),font));
+            Font font = new Font(Font.TIMES_ROMAN, 8, Font.BOLD);
+            PdfPTable nestedTable = new PdfPTable(1);
+            PdfPCell dateCell = new PdfPCell(new Phrase(sdf.format(new Date()), font));
             dateCell.setHorizontalAlignment(PdfPCell.ALIGN_CENTER);
             nestedTable.addCell(dateCell);
-            if (disclaimer!=null){
-                PdfPCell disc = new PdfPCell(new Phrase(disclaimer,font));
+            if (disclaimer != null) {
+                PdfPCell disc = new PdfPCell(new Phrase(disclaimer, font));
                 disc.setHorizontalAlignment(PdfPCell.ALIGN_CENTER);
                 nestedTable.addCell(disc);
             }
             PdfPCell cell;
-			cell = new PdfPCell(nestedTable);
+            cell = new PdfPCell(nestedTable);
             cell.setBorder(Rectangle.NO_BORDER);
             mainTable.addCell(cell);
-            if (extraImage!=null){
-                PdfPCell extraCell= new PdfPCell();
+            if (extraImage != null) {
+                PdfPCell extraCell = new PdfPCell();
                 extraCell.setFixedHeight(footerHeight);
                 extraCell.setImage(extraImage);
                 mainTable.addCell(extraCell);
             }
             return mainTable;
-        }else if (logo!=null){
+        } else if (logo != null) {
             return logo;
         }
         return null;
@@ -317,7 +327,7 @@ public class CreateMapPDF extends HttpServlet {
         String username = null;
         String password = null;
         GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
-        if (gp!=null) {
+        if (gp != null) {
             username = gp.getName();
             password = gp.getPassword();
         }
@@ -327,11 +337,12 @@ public class CreateMapPDF extends HttpServlet {
                 getParams().setConnectionTimeout(RTIMEOUT);
 
         if (username != null && password != null) {
-            client.getParams().setAuthenticationPreemptive(true);
+//            client.getParams().setAuthenticationPreemptive(true);
             Credentials defaultcreds = new UsernamePasswordCredentials(username, password);
             AuthScope authScope = new AuthScope(host, port);
-            client.getState().setCredentials(authScope, defaultcreds);
+//            client.getState().setCredentials(authScope, defaultcreds);
         }
+
 
         // Create a method instance.
         GetMethod method = new GetMethod(mapUrl);
@@ -341,12 +352,14 @@ public class CreateMapPDF extends HttpServlet {
                 log.error("Host: " + mapUrl + " error: " + method.getStatusLine().getReasonPhrase());
                 throw new Exception("Host: " + mapUrl + " error: " + method.getStatusLine().getReasonPhrase());
             }
-            return Image.getInstance(method.getResponseBody());
+            byte[] ba = method.getResponseBody();
+             return Image.getInstance(ba);
         } finally {
             // Release the connection.
             method.releaseConnection();
         }
     }
+
 
     /**
      *Voeg de metadata toe aan het document.
@@ -384,4 +397,3 @@ public class CreateMapPDF extends HttpServlet {
         return "Short description";
     }// </editor-fold>
 }
-
