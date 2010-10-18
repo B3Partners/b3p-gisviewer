@@ -627,6 +627,7 @@ public class ViewerAction extends BaseGisAction {
             Clusters cluster = th.getCluster();
             setExtraClusterProperties(jsonCluster,cluster);
 
+            Layer layer=null;
             if (th.getWms_layers_real() != null) {
                 jsonCluster.put("wmslayers", th.getWms_layers_real());
                 //if admintable is set then don't add the queryLayer
@@ -636,7 +637,8 @@ public class ViewerAction extends BaseGisAction {
                 if (th.getWms_legendlayer_real()!=null){
                     jsonCluster.put("legendurl",user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer_real())));
                 }
-            } else {
+                layer=user.getLayer(th.getWms_layers_real());
+             } else {
                 jsonCluster.put("wmslayers", th.getWms_layers());
                 //if admintable is set then don't add the queryLayer
                 if (th.getWms_querylayers()!=null && !validAdmindataSource){
@@ -644,6 +646,16 @@ public class ViewerAction extends BaseGisAction {
                 }
                 if (th.getWms_legendlayer()!=null){
                     jsonCluster.put("legendurl",user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer())));
+                }
+                layer=user.getLayer(th.getWms_layers());
+             }
+            //toevoegen scale hints
+            if (layer != null) {
+                if (layer.getScaleHintMax() != null) {
+                    jsonCluster.put("scalehintmax", layer.getScaleHintMax());
+                }
+                if (layer.getScaleHintMin() != null) {
+                    jsonCluster.put("scalehintmin", layer.getScaleHintMin());
                 }
             }
             if (th.getMetadata_link() != null) {
