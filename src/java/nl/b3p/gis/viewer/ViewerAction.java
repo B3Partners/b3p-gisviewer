@@ -625,6 +625,9 @@ public class ViewerAction extends BaseGisAction {
             }
             /*Set some cluster properties that are used by the thema.*/
             Clusters cluster = th.getCluster();
+            if (cluster.getId()!=null){
+                jsonCluster.put("clusterid", "c" + cluster.getId().intValue());
+            }
             setExtraClusterProperties(jsonCluster,cluster);
 
             Layer layer=null;
