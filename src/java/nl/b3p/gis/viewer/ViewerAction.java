@@ -28,8 +28,9 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.PrecisionModel;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -62,43 +63,41 @@ import org.json.JSONObject;
 
 public class ViewerAction extends BaseGisAction {
 
-    private static final Log logger = LogFactory.getLog(ViewerAction.class);
+    private static final Log log = LogFactory.getLog(ViewerAction.class);
     protected static final String LIST = "list";
     protected static final String LOGIN = "login";
     protected static final String SIMPLE_VIEWER_FW = "simpleviewer";
 
     /*Mogelijke request waarden*/
     //De themaid's die zichtbaar moeten zijn in de kaart en aangevinkt moeten zijn. Komma gescheiden
-    public static final String ID="id";
+    public static final String ID = "id";
     //de clusterIds waarvan de themas zichtbaar moeten zijn in de kaart (aangevinkt). Komma gescheiden
-    public static final String CLUSTERID="clusterId";
+    public static final String CLUSTERID = "clusterId";
     //de extent waarde kaart naar moet zoomen
-    public static final String EXTENT="extent";
+    public static final String EXTENT = "extent";
     //de zoekConfiguratie id die moet worden gebruikt om te zoeken
-    public static final String SEARCHCONFIGID ="searchConfigId";
+    public static final String SEARCHCONFIGID = "searchConfigId";
     //het woord waarop gezocht moet worden in de zoekconfiguratie
-    public static final String SEARCH ="search";
+    public static final String SEARCH = "search";
     //de actie die gedaan kan worden na het zoeken (filter,zoom,highlight)
-    public static final String SEARCHACTION ="searchAction";
+    public static final String SEARCHACTION = "searchAction";
     //Het thema waarop een sld moet worden toegepast (alleen filter en highlight)    
-    public static final String SEARCHSLDTHEMAID ="searchSldThemaId";//deze niet meer gebruiken!
-    public static final String SEARCHID="searchId";
+    public static final String SEARCHSLDTHEMAID = "searchSldThemaId";//deze niet meer gebruiken!
+    public static final String SEARCHID = "searchId";
     //Het cluster waarop een sld moet worden toegepast (alleen filter en highlight)
-    public static final String SEARCHSLDCLUSTERID ="searchSldClusterId";//deze niet meer gebruiken!
-    public static final String SEARCHCLUSTERID="searchClusterId";
+    public static final String SEARCHSLDCLUSTERID = "searchSldClusterId";//deze niet meer gebruiken!
+    public static final String SEARCHCLUSTERID = "searchClusterId";
     //De waarde die moet worden gebruikt in het sld als value
-    public static final String SEARCHSLDVISIBLEVALUE="searchSldVisibleValue";
-
+    public static final String SEARCHSLDVISIBLEVALUE = "searchSldVisibleValue";
     //Het tabblad dat actief moet zijn (moet wel enabled zijn)
-    public static final String ACTIVETAB="activeTab";
+    public static final String ACTIVETAB = "activeTab";
     //De enabled tabs die mogelijk zijn. Komma gescheiden
-    public static final String ENABLEDTAB="enabledTabs";
-
+    public static final String ENABLEDTAB = "enabledTabs";
     //De mappen die je opengeklapt wil hebben
-    public static final String EXPANDNODES="expandNodes";
+    public static final String EXPANDNODES = "expandNodes";
     /*Einde mogelijke request waarden*/
+    public static final String ZOEKCONFIGURATIES = "zoekconfiguraties";
 
-    public static final String ZOEKCONFIGURATIES="zoekconfiguraties";
     /**
      * Return een hashmap die een property koppelt aan een Action.
      *
@@ -157,7 +156,7 @@ public class ViewerAction extends BaseGisAction {
         //als er geen user principal is (ook geen anoniem) dan forwarden naar de login.
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         if (user == null) {
-            logger.info("Geen user beschikbaar, ook geen anoniem. Forward naar login om te proberen een user te maken met login gegevens.");
+            log.info("Geen user beschikbaar, ook geen anoniem. Forward naar login om te proberen een user te maken met login gegevens.");
             return mapping.findForward(LOGIN);
         }
         createLists(dynaForm, request);
@@ -169,7 +168,7 @@ public class ViewerAction extends BaseGisAction {
             Boolean usePanelControls = (Boolean) configMap.get("usePanelControls");
             if (usePopup == null || !usePopup) {
                 if (usePanelControls == null || !usePanelControls) {
-                 return mapping.findForward(SIMPLE_VIEWER_FW);
+                    return mapping.findForward(SIMPLE_VIEWER_FW);
                 }
             }
         }
@@ -183,52 +182,53 @@ public class ViewerAction extends BaseGisAction {
         List themalist = getValidThemas(false, ctl, request);
         Map rootClusterMap = getClusterMap(themalist, ctl, null);
         List actieveThemas = null;
-        if (FormUtils.nullIfEmpty(request.getParameter(ID))!=null){
+        if (FormUtils.nullIfEmpty(request.getParameter(ID)) != null) {
             actieveThemas = new ArrayList();
-            String[] ids=request.getParameter(ID).split(",");
-            for (int i =0; i < ids.length; i++){
-                try{
-                    int id= Integer.parseInt(ids[i]);
+            String[] ids = request.getParameter(ID).split(",");
+            for (int i = 0; i < ids.length; i++) {
+                try {
+                    int id = Integer.parseInt(ids[i]);
                     actieveThemas.add(id);
-                }catch (NumberFormatException nfe){
-                    logger.error("Id geen integer. ",nfe);
-                }                
+                } catch (NumberFormatException nfe) {
+                    log.error("Id geen integer. ", nfe);
+                }
             }
-            if (actieveThemas.size()==0){
-                actieveThemas=null;
+            if (actieveThemas.size() == 0) {
+                actieveThemas = null;
             }
         }
         String lastActiefThemaId = null;
-        if (actieveThemas!=null)
-            lastActiefThemaId=""+actieveThemas.get(actieveThemas.size()-1);
+        if (actieveThemas != null) {
+            lastActiefThemaId = "" + actieveThemas.get(actieveThemas.size() - 1);
+        }
         Themas actiefThema = SpatialUtil.getThema(lastActiefThemaId);
 
-        List actieveClusters=null;
-        if (FormUtils.nullIfEmpty(request.getParameter(CLUSTERID))!=null){
-            actieveClusters=new ArrayList();
-            String[] ids=request.getParameter(CLUSTERID).split(",");
-            for (int i =0; i < ids.length; i++){
-                try{
-                    int id= Integer.parseInt(ids[i]);
+        List actieveClusters = null;
+        if (FormUtils.nullIfEmpty(request.getParameter(CLUSTERID)) != null) {
+            actieveClusters = new ArrayList();
+            String[] ids = request.getParameter(CLUSTERID).split(",");
+            for (int i = 0; i < ids.length; i++) {
+                try {
+                    int id = Integer.parseInt(ids[i]);
                     actieveClusters.add(id);
-                }catch (NumberFormatException nfe){
-                    logger.error("ClusterId geen integer. ",nfe);
+                } catch (NumberFormatException nfe) {
+                    log.error("ClusterId geen integer. ", nfe);
                 }
             }
-            if (actieveClusters.size()==0){
-                actieveClusters=null;
+            if (actieveClusters.size() == 0) {
+                actieveClusters = null;
             }
         }
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        request.setAttribute("tree", createJasonObject(rootClusterMap, actieveThemas,actieveClusters, user));
+        request.setAttribute("tree", createJasonObject(rootClusterMap, actieveThemas, actieveClusters, user));
 
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(PrecisionModel.FLOATING), 28992);
         Polygon extentBbox = null;
         Polygon fullExtentBbox = null;
 
         //stukje voor BBox toevoegen.
-        Set bboxen=null;
-        if (user.getSp().getTopLayer()!=null){
+        Set bboxen = null;
+        if (user.getSp().getTopLayer() != null) {
             bboxen = user.getSp().getTopLayer().getSrsbb();
             Iterator it = bboxen.iterator();
             while (it.hasNext()) {
@@ -245,7 +245,7 @@ public class ViewerAction extends BaseGisAction {
                             LinearRing lr = geometryFactory.createLinearRing(ca);
                             fullExtentBbox = geometryFactory.createPolygon(lr, null);
                         } catch (NumberFormatException nfe) {
-                            logger.error("BBOX fullextent wrong format: " + request.getAttribute("fullExtent"));
+                            log.error("BBOX fullextent wrong format: " + request.getAttribute("fullExtent"));
                         }
                         break;
                     }
@@ -263,7 +263,7 @@ public class ViewerAction extends BaseGisAction {
                 test = Integer.parseInt(requestExtent.split(",")[3]);
                 extent = requestExtent;
             } catch (NumberFormatException nfe) {
-                logger.error("1 of meer van de opgegeven extent coordinaten is geen getal.");
+                log.error("1 of meer van de opgegeven extent coordinaten is geen getal.");
                 extent = null;
             }
         }
@@ -288,7 +288,7 @@ public class ViewerAction extends BaseGisAction {
                                     LinearRing lr = geometryFactory.createLinearRing(ca);
                                     extentBbox = geometryFactory.createPolygon(lr, null);
                                 } catch (NumberFormatException nfe) {
-                                    logger.error("BBOX extent wrong format: " + extent);
+                                    log.error("BBOX extent wrong format: " + extent);
                                 }
                                 break;
                             }
@@ -311,86 +311,88 @@ public class ViewerAction extends BaseGisAction {
             request.setAttribute(EXTENT, extent);
         }
         //set search params
-        if(FormUtils.nullIfEmpty(request.getParameter(SEARCHCONFIGID))!=null && FormUtils.nullIfEmpty(request.getParameter(SEARCH))!=null){
-            try{
+        if (FormUtils.nullIfEmpty(request.getParameter(SEARCHCONFIGID)) != null && FormUtils.nullIfEmpty(request.getParameter(SEARCH)) != null) {
+            try {
                 request.setAttribute(SEARCHCONFIGID, new Integer(request.getParameter(SEARCHCONFIGID)));
                 request.setAttribute(SEARCH, request.getParameter(SEARCH));
                 //searchAction: Wat te doen met het gevonden initZoek resultaat.
-                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHACTION))!=null){
-                    request.setAttribute(SEARCHACTION,request.getParameter(SEARCHACTION));
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHACTION)) != null) {
+                    request.setAttribute(SEARCHACTION, request.getParameter(SEARCHACTION));
                 }
-                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHID))!=null){
-                    request.setAttribute(SEARCHID,request.getParameter(SEARCHID));
-                //om backwards compatible te houden
-                }else if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDTHEMAID))!=null){
-                    request.setAttribute(SEARCHID,request.getParameter(SEARCHSLDTHEMAID));
-                //als geen searchId is gebruikt gebruik dan voor de searchId's de id's.
-                }else if (FormUtils.nullIfEmpty(request.getParameter(ID))!=null){
-                    request.setAttribute(SEARCHID,request.getParameter(ID));
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHID)) != null) {
+                    request.setAttribute(SEARCHID, request.getParameter(SEARCHID));
+                    //om backwards compatible te houden
+                } else if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDTHEMAID)) != null) {
+                    request.setAttribute(SEARCHID, request.getParameter(SEARCHSLDTHEMAID));
+                    //als geen searchId is gebruikt gebruik dan voor de searchId's de id's.
+                } else if (FormUtils.nullIfEmpty(request.getParameter(ID)) != null) {
+                    request.setAttribute(SEARCHID, request.getParameter(ID));
                 }
-                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHCLUSTERID))!=null){
-                    request.setAttribute(SEARCHCLUSTERID,request.getParameter(SEARCHCLUSTERID));
-                //om backwards compatible te houden
-                }else if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDCLUSTERID))!=null){
-                    request.setAttribute(SEARCHCLUSTERID,request.getParameter(SEARCHSLDCLUSTERID));
-                //als er geen searchClusterId is gebruikt dan gebruik de clusterId
-                }else if (FormUtils.nullIfEmpty(request.getParameter(CLUSTERID))!=null){
-                    request.setAttribute(SEARCHCLUSTERID,request.getParameter(CLUSTERID));
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHCLUSTERID)) != null) {
+                    request.setAttribute(SEARCHCLUSTERID, request.getParameter(SEARCHCLUSTERID));
+                    //om backwards compatible te houden
+                } else if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDCLUSTERID)) != null) {
+                    request.setAttribute(SEARCHCLUSTERID, request.getParameter(SEARCHSLDCLUSTERID));
+                    //als er geen searchClusterId is gebruikt dan gebruik de clusterId
+                } else if (FormUtils.nullIfEmpty(request.getParameter(CLUSTERID)) != null) {
+                    request.setAttribute(SEARCHCLUSTERID, request.getParameter(CLUSTERID));
                 }
-                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDVISIBLEVALUE))!=null){
-                    request.setAttribute(SEARCHSLDVISIBLEVALUE,request.getParameter(SEARCHSLDVISIBLEVALUE));
+                if (FormUtils.nullIfEmpty(request.getParameter(SEARCHSLDVISIBLEVALUE)) != null) {
+                    request.setAttribute(SEARCHSLDVISIBLEVALUE, request.getParameter(SEARCHSLDVISIBLEVALUE));
                 }
-            }catch(NumberFormatException nfe){
-                logger.error(SEARCHCONFIGID+" = NAN: "+request.getParameter(SEARCHCONFIGID));
+            } catch (NumberFormatException nfe) {
+                log.error(SEARCHCONFIGID + " = NAN: " + request.getParameter(SEARCHCONFIGID));
             }
         }
         //zoekconfiguraties inlezen.
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List zoekconfiguraties = Zoeker.getZoekConfiguraties();
-        List zoekconfiguratiesJson= new ArrayList();
-        if (zoekconfiguraties!=null){
-            for (int i=0; i < zoekconfiguraties.size(); i++){
+        List zoekconfiguratiesJson = new ArrayList();
+        if (zoekconfiguraties != null) {
+            for (int i = 0; i < zoekconfiguraties.size(); i++) {
                 ZoekConfiguratie zc = (ZoekConfiguratie) zoekconfiguraties.get(i);
                 zoekconfiguratiesJson.add(zc.toJSON());
             }
         }
-        if (zoekconfiguraties!=null){
+        if (zoekconfiguraties != null) {
             request.setAttribute(ZOEKCONFIGURATIES, zoekconfiguratiesJson);
         }
         //set de actieve tabs en enabled tabs
-        JSONArray enabledTabs=null;
-        String[] enabledTokens=null;
-        String enabledTab=FormUtils.nullIfEmpty(request.getParameter(ENABLEDTAB));
-        String activeTab=FormUtils.nullIfEmpty(request.getParameter(ACTIVETAB));
-        if (enabledTab!=null){
+        JSONArray enabledTabs = null;
+        String[] enabledTokens = null;
+        String enabledTab = FormUtils.nullIfEmpty(request.getParameter(ENABLEDTAB));
+        String activeTab = FormUtils.nullIfEmpty(request.getParameter(ACTIVETAB));
+        if (enabledTab != null) {
             //stop alle enabled tabs in een jsonarray en controleer of de activeTab er in zit.
-            enabledTabs= new JSONArray();
-            enabledTokens =enabledTab.split(",");
-            boolean containsActiveTab=false;
-            for (int i=0; i < enabledTokens.length; i++){
+            enabledTabs = new JSONArray();
+            enabledTokens = enabledTab.split(",");
+            boolean containsActiveTab = false;
+            for (int i = 0; i < enabledTokens.length; i++) {
                 enabledTabs.put(enabledTokens[i]);
-                if (enabledTokens[i].equalsIgnoreCase(activeTab)){
-                    containsActiveTab=true;
+                if (enabledTokens[i].equalsIgnoreCase(activeTab)) {
+                    containsActiveTab = true;
                 }
             }
-            if (!containsActiveTab && activeTab!=null){
+            if (!containsActiveTab && activeTab != null) {
                 enabledTabs.put(activeTab);
             }
         }
-        if (activeTab!=null)
-            request.setAttribute(ACTIVETAB,activeTab);
-        if (enabledTabs!=null)
+        if (activeTab != null) {
+            request.setAttribute(ACTIVETAB, activeTab);
+        }
+        if (enabledTabs != null) {
             request.setAttribute(ENABLEDTAB, enabledTabs);
+        }
 
         //kijk of er in de tree iets moet worden uitgeklapt
-        if(FormUtils.nullIfEmpty(request.getParameter(EXPANDNODES))!=null){
-            String collapsedNodes=request.getParameter(EXPANDNODES);
-            JSONArray nodes=new JSONArray();
-            String[] nodeIds=collapsedNodes.split(",");
-            for (int i=0; i < nodeIds.length; i++){
+        if (FormUtils.nullIfEmpty(request.getParameter(EXPANDNODES)) != null) {
+            String collapsedNodes = request.getParameter(EXPANDNODES);
+            JSONArray nodes = new JSONArray();
+            String[] nodeIds = collapsedNodes.split(",");
+            for (int i = 0; i < nodeIds.length; i++) {
                 nodes.put(nodeIds[i]);
             }
-            request.setAttribute(EXPANDNODES,nodes);
+            request.setAttribute(EXPANDNODES, nodes);
         }
 
         /* Ophalen toegekende kaartenbalie rollen van ingelogde gebruiker */
@@ -399,15 +401,15 @@ public class ViewerAction extends BaseGisAction {
         /* Ophalen rollen in configuratie database */
         ConfigKeeper configKeeper = new ConfigKeeper();
         Configuratie rollenPrio = null;
-        
+
         try {
-            rollenPrio = configKeeper.getConfiguratie("rollenPrio","rollen");
+            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
         } catch (Exception ex) {
-            logger.debug("Fout bij ophalen configKeeper configuratie: " + ex);
+            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
         }
 
         /* alleen doen als configuratie tabel bestaat */
-        if (rollenPrio != null && rollenPrio.getPropval()!=null) {
+        if (rollenPrio != null && rollenPrio.getPropval() != null) {
             String[] configRollen = rollenPrio.getPropval().split(",");
 
             String rolnaam = "";
@@ -418,10 +420,11 @@ public class ViewerAction extends BaseGisAction {
 
             /* Zoeken of gebruiker een rol heeft die in de rollen
              * configuratie voorkomt. Hoogste rol wordt geladen */
-            for (int i=0; i < configRollen.length; i++) {
+            for (int i = 0; i < configRollen.length; i++) {
 
-                if (foundRole)
+                if (foundRole) {
                     break;
+                }
 
                 rolnaam = configRollen[i];
 
@@ -442,7 +445,7 @@ public class ViewerAction extends BaseGisAction {
             }
 
             /* als gevonden rol geen configuratie records heeft dan defaults laden */
-            if ( (map == null) || (map.size() < 1) ) {
+            if ((map == null) || (map.size() < 1)) {
                 map = configKeeper.getConfigMap("default");
             }
 
@@ -511,7 +514,7 @@ public class ViewerAction extends BaseGisAction {
         return children;
     }
 
-    protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas,List actieveClusters,GisPrincipal user) throws JSONException {
+    protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas, List actieveClusters, GisPrincipal user) throws JSONException {
         JSONObject root = new JSONObject().put("id", "root").put("type", "root").put("title", "root");
         if (rootClusterMap == null || rootClusterMap.isEmpty()) {
             return root;
@@ -520,12 +523,12 @@ public class ViewerAction extends BaseGisAction {
         if (clusterMaps == null || clusterMaps.isEmpty()) {
             return root;
         }
-        root.put("children", getSubClusters(clusterMaps, null, actieveThemas,actieveClusters,user));
+        root.put("children", getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user));
 
         return root;
     }
 
-    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas,List actieveClusters,GisPrincipal user) throws JSONException {
+    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas, List actieveClusters, GisPrincipal user) throws JSONException {
         if (subclusterMaps == null) {
             return clusterArray;
         }
@@ -535,20 +538,20 @@ public class ViewerAction extends BaseGisAction {
 
             Clusters cluster = (Clusters) clMap.get("cluster");
             JSONObject jsonCluster = new JSONObject();
-            if (cluster.getId()!=null){
+            if (cluster.getId() != null) {
                 jsonCluster.put("id", "c" + cluster.getId().intValue());
             }
             jsonCluster.put("type", "child");
             jsonCluster.put("title", cluster.getNaam());
             jsonCluster.put("cluster", true);
-            setExtraClusterProperties(jsonCluster,cluster);
-            if (actieveClusters!=null &&  actieveClusters.contains(cluster.getId())){
-                jsonCluster.put("active",true);
-                jsonCluster.put("visible",true);
-            }else if (cluster.isDefault_visible()){
-                jsonCluster.put("visible",true);
-            }else{
-                jsonCluster.put("visible",false);
+            setExtraClusterProperties(jsonCluster, cluster);
+            if (actieveClusters != null && actieveClusters.contains(cluster.getId())) {
+                jsonCluster.put("active", true);
+                jsonCluster.put("visible", true);
+            } else if (cluster.isDefault_visible()) {
+                jsonCluster.put("visible", true);
+            } else {
+                jsonCluster.put("visible", false);
             }
             if (cluster.getMetadatalink() != null) {
                 String metadatalink = cluster.getMetadatalink();
@@ -558,9 +561,9 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("metadatalink", "#");
             }
             List childrenList = (List) clMap.get("children");
-            JSONArray childrenArray = getChildren(childrenList, actieveThemas,user);
+            JSONArray childrenArray = getChildren(childrenList, actieveThemas, user);
             List subsubclusterMaps = (List) clMap.get("subclusters");
-            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas,actieveClusters,user);
+            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user);
             jsonCluster.put("children", childrenArray);
 
             if (clusterArray == null) {
@@ -584,7 +587,7 @@ public class ViewerAction extends BaseGisAction {
             // Check of er een admin source is met rechten
             boolean validAdmindataSource = th.hasValidAdmindataSource(user);
             if (th.isAnalyse_thema() && !validAdmindataSource) {
-                logger.error("Thema '" + th.getNaam()
+                log.error("Thema '" + th.getNaam()
                         + "' is analyse thema, maar heeft geen geldige admindata connectie "
                         + "(mogelijk geen rechten op wfs featuretype).");
             }
@@ -599,7 +602,7 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("organizationcodekey", "");
             }
 
-            if(th.getMaptipstring() != null){
+            if (th.getMaptipstring() != null) {
                 jsonCluster.put("maptipfield", th.getMaptipstring());
             }
 
@@ -610,8 +613,7 @@ public class ViewerAction extends BaseGisAction {
                 } else {
                     jsonCluster.put("analyse", "off");
                 }
-            }
-            else {
+            } else {
                 if (th.isVisible()) {
                     jsonCluster.put("visible", "on");
                 } else {
@@ -625,40 +627,54 @@ public class ViewerAction extends BaseGisAction {
             }
             /*Set some cluster properties that are used by the thema.*/
             Clusters cluster = th.getCluster();
-            if (cluster.getId()!=null){
+            if (cluster.getId() != null) {
                 jsonCluster.put("clusterid", "c" + cluster.getId().intValue());
             }
-            setExtraClusterProperties(jsonCluster,cluster);
+            setExtraClusterProperties(jsonCluster, cluster);
 
-            Layer layer=null;
+            Layer layer = null;
             if (th.getWms_layers_real() != null) {
                 jsonCluster.put("wmslayers", th.getWms_layers_real());
                 //if admintable is set then don't add the queryLayer
-                if (th.getWms_querylayers_real()!=null && !validAdmindataSource){
+                if (th.getWms_querylayers_real() != null && !validAdmindataSource) {
                     jsonCluster.put("wmsquerylayers", th.getWms_querylayers_real());
                 }
-                if (th.getWms_legendlayer_real()!=null){
-                    jsonCluster.put("legendurl",user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer_real())));
+                if (th.getWms_legendlayer_real() != null) {
+                    jsonCluster.put("legendurl", user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer_real())));
                 }
-                layer=user.getLayer(th.getWms_layers_real());
-             } else {
+                layer = user.getLayer(th.getWms_layers_real());
+            } else {
                 jsonCluster.put("wmslayers", th.getWms_layers());
                 //if admintable is set then don't add the queryLayer
-                if (th.getWms_querylayers()!=null && !validAdmindataSource){
+                if (th.getWms_querylayers() != null && !validAdmindataSource) {
                     jsonCluster.put("wmsquerylayers", th.getWms_querylayers());
                 }
-                if (th.getWms_legendlayer()!=null){
-                    jsonCluster.put("legendurl",user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer())));
+                if (th.getWms_legendlayer() != null) {
+                    jsonCluster.put("legendurl", user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer())));
                 }
-                layer=user.getLayer(th.getWms_layers());
-             }
+                layer = user.getLayer(th.getWms_layers());
+            }
             //toevoegen scale hints
             if (layer != null) {
-                if (layer.getScaleHintMax() != null) {
-                    jsonCluster.put("scalehintmax", layer.getScaleHintMax());
+                NumberFormat formatter = new DecimalFormat("#.#####");
+
+                double shmax = -1.0;
+                try {
+                    shmax = Double.parseDouble(layer.getScaleHintMax());
+                } catch (NumberFormatException nfe) {
+                    log.debug("max scale hint not valid: " + layer.getScaleHintMax());
                 }
-                if (layer.getScaleHintMin() != null) {
-                    jsonCluster.put("scalehintmin", layer.getScaleHintMin());
+                if (shmax > 0) {
+                    jsonCluster.put("scalehintmax", formatter.format(shmax));
+                }
+                double shmin = -1.0;
+                try {
+                    shmin = Double.parseDouble(layer.getScaleHintMin());
+                } catch (NumberFormatException nfe) {
+                    log.debug("min scale hint not valid: " + layer.getScaleHintMin());
+                }
+                if (shmin > 0) {
+                    jsonCluster.put("scalehintmin", formatter.format(shmin));
                 }
             }
             if (th.getMetadata_link() != null) {
@@ -677,6 +693,7 @@ public class ViewerAction extends BaseGisAction {
 
         return childrenArray;
     }
+
     private void setExtraClusterProperties(JSONObject jsonCluster, Clusters cluster) throws JSONException {
         if (cluster.isDefault_cluster()) {
             jsonCluster.put("default_cluster", true);
