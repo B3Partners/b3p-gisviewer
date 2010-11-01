@@ -48,6 +48,7 @@ import com.vividsolutions.jts.geom.MultiPoint;
 import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -178,6 +179,26 @@ public class GetLocationData {
         returnValue[1] = value;
 
         return returnValue;
+    }
+
+    public String zendMelding(String wkt, String tekst) throws Exception {
+        if (wkt == null || wkt.length() == 0 || tekst == null || tekst.length() == 0) {
+            return null;
+        }
+        Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
+        Point p = geom.getCentroid();
+        String message = "<p>Een bericht met de inhoud \"";
+        message += tekst;
+        message += "\" voor locatie met RD-coordinaten (";
+        message += (int)p.getX();
+        message += ",";
+        message += (int)p.getY();
+        message += ") is verzonden naar de beheerder.<p>";
+
+        long now = (new Date()).getTime();
+        message += "<p>Uw referentienummer is: \""+ Long.toString(now, 32) + "\".<p>";
+        
+        return message;
     }
 
     public Map getAnalyseData(String wkt, String activeThemaIds, String extraCriterium) throws Exception {
