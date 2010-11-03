@@ -1,25 +1,3 @@
-/*
- * B3P Gisviewer is an extension to Flamingo MapComponents making
- * it a complete webbased GIS viewer and configuration tool that
- * works in cooperation with B3P Kaartenbalie.
- *
- * Copyright 2006, 2007, 2008 B3Partners BV
- * 
- * This file is part of B3P Gisviewer.
- * 
- * B3P Gisviewer is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * B3P Gisviewer is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
- */
 package nl.b3p.gis.viewer.db;
 
 public class ThemaData {
@@ -37,6 +15,8 @@ public class ThemaData {
     private String commando;
     private String kolomnaam;
     private Integer dataorder;
+
+    private Gegevensbron gegevensbron;
 
     /**
      * Creates a new instance of ThemaData
@@ -315,6 +295,14 @@ public class ThemaData {
     // <editor-fold defaultstate="" desc="public void setDataorder(String dataorder)">
     public void setDataorder(Integer dataorder) {
         this.dataorder = dataorder;
+    }
+
+    public Gegevensbron getGegevensbron() {
+        return gegevensbron;
+    }
+
+    public void setGegevensbron(Gegevensbron gegevensbron) {
+        this.gegevensbron = gegevensbron;
     }
     // </editor-fold>
 }

@@ -56,6 +56,8 @@ public class Themas implements Comparable {
     private boolean uitgebreid;
     private String layoutadmindata;
 
+    private Gegevensbron gegevensbron;
+
     /** Creates a new instance of Themas */
     public Themas() {
     }
@@ -800,5 +802,13 @@ public class Themas implements Comparable {
             // andere externe bronnen checken we niet, mogelijk later
             return true;
         }
+    }
+
+    public Gegevensbron getGegevensbron() {
+        return gegevensbron;
+    }
+
+    public void setGegevensbron(Gegevensbron gegevensbron) {
+        this.gegevensbron = gegevensbron;
     }
 }

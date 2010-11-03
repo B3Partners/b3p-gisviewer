@@ -17,3 +17,17 @@ alter table gegevensbron
         references clusters;
 		
 create sequence gegevensbron_id_seq;
+
+ALTER TABLE thema_data ADD (gegevensbron NUMBER(10,0));
+
+alter table thema_data 
+        add constraint FK_GEGEVENSBRON 
+        foreign key (gegevensbron)
+        references gegevensbron;
+		
+ALTER TABLE themas ADD (gegevensbron NUMBER(10,0));
+
+alter table themas
+        add constraint FK_THEMAS_GEGEVENSBRON 
+        foreign key (gegevensbron)
+        references gegevensbron;

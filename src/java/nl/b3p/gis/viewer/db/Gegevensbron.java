@@ -2,6 +2,8 @@ package nl.b3p.gis.viewer.db;
 
 import java.util.HashSet;
 import java.util.Set;
+import javax.servlet.http.HttpServletRequest;
+import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,6 +23,9 @@ public class Gegevensbron implements Comparable {
     private Set children = new HashSet();
     private String admin_fk;
     private String admin_tabel_opmerkingen;
+
+    private Set themaData;
+    private Set themas;
 
     public Gegevensbron() {
     }
@@ -107,5 +112,37 @@ public class Gegevensbron implements Comparable {
 
     public int compareTo(Object o) {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Set getThemaData() {
+        return themaData;
+    }
+
+    public void setThemaData(Set themaData) {
+        this.themaData = themaData;
+    }
+
+    public Bron getBron(HttpServletRequest request) {
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+
+        return getBron(user);
+    }
+
+    public Bron getBron(GisPrincipal user) {
+        Bron b = bron;
+        if (b == null && admin_tabel != null &&
+                admin_tabel.length() > 0 && user != null) {
+
+            b = user.getKbWfsConnectie();
+        }
+        return b;
+    }
+
+    public Set getThemas() {
+        return themas;
+    }
+
+    public void setThemas(Set themas) {
+        this.themas = themas;
     }
 }

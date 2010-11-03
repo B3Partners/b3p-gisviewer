@@ -79,6 +79,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="commando"/>
     <property name="kolomnaam"/>
     <property name="dataorder"/>
+    <many-to-one name="gegevensbron" lazy="false" />
   </class>
   <class name="nl.b3p.gis.viewer.db.Themas">
     <id name="id" type="int">
@@ -125,6 +126,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
       <key column="thema"/>
       <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
     </set>
+    <many-to-one name="gegevensbron" lazy="false"/>
   </class>
   <class name="nl.b3p.gis.viewer.db.WaardeTypen">
     <id name="id" type="int">
@@ -171,5 +173,15 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
       
         <property name="admin_fk"/>
         <property name="admin_tabel_opmerkingen"/>
+
+        <set name="themaData" lazy="false" cascade="all-delete-orphan" order-by="dataorder, basisregel desc, label">
+            <key column="gegevensbron"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
+        </set>
+
+        <set name="themas" lazy="false" cascade="all-delete-orphan">
+            <key column="gegevensbron"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.Themas"/>
+        </set>
 </class>
 </hibernate-mapping>
