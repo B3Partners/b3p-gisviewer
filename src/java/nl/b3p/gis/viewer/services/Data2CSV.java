@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package nl.b3p.gis.viewer.services;
 
 import java.io.IOException;
@@ -19,13 +15,13 @@ import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.csv.CsvOutputStream;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
+import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.fileupload.FileUploadBase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.geotools.data.DataStore;
 import org.hibernate.Transaction;
 import org.opengis.feature.Feature;
 import org.opengis.feature.Property;
@@ -115,7 +111,7 @@ public class Data2CSV extends HttpServlet {
      * Haal de kolomnamen op uit de themadata. Elke kolomnaam wordt maar 1 keer toegevoegd.
      */
     public String[] getThemaPropertyNames(Themas thema) {
-        Set themadata = thema.getThemaData();
+        Set themadata = thema.getGegevensbron().getThemaData();
         Iterator it = themadata.iterator();
         ArrayList columns = new ArrayList();
         while (it.hasNext()) {
@@ -137,11 +133,14 @@ public class Data2CSV extends HttpServlet {
      * Haalt de data op. Van een thema (t) waarvan de pk is meegegeven
      */
     public List getData(Bron b, Themas t, String[] pks, String[] propertyNames)throws IOException, Exception {
+
+        Gegevensbron gb = t.getGegevensbron();
+
         Filter filter = FilterBuilder.createOrEqualsFilter(
-                DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart(), pks);
-        List<ThemaData> items = SpatialUtil.getThemaData(t, false);
+                DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart(), pks);
+        List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
-        ArrayList<Feature> features=DataStoreUtil.getFeatures(b, t, null, filter, propnames, null, false);
+        ArrayList<Feature> features=DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, false);
         ArrayList result = new ArrayList();
         for (int i=0; i < features.size(); i++) {
             Feature f = features.get(i);
@@ -205,6 +204,7 @@ public class Data2CSV extends HttpServlet {
      * @param request servlet request
      * @param response servlet response
      */
+    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
@@ -215,6 +215,7 @@ public class Data2CSV extends HttpServlet {
      * @param request servlet request
      * @param response servlet response
      */
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
@@ -223,6 +224,7 @@ public class Data2CSV extends HttpServlet {
     /**
      * Returns a short description of the servlet.
      */
+    @Override
     public String getServletInfo() {
         return "Short description";
     }// </editor-fold>

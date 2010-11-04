@@ -7,15 +7,13 @@ import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.PrecisionModel;
 import com.vividsolutions.jts.geom.util.PolygonExtracter;
-import com.vividsolutions.jts.io.ParseException;
-import com.vividsolutions.jts.io.WKTReader;
-import com.vividsolutions.jts.io.WKTWriter;
 import com.vividsolutions.jts.operation.buffer.BufferOp;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.geotools.DataStoreUtil;
+import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
@@ -100,7 +98,7 @@ public class EditUtil {
             if (thema == null)
                 throw new Exception("Kan niet highlighten. Layer niet gevonden.");
 
-            List thema_items = SpatialUtil.getThemaData(thema, true);
+            List thema_items = SpatialUtil.getThemaData(thema.getGegevensbron(), true);
 
             if (thema_items.size() < 1)
                 throw new Exception("Kan niet highlighten. Geen themadata gevonden.");
@@ -116,7 +114,8 @@ public class EditUtil {
             if (!thema.hasValidAdmindataSource(user))
                 throw new Exception("Kan niet highlighten. Geen geldige datasource gevonden.");
 
-            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, thema, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
+            Gegevensbron gb = thema.getGegevensbron();
+            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
 
             if ( (features == null) || (features.size() < 1) )
                 throw new Exception("Kan niet highlighten. Geen features gevonden.");

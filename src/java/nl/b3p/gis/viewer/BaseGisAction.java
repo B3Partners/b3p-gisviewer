@@ -1,25 +1,3 @@
-/*
- * B3P Gisviewer is an extension to Flamingo MapComponents making
- * it a complete webbased GIS viewer and configuration tool that
- * works in cooperation with B3P Kaartenbalie.
- *
- * Copyright 2006, 2007, 2008 B3Partners BV
- * 
- * This file is part of B3P Gisviewer.
- * 
- * B3P Gisviewer is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * B3P Gisviewer is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
- */
 package nl.b3p.gis.viewer;
 
 import java.io.UnsupportedEncodingException;
@@ -61,7 +39,8 @@ import org.opengis.filter.Filter;
 
 public abstract class BaseGisAction extends BaseHibernateAction {
 
-    private static final Log log = LogFactory.getLog(BaseGisAction.class);
+    private static final Log logger = LogFactory.getLog(BaseGisAction.class);
+
     public static final String URL_AUTH = "code";
     protected static final double DEFAULTTOLERANCE = 5.0;
     protected static final String ACKNOWLEDGE_MESSAGES = "acknowledgeMessages";
@@ -73,11 +52,11 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             if (sp != null) {
                 return sp.getOrganizationCode();
             } else {
-                log.error("Er is geen serviceprovider aanwezig bij GisPrincipal met naam: " + gp.getName());
+                logger.error("Er is geen serviceprovider aanwezig bij GisPrincipal met naam: " + gp.getName());
                 return null;
             }
         } else {
-            log.error("Er is geen GisPrincipal aanwezig.");
+            logger.error("Er is geen GisPrincipal aanwezig.");
             return null;
         }
     }
@@ -368,12 +347,12 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 statement.close();
             }
         } catch (SQLException ex) {
-            log.error("", ex);
+            logger.error("", ex);
         } finally {
             try {
                 connection.close();
             } catch (SQLException ex) {
-                log.error("", ex);
+                logger.error("", ex);
             }
         }
     }
@@ -396,7 +375,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     protected AdminDataRowBean getRegel(Feature f, Themas t, List<ThemaData> thema_items) throws SQLException, UnsupportedEncodingException, Exception {
         AdminDataRowBean regel = new AdminDataRowBean();
 
-        String adminPk = DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart();
+        String adminPk = DataStoreUtil.convertFullnameToQName(t.getGegevensbron().getAdmin_pk()).getLocalPart();
         if (adminPk != null) {
             regel.setPrimaryKey(f.getProperty(adminPk).getValue());
         }
@@ -527,21 +506,21 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                     }
 
                     // De attributeValue ook eerst vooraan erbij zetten om die te kunnen tonen op de admindata pagina - Drie hekjes als scheidingsteken
-                    StringBuffer function = new StringBuffer("");
+                    StringBuilder function = new StringBuilder("");
                     function.append(attributeValue);
-                    function.append("###" + td.getCommando());
+                    function.append("###").append(td.getCommando());
                     function.append("(this, ");
-                    function.append("'" + td.getThema().getId() + "'");
+                    function.append("'").append(td.getGegevensbron().getId()).append("'");
                     function.append(",");
-                    function.append("'" + adminPk + "'");
+                    function.append("'").append(adminPk).append("'");
                     function.append(",");
-                    function.append("'" + keyValue + "'");
+                    function.append("'").append(keyValue).append("'");
                     function.append(",");
-                    function.append("'" + attributeName + "'");
+                    function.append("'").append(attributeName).append("'");
                     function.append(",");
-                    function.append("'" + attributeValue + "'");
+                    function.append("'").append(attributeValue).append("'");
                     function.append(",");
-                    function.append("'" + td.getEenheid() + "'");
+                    function.append("'").append(td.getEenheid()).append("'");
                     function.append(")");
                     regel.addValue(function.toString());
                 } else {
@@ -657,7 +636,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 if (begin == -1) {
                     begin = i;
                 } else {
-                    log.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+                    logger.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
                     throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
                 }
             } else if (c == ']') {
@@ -665,7 +644,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 if (begin != -1 && eind != -1) {
                     String kolomnaam = url.substring(begin + 1, eind);
                     if (kolomnaam == null || kolomnaam.length() == 0) {
-                        log.error("Commando \"" + string + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                        logger.error("Commando \"" + string + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
                         throw new Exception("Commando \"" + string + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
                     }
                     Object value = values.get(kolomnaam);
@@ -677,11 +656,11 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                     eind = -1;
                     i = 0;
                 } else {
-                    log.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een [ .");
+                    logger.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een [ .");
                     throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een [ .");
                 }
             } else if (i == url.length() - 1 && begin != -1) {
-                log.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+                logger.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
                 throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
             }
         }
@@ -796,7 +775,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             }
         } catch (NumberFormatException nfe) {
             scale = 0.0;
-            log.debug("Scale is geen double dus wordt genegeerd");
+            logger.debug("Scale is geen double dus wordt genegeerd");
         }
         String tolerance = request.getParameter("tolerance");
         double clickTolerance = DEFAULTTOLERANCE;
@@ -806,7 +785,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             }
         } catch (NumberFormatException nfe) {
             clickTolerance = DEFAULTTOLERANCE;
-            log.debug("Tolerance is geen double dus de default wordt gebruikt: " + DEFAULTTOLERANCE + " pixels");
+            logger.debug("Tolerance is geen double dus de default wordt gebruikt: " + DEFAULTTOLERANCE + " pixels");
         }
         double distance = clickTolerance;
         if (scale > 0.0) {

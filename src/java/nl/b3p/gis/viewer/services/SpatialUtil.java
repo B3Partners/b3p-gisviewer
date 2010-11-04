@@ -82,21 +82,6 @@ public class SpatialUtil {
         return q.list();
     }
 
-    static public List<ThemaData> getThemaData(Themas t, boolean basisregel) {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        String query = "from ThemaData td where td.thema.id = :tid ";
-        if (basisregel) {
-            query += "and td.basisregel = :br ";
-        }
-        query += " order by td.dataorder, td.label";
-        Query q = sess.createQuery(query);
-        q.setInteger("tid", t.getId());
-        if (basisregel) {
-            q.setBoolean("br", basisregel);
-        }
-        return q.list();
-    }
-
     static public List<ThemaData> getThemaData(Gegevensbron gb, boolean basisregel) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
@@ -117,7 +102,7 @@ public class SpatialUtil {
         if (conn == null) {
             return null;
         }
-        StringBuffer sq = new StringBuffer();
+        StringBuilder sq = new StringBuilder();
         sq.append("update \"");
         sq.append(tableName);
         sq.append("\" set \"");

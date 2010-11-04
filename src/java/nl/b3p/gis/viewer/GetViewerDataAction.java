@@ -1,25 +1,3 @@
-/*
- * B3P Gisviewer is an extension to Flamingo MapComponents making
- * it a complete webbased GIS viewer and configuration tool that
- * works in cooperation with B3P Kaartenbalie.
- *
- * Copyright 2006, 2007, 2008 B3Partners BV
- * 
- * This file is part of B3P Gisviewer.
- * 
- * B3P Gisviewer is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * B3P Gisviewer is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
- */
 package nl.b3p.gis.viewer;
 
 import nl.b3p.gis.geotools.DataStoreUtil;
@@ -229,64 +207,6 @@ public class GetViewerDataAction extends BaseGisAction {
 
         /* geen config gevonden of ingesteld pak de uitgebreide versie */
         return mapping.findForward("admindata1");
-    }
-
-    protected void collectThemaRegels_old(ActionMapping mapping, HttpServletRequest request,
-            ArrayList themas, ArrayList regels, ArrayList ti, boolean locatie) {
-        for (int i = 0; i < themas.size(); i++) {
-            Themas t = (Themas) themas.get(i);
-            if (locatie && !t.isLocatie_thema()) {
-                continue;
-            }
-
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            if (t.hasValidAdmindataSource(user)) {
-                try {
-                    List thema_items = SpatialUtil.getThemaData(t, true);
-                    int themadatanummer = 0;
-                    themadatanummer = ti.size();
-                    for (int a = 0; a < ti.size(); a++) {
-                        if (compareThemaDataLists((List) ti.get(a), thema_items)) {
-                            themadatanummer = a;
-                            break;
-                        }
-                    }
-
-                    Bron b = t.getConnectie(request);
-                    List l = null;
-                    if (b != null) {
-                        if (themadatanummer == regels.size()) {
-                            regels.add(new ArrayList());
-                        }
-                        l = getThemaObjectsWithGeom(t, thema_items, request);
-                    }
-                    if (l != null && l.size() > 0) {
-                        ((ArrayList) regels.get(themadatanummer)).addAll(l);
-                        if (themadatanummer == ti.size()) {
-                            ti.add(thema_items);
-                        }
-                    }
-                } catch (Exception e) {
-                    String mapserver4Hack = "msQueryByRect(): Search returned no results. No matching record(s) found.";
-                    if (mapserver4Hack.equalsIgnoreCase(e.getMessage())) {
-                        // mapserver 4 returns service exception when no hits, this is not compliant.
-                    } else {
-                        String msg = e.getMessage();
-
-                        if (msg != null) {
-                            if (msg.contains("PropertyDescriptor is null - did you request a property that does not exist?")) {
-                                msg = "U vraagt een attribuut op dat niet bestaat, waarschijnlijk is de configuratie niet in orde, raadpleeg de beheerder!";
-                            }
-                        } else {
-                            msg = "Kon objectinfo niet ophalen.";
-                        }
-
-                        log.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
-                        addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + msg);
-                    }
-                }
-            }
-        }
     }
 
     protected void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,

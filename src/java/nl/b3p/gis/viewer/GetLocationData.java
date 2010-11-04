@@ -1,25 +1,3 @@
-/*
- * B3P Gisviewer is an extension to Flamingo MapComponents making
- * it a complete webbased GIS viewer and configuration tool that
- * works in cooperation with B3P Kaartenbalie.
- *
- * Copyright 2006, 2007, 2008 B3Partners BV
- *
- * This file is part of B3P Gisviewer.
- *
- * B3P Gisviewer is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * B3P Gisviewer is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
- */
 package nl.b3p.gis.viewer;
 
 import nl.b3p.gis.geotools.DataStoreUtil;
@@ -36,12 +14,10 @@ import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-//import org.geotools.data.wfs.v1_1_0.WFSFeatureSource;
 import org.directwebremoting.WebContext;
 import org.directwebremoting.WebContextFactory;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.MultiLineString;
 import com.vividsolutions.jts.geom.MultiPoint;
@@ -53,6 +29,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import org.geotools.data.DataStore;
 import org.opengis.feature.Feature;
@@ -92,7 +69,10 @@ public class GetLocationData {
 
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
-            Bron b = (Bron) t.getConnectie(request);
+
+            Gegevensbron gb = t.getGegevensbron();
+            Bron b = gb.getBron(request);
+
             if (b == null) {
                 return wkt;
             }
@@ -102,7 +82,7 @@ public class GetLocationData {
                 String geometryName = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
                 ArrayList<String> propertyNames = new ArrayList();
                 propertyNames.add(geometryName);
-                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
+                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
                 if (list.size() >= 1) {
                     Feature f = list.get(0);
                     wkt = DataStoreUtil.convertFeature2WKT(f, true);
@@ -137,7 +117,11 @@ public class GetLocationData {
 
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
-            Bron b = (Bron) t.getConnectie(request);
+
+            Gegevensbron gb = t.getGegevensbron();
+
+            Bron b = gb.getBron(request);
+
             if (b == null) {
                 return returnValue;
             }
@@ -147,7 +131,7 @@ public class GetLocationData {
                 String geometryName = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
                 ArrayList<String> propertyNames = new ArrayList();
                 propertyNames.add(geometryName);
-                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, t, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
+                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
                 if (list.size() >= 1) {
                     Feature f = list.get(0);
                     area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
@@ -181,7 +165,7 @@ public class GetLocationData {
             area = Math.round(area);
             area /= 100;
         }
-        String value = new String("" + area);
+        String value = "" + area;
         if (eenheid != null) {
             value += " " + eenheid;
         } else {
@@ -360,10 +344,12 @@ public class GetLocationData {
      * waarde
      */
     private Map calcThemaAnalyseData(Bron b, Themas t, String extraCriterium, Geometry analyseGeometry) throws Exception {
+        Gegevensbron gb = t.getGegevensbron();
+
         //maak het eventuele extra filter.
         Filter extraFilter = null;
         if (extraCriterium != null && extraCriterium.length() != 0) {
-            List thema_items = SpatialUtil.getThemaData(t, true);
+            List thema_items = SpatialUtil.getThemaData(gb, true);
             extraFilter = calculateExtraFilter(thema_items, extraCriterium);
         }
         return calcThemaAnalyseData(b, t, extraFilter, analyseGeometry);
@@ -372,9 +358,10 @@ public class GetLocationData {
     private Map calcThemaAnalyseData(Bron b, Themas t, Filter extraFilter, Geometry analyseGeometry) throws Exception {
         DataStore ds = b.toDatastore();
         try {
+            Gegevensbron gb = t.getGegevensbron();
 
             //Haal alle features op die binnen de analyseGeometry vallen:
-            List<Feature> features = DataStoreUtil.getFeatures(b, t, analyseGeometry, extraFilter, null, maxFeatures, true);
+            List<Feature> features = DataStoreUtil.getFeatures(b, gb, analyseGeometry, extraFilter, null, maxFeatures, true);
 
             if (features == null || features.isEmpty()) {
                 return null;
@@ -487,7 +474,7 @@ public class GetLocationData {
             }
         }
 
-        if (andFilters.size() == 0) {
+        if (andFilters.isEmpty()) {
             return null;
         }
         if (andFilters.size() == 1) {
@@ -539,10 +526,7 @@ public class GetLocationData {
 
                 /*let op indien table een view is dan kan deze alleen geupdate worden indien
                  * er een UPDATE INSTEAD rule is aangemaakt */
-                String tableName = t.getSpatial_tabel();
-                
-                if (tableName == null)
-                    tableName = t.getAdmin_tabel();
+                String tableName = t.getGegevensbron().getAdmin_tabel();
 
                 try {
                     String retVal = SpatialUtil.setAttributeValue(conn, tableName, keyName, keyValueInt, attributeName, newValue);

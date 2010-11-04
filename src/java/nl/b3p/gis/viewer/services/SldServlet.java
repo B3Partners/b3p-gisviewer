@@ -19,6 +19,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
+import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -115,7 +116,7 @@ public class SldServlet extends HttpServlet {
                     try {
                         Integer cid = Integer.parseInt(clusterIds[i]);
                         List<Themas> clusterThemaList = getClusterThemas(cid);
-                        if (clusterThemaList == null || clusterThemaList.size() == 0) {
+                        if (clusterThemaList == null || clusterThemaList.isEmpty()) {
                             log.warn("No cluster or no themas in cluster: " + clusterIds[i]);
                         } else {
                             themaList.addAll(clusterThemaList);
@@ -128,9 +129,12 @@ public class SldServlet extends HttpServlet {
 
             for (int i = 0; i < themaList.size(); i++) {
                 Themas th = themaList.get(i);
+
+                Gegevensbron gb = th.getGegevensbron();
+
                 String sldattribuut = th.getSldattribuut();
                 if (sldattribuut == null || sldattribuut.length() == 0) {
-                    sldattribuut = DataStoreUtil.convertFullnameToQName(th.getAdmin_pk()).getLocalPart();
+                    sldattribuut = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
                 }
                 if (sldattribuut == null || sldattribuut.length() == 0) {
                     log.debug("thema heeft geen sld attribuut");
@@ -365,6 +369,7 @@ public class SldServlet extends HttpServlet {
         return featureTypeConstraint;
     }
 
+    @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         try {

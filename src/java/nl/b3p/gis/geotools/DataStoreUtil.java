@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package nl.b3p.gis.geotools;
 
 import com.vividsolutions.jts.geom.Envelope;
@@ -265,175 +261,7 @@ public class DataStoreUtil {
      }
 
 
-    /**
-     * Haal de features op van het Thema
-     * De 3 mogelijke filters worden gecombineerd als ze gevuld zijn (1: ThemaFilter, 2: ExtraFilter 3: GeometryFilter)
-     * LETOP!: De DataStore wordt in deze functie geopend en gesloten. Als je dus al een datastore hebt geopend, gebruik dan de functie
-     * waarin je de DataStore mee kan geven.
-     * @param t Het thema waarvan de features moeten worden opgehaald
-     * @param geom De geometrie waarmee de features moeten intersecten (mag null zijn)
-     * @param extraFilter een extra filter dat wordt gebruikt om de features op te halen
-     * @param maximum Het maximum aantal features die gereturned moeten worden. (default is geset op 1000)
-     *
-     */
-    public static ArrayList<Feature> getFeatures(Bron b, Themas t, Geometry geom, Filter extraFilter, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
-        DataStore ds = b.toDatastore();
-        try {
-            Filter geomFilter = createIntersectFilter(t, ds, geom);
-            ArrayList<Filter> filters = new ArrayList();
-            if (geomFilter != null) {
-                filters.add(geomFilter);
-            }
-            if (extraFilter != null) {
-                filters.add(extraFilter);
-            }
-            Filter filter = null;
-            if (filters.size() == 1) {
-                filter = filters.get(0);
-            } else if (filters.size() > 1) {
-                filter = ff.and(filters);
-            }
-            return getFeatures(ds, t, filter, propNames, maximum, collectGeom);
-        } finally {
-            ds.dispose();
-        }
-    }
-
-    /**
-     * De beste functie om te gebruiken. Open en dispose de DataStore zelf bij het meegeven.
-     * Alle filters zijn gecombineerd in Filter f. (geometry filter en extra filter)
-     * Het adminfilter wordt automatisch toegevoegd.
-     */
-    public static ArrayList<Feature> getFeatures(DataStore ds, Themas t, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
-        ArrayList<Filter> filters = new ArrayList();
-        if (f != null) {
-            filters.add(f);
-        }
-
-        Filter adminFilter = null;
-        try {
-            adminFilter = getThemaFilter(t);
-        } catch (CQLException cqle) {
-            if (filters.isEmpty()) {
-                String msg = cqle.getLocalizedMessage();
-                throw new Exception ("Error creating filter: " + msg, cqle);
-            }
-            log.debug("error creating filter: ", cqle);
-        }
-        if (adminFilter != null) {
-            filters.add(adminFilter);
-        }
-
-        Filter filter = null;
-        if (filters.size() == 1) {
-            filter = filters.get(0);
-        } else if (filters.size() > 1) {
-            filter = ff.and(filters);
-        } else {
-            throw new Exception("Geen filter gemaakt. Data wordt niet getoond");
-        }
-
-        if (log.isDebugEnabled()) {
-            try {
-                FilterTransformer ft = new FilterTransformer();
-                String s = ft.transform(filter);
-                log.debug("Do query with filter: " + s);
-            } catch (Exception e) {
-                log.debug("Cannot transform filter: " + filter.toString());
-                log.debug("Error transform filter: " + e.getLocalizedMessage());
-                if (e.getCause() != null) {
-                    log.debug("Cause Error transform filter: " + e.getCause().getLocalizedMessage());
-                }
-            }
-        }
-
-        FeatureSource fs = null;
-        QName ftName = convertFullnameToQName(t.getAdmin_tabel());
-        if (ds instanceof WFS_1_1_0_DataStore) {
-            fs = ds.getFeatureSource(new NameImpl(ftName.getNamespaceURI(), ftName.getLocalPart()));
-            // hierkomt een FeatureSource uit met als typename een prefixed name
-            // bv: app:bestemmingsplangebied
-        } else {
-            fs = ds.getFeatureSource(ftName.getLocalPart());
-        }
-
-        DefaultQuery query = null;
-        if (ds instanceof WFS_1_1_0_DataStore) {
-            // deze query moet passen bij feature source dus moet prefixed name zijn
-            String prefixedName = ftName.getPrefix() + ":" + ftName.getLocalPart();
-            query = new DefaultQuery(prefixedName, filter);
-            query.setNamespace(new URI(ftName.getNamespaceURI())); // wordt niet gebruikt
-        } else {
-            query = new DefaultQuery(ftName.getLocalPart(), filter);
-        }
-
-        int max;
-        if (maximum != null) {
-            max = maximum.intValue();
-        } else {
-            max = maxFeatures;
-        }
-        if (max > 0) {
-            query.setMaxFeatures(max);
-        }
-        if (propNames != null) {
-            //zorg er voor dat de pk ook wordt opgehaald
-            String adminPk = DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart();
-            if (adminPk != null && adminPk.length() > 0 && !propNames.contains(adminPk)) {
-                propNames.add(adminPk);
-            }
-
-            if (collectGeom) {
-                // zorg ervoor dat de geometry wordt opgehaald, indien aanwezig.
-                String geomAttributeName = getGeometryAttributeName(ds, t);
-                if (geomAttributeName != null && geomAttributeName.length() > 0 && !propNames.contains(geomAttributeName)) {
-                    propNames.add(geomAttributeName);
-                }
-            }
-
-            /*Als een themaDataObject van het type query is en er zitten [] in
-            dan moeten deze ook worden opgehaald*/
-            Iterator<ThemaData> it = SpatialUtil.getThemaData(t, false).iterator();
-            while (it.hasNext()) {
-                ThemaData td = it.next();
-                //als de td van het type query is.
-                if (td.getDataType() != null && td.getDataType().getId() == DataTypen.QUERY) {
-                    String commando = td.getCommando();
-                    //als er in het commando [replaceme] voorkomt
-                    while (commando.indexOf("[") != -1 && commando.indexOf("]") != -1) {
-                        //haal alle properties er uit.en stuur deze mee in de query
-                        int beginIndex = commando.indexOf("[") + 1;
-                        int endIndex = commando.indexOf("]");
-                        QName propName = convertFullnameToQName(commando.substring(beginIndex, endIndex));
-                        //geen dubbele meegeven.
-                        if (propName != null && !propNames.contains(propName.getLocalPart())) {
-                            propNames.add(propName.getLocalPart());
-                        }
-                        if (endIndex + 1 >= commando.length() - 1) {
-                            commando = "";
-                        } else {
-                            commando = commando.substring(endIndex + 1);
-                        }
-                    }
-                }
-            }
-            if (propNames.size() > 0) {
-                query.setPropertyNames(propNames);
-            }
-        }
-
-        FeatureCollection fc = fs.getFeatures(query);
-        FeatureIterator fi = fc.features();
-        ArrayList<Feature> features = new ArrayList();
-        try {
-            while (fi.hasNext()) {
-                features.add(fi.next());
-            }
-        } finally {
-            fc.close(fi);
-        }
-        return features;
-     }
+    
 
     public static Filter createIntersectFilter(Themas t, DataStore ds, Geometry geom) throws Exception {
         if (geom == null) {
@@ -470,7 +298,7 @@ public class DataStoreUtil {
     }
 
     public static Filter getThemaFilter(Themas t) throws CQLException {
-        String adminQuery = t.getAdmin_query();
+        String adminQuery = t.getGegevensbron().getAdmin_query();
         if ((adminQuery != null) && (adminQuery.length() > 0)) {
             // Als er nog een oude select staat met ? dan maar fout laten gaan
             return CQL.toFilter(adminQuery);
@@ -500,7 +328,7 @@ public class DataStoreUtil {
         /* TODO
          * spatial tabel indien null check ?
         */
-        return getSchema(ds, t.getAdmin_tabel());
+        return getSchema(ds, t.getGegevensbron().getAdmin_tabel());
     }
 
     /**
@@ -689,17 +517,22 @@ public class DataStoreUtil {
      *
      */
     static public Name getThemaGeomName(Themas t, GisPrincipal user) throws IOException, Exception {
-        Bron b = t.getConnectie(user);
+        Gegevensbron gb = t.getGegevensbron();
+        Bron b = null;
+
+        if (gb != null) {
+            b = gb.getBron(user);
+        }
+
         if (b == null) {
             return null;
         }
-        QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel());
-        if (n == null || n.getLocalPart() == null) {
-            n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
-        }
+
+        QName n = DataStoreUtil.convertFullnameToQName(gb.getAdmin_tabel());
         if (n == null || n.getLocalPart() == null) {
             return null;
         }
+
         DataStore ds = b.toDatastore();
         try {
             SimpleFeatureType sft = ds.getSchema(n.getLocalPart());
@@ -722,6 +555,7 @@ public class DataStoreUtil {
         if (n == null || n.getLocalPart() == null) {
             return null;
         }
+
         DataStore ds = b.toDatastore();
         try {
             SimpleFeatureType sft = ds.getSchema(n.getLocalPart());
@@ -735,17 +569,22 @@ public class DataStoreUtil {
     }
 
     static public String getThemaGeomType(Themas t, GisPrincipal user) throws IOException, Exception {
-        Bron b = t.getConnectie(user);
+        Gegevensbron gb = t.getGegevensbron();
+        Bron b = null;
+        
+        if (gb != null) {
+            b = gb.getBron(user);
+        }
+        
         if (b == null) {
             return null;
         }
-        QName n = DataStoreUtil.convertFullnameToQName(t.getSpatial_tabel());
-        if (n == null || n.getLocalPart() == null) {
-            n = DataStoreUtil.convertFullnameToQName(t.getAdmin_tabel());
-        }
+        
+        QName n = DataStoreUtil.convertFullnameToQName(gb.getAdmin_tabel());
         if (n == null || n.getLocalPart() == null) {
             return null;
         }
+
         DataStore ds = b.toDatastore();
         try {
             SimpleFeatureType sft = ds.getSchema(n.getLocalPart());
