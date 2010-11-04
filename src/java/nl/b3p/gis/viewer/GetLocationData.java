@@ -74,7 +74,18 @@ public class GetLocationData {
         try {
             sess = HibernateUtil.getSessionFactory().getCurrentSession();
             sess.beginTransaction();
-            Themas t = (Themas) sess.get(Themas.class, new Integer(themaId));
+            
+            Themas t = null;
+            Integer id = -1;
+
+            try {
+                id = new Integer(themaId);
+            } catch (NumberFormatException ex) {
+                log.error("Themaid is leeg. NumberFormatException bij maken Integer");
+            }
+
+            t = (Themas) sess.get(Themas.class, id);
+
             if (t == null) {
                 return wkt;
             }

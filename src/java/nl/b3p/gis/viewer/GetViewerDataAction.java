@@ -39,6 +39,7 @@ import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Configuratie;
+import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
@@ -230,7 +231,7 @@ public class GetViewerDataAction extends BaseGisAction {
         return mapping.findForward("admindata1");
     }
 
-    protected void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
+    protected void collectThemaRegels_old(ActionMapping mapping, HttpServletRequest request,
             ArrayList themas, ArrayList regels, ArrayList ti, boolean locatie) {
         for (int i = 0; i < themas.size(); i++) {
             Themas t = (Themas) themas.get(i);
@@ -252,6 +253,65 @@ public class GetViewerDataAction extends BaseGisAction {
                     }
 
                     Bron b = t.getConnectie(request);
+                    List l = null;
+                    if (b != null) {
+                        if (themadatanummer == regels.size()) {
+                            regels.add(new ArrayList());
+                        }
+                        l = getThemaObjectsWithGeom(t, thema_items, request);
+                    }
+                    if (l != null && l.size() > 0) {
+                        ((ArrayList) regels.get(themadatanummer)).addAll(l);
+                        if (themadatanummer == ti.size()) {
+                            ti.add(thema_items);
+                        }
+                    }
+                } catch (Exception e) {
+                    String mapserver4Hack = "msQueryByRect(): Search returned no results. No matching record(s) found.";
+                    if (mapserver4Hack.equalsIgnoreCase(e.getMessage())) {
+                        // mapserver 4 returns service exception when no hits, this is not compliant.
+                    } else {
+                        String msg = e.getMessage();
+
+                        if (msg != null) {
+                            if (msg.contains("PropertyDescriptor is null - did you request a property that does not exist?")) {
+                                msg = "U vraagt een attribuut op dat niet bestaat, waarschijnlijk is de configuratie niet in orde, raadpleeg de beheerder!";
+                            }
+                        } else {
+                            msg = "Kon objectinfo niet ophalen.";
+                        }
+
+                        log.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
+                        addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + msg);
+                    }
+                }
+            }
+        }
+    }
+
+    protected void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
+            ArrayList themas, ArrayList regels, ArrayList ti, boolean locatie) {
+        for (int i = 0; i < themas.size(); i++) {
+            Themas t = (Themas) themas.get(i);
+            if (locatie && !t.isLocatie_thema()) {
+                continue;
+            }
+
+            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+            if (t.hasValidAdmindataSource(user)) {
+                try {
+                    Gegevensbron gb = t.getGegevensbron();
+                    List thema_items = SpatialUtil.getThemaData(gb, true);
+                    int themadatanummer = 0;
+                    themadatanummer = ti.size();
+                    for (int a = 0; a < ti.size(); a++) {
+                        if (compareThemaDataLists((List) ti.get(a), thema_items)) {
+                            themadatanummer = a;
+                            break;
+                        }
+                    }
+
+                    Bron b = gb.getBron(request);
                     List l = null;
                     if (b != null) {
                         if (themadatanummer == regels.size()) {
@@ -310,10 +370,12 @@ public class GetViewerDataAction extends BaseGisAction {
             return mapping.findForward("aanvullendeinfo");
         }
 
-        List<ThemaData> thema_items = SpatialUtil.getThemaData(t, false);
+        Gegevensbron gb = t.getGegevensbron();
+
+        List<ThemaData> thema_items = SpatialUtil.getThemaData(gb, false);
         request.setAttribute("thema_items", thema_items);
 
-        Bron b = t.getConnectie(request);
+        Bron b = gb.getBron(request);
         if (b != null) {
             request.setAttribute("regels", getThemaObjectsWithId(t, thema_items, request));
         }
@@ -384,9 +446,11 @@ public class GetViewerDataAction extends BaseGisAction {
 
         // filter op locatie thema's
 
-        Bron b = t.getConnectie(request);
+        Gegevensbron gb = t.getGegevensbron();
+        Bron b = gb.getBron(request);
+
         List<String> propnames = DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items);
-        List<Feature> features = DataStoreUtil.getFeatures(b, t, geom, extraFilter, propnames, null, false);
+        List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, extraFilter, propnames, null, false);
         List<AdminDataRowBean> regels = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
@@ -403,7 +467,9 @@ public class GetViewerDataAction extends BaseGisAction {
             return null;
         }
 
-        String adminPk = DataStoreUtil.convertFullnameToQName(t.getAdmin_pk()).getLocalPart();
+        Gegevensbron gb = t.getGegevensbron();
+
+        String adminPk = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
         String id = null;
         Filter filter = null;
         if (adminPk != null) {
@@ -428,9 +494,9 @@ public class GetViewerDataAction extends BaseGisAction {
         }
 
         List<ReferencedEnvelope> kaartEnvelopes = new ArrayList<ReferencedEnvelope>();
-        Bron b = t.getConnectie(request);
+        Bron b = gb.getBron(request);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(thema_items);
-        List<Feature> features = DataStoreUtil.getFeatures(b, t, null, filter, propnames, null, true);
+        List<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, true);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             if (addKaart) {

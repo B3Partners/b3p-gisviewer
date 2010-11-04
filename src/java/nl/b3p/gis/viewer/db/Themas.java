@@ -301,6 +301,10 @@ public class Themas implements Comparable {
      */
     // <editor-fold defaultstate="" desc="public String getAdmin_pk()">
     public String getAdmin_pk() {
+
+        if (getGegevensbron() != null)
+            return getGegevensbron().getAdmin_pk();
+
         return admin_pk;
     }
     // </editor-fold>
@@ -789,7 +793,7 @@ public class Themas implements Comparable {
         this.layoutadmindata = layoutadmindata;
     }
 
-    public boolean hasValidAdmindataSource(GisPrincipal user) {
+    public boolean hasValidAdmindataSource_old(GisPrincipal user) {
         if (getAdmin_tabel() == null || getAdmin_tabel().length() == 0) {
             return false;
         }
@@ -798,6 +802,24 @@ public class Themas implements Comparable {
             // moet kaartenbalie wfs zijn want geen bron
             // we zoeken naar featuretype met zelfde naam
             return user.acceptWfsFeatureType(getAdmin_tabel());
+        } else {
+            // andere externe bronnen checken we niet, mogelijk later
+            return true;
+        }
+    }
+
+    public boolean hasValidAdmindataSource(GisPrincipal user) {
+
+        if (getGegevensbron() == null)
+            return false;
+
+        Gegevensbron gb = getGegevensbron();
+        Bron b = gb.getBron();
+
+        if (b == null) {
+            // moet kaartenbalie wfs zijn want geen bron
+            // we zoeken naar featuretype met zelfde naam
+            return user.acceptWfsFeatureType(gb.getAdmin_tabel());
         } else {
             // andere externe bronnen checken we niet, mogelijk later
             return true;
