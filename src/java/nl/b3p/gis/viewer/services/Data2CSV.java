@@ -43,9 +43,11 @@ public class Data2CSV extends HttpServlet {
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String themaId = request.getParameter("themaId");
+
+        String gegevensbronId = request.getParameter("themaId");
         String objectIds = request.getParameter("objectIds");
         String seperator = request.getParameter("seperator");
+
         if (seperator == null || seperator.length() != 1) {
             seperator = ",";
         }
@@ -54,7 +56,7 @@ public class Data2CSV extends HttpServlet {
         CsvOutputStream cos = new CsvOutputStream(new OutputStreamWriter(out), sep, false);
         Transaction tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
         try {
-            Themas thema = SpatialUtil.getThema(themaId);
+            Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
             
             String[] ids = null;
             if (objectIds != null) {
@@ -66,20 +68,24 @@ public class Data2CSV extends HttpServlet {
                 writeErrorMessage(response, out, "Kan de data niet ophalen omdat u niet bent ingelogd.");
                 return;
             }
+            /*
             if (!themaAllowed(thema, user)) {
                 writeErrorMessage(response, out, "U heeft geen rechten op dit thema.");
                 return;
             }
 
-            Bron b = thema.getConnectie(request);
-            if (b==null){
-                throw new ServletException("Thema with id: "+thema.getId()+" has no connection");
+            */
+
+            Bron b = gb.getBron(request);
+
+            if (b == null){
+                throw new ServletException("Gegevensbron (id " + gb.getId() + ") Bron null.");
             }
 
             List data = null;
-            String[] propertyNames = getThemaPropertyNames(thema);
+            String[] propertyNames = getThemaPropertyNames(gb);
             try {
-                data = getData(b, thema, ids, propertyNames);
+                data = getData(b, gb, ids, propertyNames);
             } catch (Exception ex) {
                 writeErrorMessage(response, out, ex.getMessage());
                 log.error("Fout bij laden csv data.",ex);
@@ -87,7 +93,7 @@ public class Data2CSV extends HttpServlet {
             }
 
             response.setContentType("text/csv");
-            response.setHeader(FileUploadBase.CONTENT_DISPOSITION, "attachment; filename=\"" + thema.getNaam() + ".csv\";");
+            response.setHeader(FileUploadBase.CONTENT_DISPOSITION, "attachment; filename=\"" + gb.getNaam() + ".csv\";");
             
             cos.writeRecord(propertyNames);
             for (int i = 0; i < data.size(); i++) {
@@ -106,12 +112,10 @@ public class Data2CSV extends HttpServlet {
         }
     }
     //TODO: Kijken of uitgebreide data ook moet worden geexporteerd.
-
-    /**
-     * Haal de kolomnamen op uit de themadata. Elke kolomnaam wordt maar 1 keer toegevoegd.
-     */
-    public String[] getThemaPropertyNames(Themas thema) {
-        Set themadata = thema.getGegevensbron().getThemaData();
+    
+    public String[] getThemaPropertyNames(Gegevensbron gb) {
+        Set themadata = gb.getThemaData();
+        
         Iterator it = themadata.iterator();
         ArrayList columns = new ArrayList();
         while (it.hasNext()) {
@@ -129,12 +133,7 @@ public class Data2CSV extends HttpServlet {
         return s;
     }
 
-    /**
-     * Haalt de data op. Van een thema (t) waarvan de pk is meegegeven
-     */
-    public List getData(Bron b, Themas t, String[] pks, String[] propertyNames)throws IOException, Exception {
-
-        Gegevensbron gb = t.getGegevensbron();
+    public List getData(Bron b, Gegevensbron gb, String[] pks, String[] propertyNames)throws IOException, Exception {
 
         Filter filter = FilterBuilder.createOrEqualsFilter(
                 DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart(), pks);
@@ -145,7 +144,7 @@ public class Data2CSV extends HttpServlet {
         for (int i=0; i < features.size(); i++) {
             Feature f = features.get(i);
             String[] row = new String[propertyNames.length];
-            
+
             for (int p=0; p< propertyNames.length; p++) {
                 Property property = f.getProperty(propertyNames[p]);
                 if (property!=null && property.getValue()!=null && property.getValue().toString()!=null){
@@ -158,6 +157,7 @@ public class Data2CSV extends HttpServlet {
         }
         return result;
     }
+
     /**
      * Writes a error message to the response
      */

@@ -52,7 +52,6 @@ public class GetLocationData {
             sess = HibernateUtil.getSessionFactory().getCurrentSession();
             sess.beginTransaction();
             
-            Themas t = null;
             Integer id = -1;
 
             try {
@@ -61,16 +60,15 @@ public class GetLocationData {
                 log.error("Themaid is leeg. NumberFormatException bij maken Integer");
             }
 
-            t = (Themas) sess.get(Themas.class, id);
-
-            if (t == null) {
-                return wkt;
-            }
-
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
 
-            Gegevensbron gb = t.getGegevensbron();
+            Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, id);
+
+            if (gb == null) {
+                return wkt;
+            }
+
             Bron b = gb.getBron(request);
 
             if (b == null) {
@@ -79,7 +77,7 @@ public class GetLocationData {
             DataStore ds = b.toDatastore();
             try {
                 //haal alleen de geometry op.
-                String geometryName = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
+                String geometryName = DataStoreUtil.getSchema(ds, gb).getGeometryDescriptor().getLocalName();
                 ArrayList<String> propertyNames = new ArrayList();
                 propertyNames.add(geometryName);
                 ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);

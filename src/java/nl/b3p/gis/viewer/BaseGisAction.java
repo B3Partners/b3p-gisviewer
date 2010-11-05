@@ -19,6 +19,7 @@ import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.DataTypen;
+import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
@@ -123,6 +124,32 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     protected Themas getThema(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) {
         String themaid = (String) request.getParameter("themaid");
         return getThema(themaid, request);
+    }
+    
+    protected Gegevensbron getGegevensbron(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) {
+        String bronId = (String) request.getParameter("themaid");
+        
+        return getGegevensbron(bronId, request);
+    }
+
+    private Gegevensbron getGegevensbron(String bronId, HttpServletRequest request) {
+        Gegevensbron gb = SpatialUtil.getGegevensbron(bronId);
+
+        if (!HibernateUtil.isCheckLoginKaartenbalie()) {
+            return gb;
+        }
+
+        // Zoek layers die via principal binnen komen
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        if (user == null) {
+            return null;
+        }
+        List layersFromRoles = user.getLayerNames(false);
+        if (layersFromRoles == null) {
+            return null;
+        }
+
+        return gb;
     }
 
     protected Themas getThema(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, boolean analysethemaid) {
@@ -358,24 +385,10 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     }
     // </editor-fold>
 
-    /**
-     * Zelfde als getRegel met Resultset maar nu met Feature
-     *
-     * @param rs ResultSet
-     * @param t Themas
-     * @param thema_items List
-     *
-     * @return List
-     *
-     * @throws SQLException
-     * @throws UnsupportedEncodingException
-     *
-     * @see Themas
-     */
-    protected AdminDataRowBean getRegel(Feature f, Themas t, List<ThemaData> thema_items) throws SQLException, UnsupportedEncodingException, Exception {
+    protected AdminDataRowBean getRegel(Feature f, Gegevensbron gb, List<ThemaData> thema_items) throws SQLException, UnsupportedEncodingException, Exception {
         AdminDataRowBean regel = new AdminDataRowBean();
 
-        String adminPk = DataStoreUtil.convertFullnameToQName(t.getGegevensbron().getAdmin_pk()).getLocalPart();
+        String adminPk = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
         if (adminPk != null) {
             regel.setPrimaryKey(f.getProperty(adminPk).getValue());
         }
@@ -384,7 +397,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             ThemaData td = (ThemaData) it.next();
             /*
              * Controleer of de kolomnaam van dit themadata object wel voorkomt in de feature.
-             * zoniet kan het zijn dat er een prefix ns in staat. Die moet er dan van afgehaald worden. 
+             * zoniet kan het zijn dat er een prefix ns in staat. Die moet er dan van afgehaald worden.
              * Als het dan nog steeds niet bestaat: een lege toevoegen.
              */
             String kolomnaam = td.getKolomnaam();
@@ -420,9 +433,11 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 } else {
                     url = new StringBuffer();
                 }
+
+                /* BOY: Welk id moet hier geappend worden ? */
                 url.append(Themas.THEMAID);
                 url.append("=");
-                url.append(t.getId());
+                url.append(gb.getId());
 
                 Object value = null;
                 if (adminPk != null) {

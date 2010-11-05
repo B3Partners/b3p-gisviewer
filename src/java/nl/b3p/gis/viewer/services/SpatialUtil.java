@@ -70,6 +70,20 @@ public class SpatialUtil {
         Themas t = (Themas) sess.get(Themas.class, id);
         return t;
     }
+    
+    public static Gegevensbron getGegevensbron(String gbId) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        if (gbId == null || gbId.length() == 0) {
+            return null;
+        }
+
+        Integer id = new Integer(gbId);
+        Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, id);
+        
+        return gb;
+    }
+
+
 
     public static List getValidThemas(boolean locatie) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();

@@ -12,6 +12,8 @@ public class Gegevensbron implements Comparable {
 
     private static final Log log = LogFactory.getLog(Gegevensbron.class);
 
+    public static final String GEGEVENSBRONID = "gegevensbronid";
+
     private Integer id;
 
     private String naam;

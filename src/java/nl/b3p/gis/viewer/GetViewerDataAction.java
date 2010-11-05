@@ -34,7 +34,8 @@ import org.opengis.filter.Filter;
 
 public class GetViewerDataAction extends BaseGisAction {
 
-    private static final Log log = LogFactory.getLog(GetViewerDataAction.class);
+    private static final Log logger = LogFactory.getLog(GetViewerDataAction.class);
+
     protected static final String ADMINDATA = "admindata";
     protected static final String AANVULLENDEINFO = "aanvullendeinfo";
     protected static final String METADATA = "metadata";
@@ -140,7 +141,7 @@ public class GetViewerDataAction extends BaseGisAction {
         try {
             rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
         } catch (Exception ex) {
-            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
+            logger.debug("Fout bij ophalen configKeeper configuratie: " + ex);
         }
 
         /* alleen doen als configuratie tabel bestaat */
@@ -260,7 +261,7 @@ public class GetViewerDataAction extends BaseGisAction {
                             msg = "Kon objectinfo niet ophalen.";
                         }
 
-                        log.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
+                        logger.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
                         addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + msg);
                     }
                 }
@@ -285,19 +286,18 @@ public class GetViewerDataAction extends BaseGisAction {
      * regels
      */
     public ActionForward aanvullendeinfo(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        Themas t = getThema(mapping, dynaForm, request);
-        if (t == null) {
+        Gegevensbron gb = getGegevensbron(mapping, dynaForm, request);
+
+        if (gb == null) {
             return mapping.findForward("aanvullendeinfo");
         }
-
-        Gegevensbron gb = t.getGegevensbron();
 
         List<ThemaData> thema_items = SpatialUtil.getThemaData(gb, false);
         request.setAttribute("thema_items", thema_items);
 
         Bron b = gb.getBron(request);
         if (b != null) {
-            request.setAttribute("regels", getThemaObjectsWithId(t, thema_items, request));
+            request.setAttribute("regels", getThemaObjectsWithId(gb, thema_items, request));
         }
         return mapping.findForward("aanvullendeinfo");
     }
@@ -374,20 +374,18 @@ public class GetViewerDataAction extends BaseGisAction {
         List<AdminDataRowBean> regels = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
-            regels.add(getRegel(f, t, thema_items));
+            regels.add(getRegel(f, gb, thema_items));
         }
         return regels;
     }
 
-    protected List getThemaObjectsWithId(Themas t, List thema_items, HttpServletRequest request) throws Exception {
-        if (t == null) {
+    protected List getThemaObjectsWithId(Gegevensbron gb, List thema_items, HttpServletRequest request) throws Exception {
+        if (gb == null) {
             return null;
         }
         if (thema_items == null || thema_items.isEmpty()) {
             return null;
         }
-
-        Gegevensbron gb = t.getGegevensbron();
 
         String adminPk = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
         String id = null;
@@ -425,7 +423,7 @@ public class GetViewerDataAction extends BaseGisAction {
                     kaartEnvelopes.add(env);
                 }
             }
-            regels.add(getRegel(f, t, thema_items));
+            regels.add(getRegel(f, gb, thema_items));
         }
         if (addKaart) {
             request.setAttribute("envelops", kaartEnvelopes);
