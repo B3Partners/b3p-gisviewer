@@ -9,11 +9,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import nl.b3p.gis.viewer.db.Clusters;
+import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.db.WaardeTypen;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.Query;
@@ -109,7 +112,41 @@ public class SpatialUtil {
         if (basisregel) {
             q.setBoolean("br", basisregel);
         }
-        return q.list();
+
+        List themadata = q.list();
+
+        /* Extra kolommen toevoegen als deze Gegevensbron nog kinderen heeft */
+        List bronnen = sess.createQuery("from Gegevensbron where parent = :parentId")
+                .setInteger("parentId", gb.getId()).list();
+
+        if (bronnen != null) {
+            Iterator iter = bronnen.iterator();
+
+            while (iter.hasNext()) {
+                Gegevensbron child = (Gegevensbron) iter.next();
+
+                ThemaData td = new ThemaData();
+                td.setLabel("Child");
+                td.setBasisregel(true);
+                td.setKolombreedte(50);
+
+                WaardeTypen wt = new WaardeTypen();
+                wt.setId(1);
+                td.setWaardeType(wt);
+
+                DataTypen dt = new DataTypen();
+                dt.setId(2);
+                td.setDataType(dt);
+                
+                td.setCommando("viewerdata.do?nieuwemethode=t&id=" + child.getId());
+                td.setDataorder(new Integer(1000));
+                td.setGegevensbron(child);
+
+                themadata.add(td);
+            }
+        }
+
+        return themadata;
     }
 
     public static String setAttributeValue(Connection conn, String tableName, String keyName, int keyValue, String attributeName, String newValue) throws SQLException {
