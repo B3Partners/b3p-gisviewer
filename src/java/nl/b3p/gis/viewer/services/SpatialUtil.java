@@ -126,7 +126,7 @@ public class SpatialUtil {
                 Gegevensbron child = (Gegevensbron) iter.next();
 
                 ThemaData td = new ThemaData();
-                td.setLabel("Child");
+                td.setLabel(child.getNaam());
                 td.setBasisregel(true);
                 td.setKolombreedte(50);
 
@@ -138,7 +138,7 @@ public class SpatialUtil {
                 dt.setId(2);
                 td.setDataType(dt);
                 
-                td.setCommando("viewerdata.do?nieuwemethode=t&id=" + child.getId());
+                td.setCommando("viewerdata.do?aanvullendeinfo=t&amp;gegevensbronid=" + child.getId() + "&amp;");
                 td.setDataorder(new Integer(1000));
                 td.setGegevensbron(child);
 

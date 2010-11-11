@@ -292,10 +292,20 @@ public class GetViewerDataAction extends BaseGisAction {
             return mapping.findForward("aanvullendeinfo");
         }
 
+        String gegevensbronId = (String) request.getParameter("gegevensbronid");
+
+        if (gegevensbronId != null) {
+            gb = SpatialUtil.getGegevensbron(gegevensbronId);
+
+            String fkId = (String) request.getParameter("id");
+            request.setAttribute("fkId", fkId);
+        }
+
         List<ThemaData> thema_items = SpatialUtil.getThemaData(gb, false);
         request.setAttribute("thema_items", thema_items);
 
         Bron b = gb.getBron(request);
+
         if (b != null) {
             request.setAttribute("regels", getThemaObjectsWithId(gb, thema_items, request));
         }
@@ -391,7 +401,20 @@ public class GetViewerDataAction extends BaseGisAction {
         String id = null;
         Filter filter = null;
         if (adminPk != null) {
+
             id = request.getParameter(adminPk);
+
+            /* Als er een foreign key is ingevuld dan een filter toevoegen op
+             * dit veld */
+            String fkField = gb.getAdmin_fk();
+            if (fkField != null) {
+                String fkId = (String) request.getAttribute("fkId");
+
+                if (fkId != null) {
+                    filter = FilterBuilder.createEqualsFilter(gb.getAdmin_fk(), fkId);
+                }
+            }
+
             if (id != null) {
                 filter = FilterBuilder.createEqualsFilter(adminPk, id);
             } else {
