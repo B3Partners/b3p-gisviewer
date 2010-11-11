@@ -119,9 +119,6 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <class name="nl.b3p.gis.viewer.db.Gegevensbron">
         <id name="id" type="int">
             <column name="id" not-null="true"/>
-            <generator class="sequence">
-            <param name="sequence">gegevensbron_id_seq</param>
-            </generator>
         </id>
         <property name="naam"/>
         <many-to-one name="bron" lazy="false"/>
