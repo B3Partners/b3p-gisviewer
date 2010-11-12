@@ -140,7 +140,7 @@ public class SpatialUtil {
                 
                 td.setCommando("viewerdata.do?aanvullendeinfo=t&amp;gegevensbronid=" + child.getId() + "&amp;");
                 td.setDataorder(new Integer(1000));
-                td.setGegevensbron(child);
+                td.setGegevensbron(gb);
 
                 themadata.add(td);
             }

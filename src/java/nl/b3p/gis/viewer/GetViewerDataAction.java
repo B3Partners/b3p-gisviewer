@@ -407,15 +407,18 @@ public class GetViewerDataAction extends BaseGisAction {
             /* Als er een foreign key is ingevuld dan een filter toevoegen op
              * dit veld */
             String fkField = gb.getAdmin_fk();
+            String fkId = null;
+
             if (fkField != null) {
-                String fkId = (String) request.getAttribute("fkId");
+                fkId = (String) request.getAttribute("fkId");
 
                 if (fkId != null) {
                     filter = FilterBuilder.createEqualsFilter(gb.getAdmin_fk(), fkId);
                 }
             }
 
-            if (id != null) {
+            /* alleen adminpk als filter adden als foreign key leeg is */
+            if (id != null && fkId == null) {
                 filter = FilterBuilder.createEqualsFilter(adminPk, id);
             } else {
                 // tbv data2info meerdere id's
