@@ -5,6 +5,7 @@ import com.vividsolutions.jts.geom.Point;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,6 +23,7 @@ import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.hibernate.Session;
 import nl.b3p.gis.geotools.DataStoreUtil;
+import org.apache.struts.action.ActionMessage;
 
 public class MeldingAction extends ViewerCrudAction {
 
@@ -42,15 +44,15 @@ public class MeldingAction extends ViewerCrudAction {
         ExtendedMethodProperties hibProp = null;
 
         hibProp = new ExtendedMethodProperties(PREPARE_MELDING);
-        hibProp.setDefaultForwardName(SUCCESS);
-        hibProp.setAlternateForwardName(FAILURE);
+        hibProp.setDefaultForwardName(MELDINGFW);
+        hibProp.setAlternateForwardName(MELDINGFW);
         hibProp.setAlternateMessageKey("error.preparemelding.failed");
         map.put(PREPARE_MELDING, hibProp);
 
         hibProp = new ExtendedMethodProperties(SEND_MELDING);
-        hibProp.setDefaultForwardName(SUCCESS);
-        hibProp.setAlternateMessageKey("message.sendmelding.success");
-        hibProp.setAlternateForwardName(FAILURE);
+        hibProp.setDefaultForwardName(MELDINGFW);
+        hibProp.setDefaultMessageKey("message.sendmelding.success");
+        hibProp.setAlternateForwardName(MELDINGFW);
         hibProp.setAlternateMessageKey("error.sendmelding.failed");
         map.put(SEND_MELDING, hibProp);
 
@@ -82,7 +84,7 @@ public class MeldingAction extends ViewerCrudAction {
         super.createLists(form, request);
         request.setAttribute("meldingTypes", new String[]{"klacht", "Suggestie"});
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        request.setAttribute("allMeldingen", sess.createQuery("from Meldingen order by kenmerk").list());
+//        request.setAttribute("allMeldingen", sess.createQuery("from Meldingen order by kenmerk").list());
     }
 
     public ActionForward prepareMelding(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -90,7 +92,7 @@ public class MeldingAction extends ViewerCrudAction {
         
         createLists(dynaForm, request);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
-        return mapping.findForward(MELDINGFW);
+        return getDefaultForward(mapping, request);
     }
 
     public ActionForward sendMelding(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -108,30 +110,13 @@ public class MeldingAction extends ViewerCrudAction {
         long now = (new Date()).getTime();
         m.setKenmerk(Long.toString(now, 32));
         m.setDatumOntvangst(new Date());
-        dynaForm.set("opmerking", constructMessage(m));
 
         createLists(dynaForm, request);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
-        return mapping.findForward(MELDINGFW);
-    }
+        ActionMessage amsg = new ActionMessage("melding.kenmerk", m.getKenmerk());
+        addAttributeMessage(request, ACKNOWLEDGE_MESSAGES, amsg);
 
-    private String constructMessage(Meldingen m) {
-        String message = "Een bericht";
-
-        Geometry geom = m.getTheGeom();
-        if (geom != null) {
-            Point p = geom.getCentroid();
-            message += " voor locatie met RD-coordinaten (";
-            message += (int) p.getX();
-            message += ",";
-            message += (int) p.getY();
-            message += ")";
-        }
-        message += " is verzonden naar de beheerder.";
-        message += " Uw referentienummer is: \"" + m.getKenmerk() +"\".";
-
-        return message;
-
+        return getDefaultForward(mapping, request);
     }
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
