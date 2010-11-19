@@ -1,20 +1,21 @@
 package nl.b3p.gis.viewer;
 
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.Point;
+import java.io.IOException;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
+import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Meldingen;
+import nl.b3p.gis.viewer.db.Gegevensbron;
+import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.services.HibernateUtil;
+import nl.b3p.gis.viewer.services.GisPrincipal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionErrors;
@@ -24,6 +25,11 @@ import org.apache.struts.validator.DynaValidatorForm;
 import org.hibernate.Session;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import org.apache.struts.action.ActionMessage;
+import org.geotools.data.DataStore;
+import org.geotools.data.FeatureWriter;
+import org.geotools.data.Transaction;
+import org.opengis.feature.simple.SimpleFeature;
+import org.opengis.feature.simple.SimpleFeatureType;
 
 public class MeldingAction extends ViewerCrudAction {
 
@@ -82,14 +88,14 @@ public class MeldingAction extends ViewerCrudAction {
 
     protected void createLists(DynaValidatorForm form, HttpServletRequest request) throws Exception {
         super.createLists(form, request);
-        request.setAttribute("meldingTypes", new String[]{"klacht", "Suggestie"});
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 //        request.setAttribute("allMeldingen", sess.createQuery("from Meldingen order by kenmerk").list());
     }
 
     public ActionForward prepareMelding(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        populateFromInstellingen(dynaForm);
-        
+        dynaForm.initialize(mapping);
+        populateFromInstellingen(dynaForm, request);
+
         createLists(dynaForm, request);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
@@ -99,6 +105,7 @@ public class MeldingAction extends ViewerCrudAction {
 
         ActionErrors errors = dynaForm.validate(mapping, request);
         if (!errors.isEmpty()) {
+            createLists(dynaForm, request);
             addMessages(request, errors);
             prepareMethod(dynaForm, request, EDIT, LIST);
             addAlternateMessage(mapping, request, VALIDATION_ERROR_KEY);
@@ -107,16 +114,47 @@ public class MeldingAction extends ViewerCrudAction {
 
         Meldingen m = new Meldingen();
         populateMeldingenObject(dynaForm, m, request);
-        long now = (new Date()).getTime();
-        m.setKenmerk(Long.toString(now, 32));
+        long stamp = (new Date()).getTime() - 1290000000000l;
+        String kenmerk = dynaForm.getString("prefixKenmerk") +
+                Long.toString(stamp, 32);
+        m.setKenmerk(kenmerk);
         m.setDatumOntvangst(new Date());
 
+        Integer ggbId = (Integer) dynaForm.get("gegevensbron");
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Gegevensbron ggb = (Gegevensbron) sess.get(Gegevensbron.class, ggbId);
+        DataStore ds = ggb.getBron().toDatastore();
+        try {
+            String typename = ggb.getAdmin_tabel();
+            SimpleFeatureType ft = ds.getSchema(typename);
+            SimpleFeature f = m.getFeature(ft);
+            writeMelding(ds, f);
+        } finally {
+            ds.dispose();
+        }
+
+        populateMeldingenForm(m, dynaForm, request);
         createLists(dynaForm, request);
+
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         ActionMessage amsg = new ActionMessage("melding.kenmerk", m.getKenmerk());
         addAttributeMessage(request, ACKNOWLEDGE_MESSAGES, amsg);
 
         return getDefaultForward(mapping, request);
+    }
+
+    private void writeMelding(DataStore dataStore2Write, SimpleFeature feature) throws IOException {
+        String typename = feature.getFeatureType().getTypeName();
+        FeatureWriter writer = dataStore2Write.getFeatureWriterAppend(typename, Transaction.AUTO_COMMIT);
+        try {
+            SimpleFeature newFeature = (SimpleFeature) writer.next();
+            newFeature.setAttributes(feature.getAttributes());
+            writer.write();
+        } finally {
+            if (writer != null) {
+                writer.close();
+            }
+        }
     }
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -211,11 +249,13 @@ public class MeldingAction extends ViewerCrudAction {
         return getDefaultForward(mapping, request);
     }
 
-    private void populateMeldingenForm(Meldingen m, DynaValidatorForm dynaForm, HttpServletRequest request) {
+    private void populateMeldingenForm(Meldingen m, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         if (m == null) {
             return;
         }
-        dynaForm.set("meldingID", Integer.toString(m.getId().intValue()));
+        if (m.getId() != null) {
+            dynaForm.set("meldingID", Integer.toString(m.getId().intValue()));
+        }
         dynaForm.set("meldingTekst", m.getMeldingTekst());
         dynaForm.set("emailMelder", m.getEmailZender());
         dynaForm.set("adresMelder", m.getAdresZender());
@@ -225,22 +265,73 @@ public class MeldingAction extends ViewerCrudAction {
         dynaForm.set("meldingCommentaar", m.getMeldingCommentaar());
         dynaForm.set("kenmerk", m.getKenmerk());
 
-        populateFromInstellingen(dynaForm);
+        populateFromInstellingen(dynaForm, request);
     }
 
-    private void populateFromInstellingen(DynaValidatorForm dynaForm) {
-        dynaForm.set("welkomTekst", "");
-        dynaForm.set("prefixKenmerk", "");
-        dynaForm.set("zendEmailMelder", new Boolean(false));
-        dynaForm.set("layoutStylesheetMelder", "");
-        dynaForm.set("naamBehandelaar", "balie");
-        dynaForm.set("emailBehandelaar", "");
-        dynaForm.set("zendEmailBehandelaar", new Boolean(false));
-        dynaForm.set("layoutStylesheetBehandelaar", "");
-        dynaForm.set("objectSoort", "Point");
-        dynaForm.set("icoonTekentool", "");
+    private void populateFromInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
+
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        Set roles = user.getRoles();
+
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Configuratie rollenPrio = null;
+        try {
+            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
+        } catch (Exception ex) {
+            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
+        }
+
+        String[] configRollen = null;
+
+        if (rollenPrio != null && rollenPrio.getPropval() != null) {
+            configRollen = rollenPrio.getPropval().split(",");
+        }
+
+        String echteRol = null;
+
+        Boolean foundRole = false;
+        for (int i = 0; i < configRollen.length; i++) {
+            if (foundRole) {
+                break;
+            }
+            String rolnaam = configRollen[i];
+            Iterator iter = roles.iterator();
+            while (iter.hasNext()) {
+                String inlogRol = iter.next().toString();
+                if (rolnaam.equals(inlogRol)) {
+                    echteRol = rolnaam;
+                    foundRole = true;
+                    break;
+                }
+            }
+        }
+
+        Map map = configKeeper.getConfigMap(echteRol);
+        if ((map == null) || (map.size() == 0)) {
+            map = configKeeper.getConfigMap("default");
+        }
+
+        String[] mts = ((String) map.get("meldingType")).split(",");
+        request.setAttribute("meldingTypes", mts);
+
+        String[] mss = ((String) map.get("meldingStatus")).split(",");
+        request.setAttribute("meldingStatus", mss);
+
+        if (mss != null && mss.length > 0) {
+            dynaForm.set("meldingStatus", mss[0]);
+        }
+        dynaForm.set("welkomTekst", map.get("meldingWelkomtekst"));
+        dynaForm.set("prefixKenmerk", map.get("meldingPrefix"));
+        dynaForm.set("zendEmailMelder", map.get("meldingEmailmelder"));
+        dynaForm.set("layoutStylesheetMelder", map.get("meldingLayoutEmailMelder"));
+        dynaForm.set("naamBehandelaar", map.get("meldingNaam"));
+        dynaForm.set("emailBehandelaar", map.get("meldingEmail"));
+        dynaForm.set("zendEmailBehandelaar", map.get("meldingEmailBehandelaar"));
+        dynaForm.set("layoutStylesheetBehandelaar", map.get("meldingLayoutEmailBehandelaar"));
+        dynaForm.set("objectSoort", map.get("meldingObjectSoort"));
+        dynaForm.set("icoonTekentool", map.get("meldingTekentoolIcoon"));
         dynaForm.set("opmerking", "Nog geen melding verstuurd!");
-        dynaForm.set("gegevensbron", "1");
+        dynaForm.set("gegevensbron", map.get("meldingGegevensbron"));
 
     }
 

@@ -117,6 +117,7 @@
     create table zoekconfiguratie (
         id number(10,0) not null,
         naam varchar2(255 char),
+        resultlistdynamic number(1,0),
         featuretype varchar2(255 char),
         parentbron number(10,0),
         parentzoekconfiguratie number(10,0),
@@ -133,6 +134,7 @@
         zoekconfiguratie number(10,0),
         inputtype number(10,0),
         inputsize number(10,0),
+        inputzoekconfiguratie number(10,0),
         primary key (id)
     );
 
@@ -184,6 +186,11 @@
     alter table zoekveld 
         add constraint FK239789827EE6CA2B 
         foreign key (zoekconfiguratie) 
+        references zoekconfiguratie;
+
+    alter table zoekveld 
+        add constraint FK239789828F5D4DF5 
+        foreign key (inputzoekconfiguratie) 
         references zoekconfiguratie;
 
     create sequence bron_id_seq;

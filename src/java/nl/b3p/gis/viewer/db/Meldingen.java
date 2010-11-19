@@ -1,18 +1,22 @@
-
 package nl.b3p.gis.viewer.db;
 
 import com.vividsolutions.jts.geom.Geometry;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import org.geotools.feature.simple.SimpleFeatureBuilder;
+import org.opengis.feature.simple.SimpleFeature;
+import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.feature.type.AttributeDescriptor;
 
 /**
  *
  * @author Chris
  */
-
 public class Meldingen {
 
     private Integer id;
-
     private String naamZender;
     private String adresZender;
     private String emailZender;
@@ -152,7 +156,6 @@ public class Meldingen {
         this.naamOntvanger = naamOntvanger;
     }
 
- 
     /**
      * @return the the_geom
      */
@@ -209,4 +212,35 @@ public class Meldingen {
         this.datumAfhandeling = datumAfhandeling;
     }
 
+    public HashMap getAttributesMap() {
+        HashMap hm = new HashMap();
+        hm.put("naam_zender", naamZender);
+        hm.put("adres_zender", adresZender);
+        hm.put("email_zender", emailZender);
+        hm.put("melding_type", meldingType);
+        hm.put("melding_tekst", meldingTekst);
+        hm.put("melding_status", meldingStatus);
+        hm.put("melding_commentaar", meldingCommentaar);
+        hm.put("naam_ontvanger", naamOntvanger);
+        hm.put("datum_ontvangst", datumOntvangst);
+        hm.put("datum_afhandeling", datumAfhandeling);
+        hm.put("the_geom", theGeom);
+        hm.put("kenmerk", kenmerk);
+        return hm;
+    }
+
+    public SimpleFeature getFeature(SimpleFeatureType ft) {
+        SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(ft);
+
+        List<AttributeDescriptor> attributeDescriptors = new ArrayList<AttributeDescriptor>(ft.getAttributeDescriptors());
+        for (AttributeDescriptor ad : attributeDescriptors) {
+            String ln = ad.getLocalName();
+            Object lnv = this.getAttributesMap().get(ln);
+            featureBuilder.add(lnv);
+        }
+
+        SimpleFeature f = featureBuilder.buildFeature( null );
+
+        return f;
+    }
 }
