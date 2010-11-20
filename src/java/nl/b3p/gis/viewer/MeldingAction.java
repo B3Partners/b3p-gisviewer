@@ -86,29 +86,40 @@ public class MeldingAction extends ViewerCrudAction {
         return null;
     }
 
+    @Override
     protected void createLists(DynaValidatorForm form, HttpServletRequest request) throws Exception {
         super.createLists(form, request);
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-//        request.setAttribute("allMeldingen", sess.createQuery("from Meldingen order by kenmerk").list());
+        request.setAttribute("allMeldingen", sess.createQuery("from Meldingen order by kenmerk").list());
+    }
+
+    private void useInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
+        Map instellingen = getInstellingenMap(request);
+
+        String[] mts = ((String) instellingen.get("meldingType")).split(",");
+        request.setAttribute("meldingTypes", mts);
+        String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
+        request.setAttribute("meldingStatus", mss);
+
+        populateFromInstellingen(instellingen, dynaForm, request);
     }
 
     public ActionForward prepareMelding(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         dynaForm.initialize(mapping);
-        populateFromInstellingen(dynaForm, request);
+        useInstellingen(dynaForm, request);
 
-        createLists(dynaForm, request);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
 
     public ActionForward sendMelding(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
+        useInstellingen(dynaForm, request);
+
         ActionErrors errors = dynaForm.validate(mapping, request);
         if (!errors.isEmpty()) {
-            createLists(dynaForm, request);
             addMessages(request, errors);
-            prepareMethod(dynaForm, request, EDIT, LIST);
-            addAlternateMessage(mapping, request, VALIDATION_ERROR_KEY);
+            //addAlternateMessage(mapping, request, VALIDATION_ERROR_KEY);
             return getAlternateForward(mapping, request);
         }
 
@@ -134,7 +145,6 @@ public class MeldingAction extends ViewerCrudAction {
         }
 
         populateMeldingenForm(m, dynaForm, request);
-        createLists(dynaForm, request);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         ActionMessage amsg = new ActionMessage("melding.kenmerk", m.getKenmerk());
@@ -264,11 +274,9 @@ public class MeldingAction extends ViewerCrudAction {
         dynaForm.set("meldingStatus", m.getMeldingStatus());
         dynaForm.set("meldingCommentaar", m.getMeldingCommentaar());
         dynaForm.set("kenmerk", m.getKenmerk());
-
-        populateFromInstellingen(dynaForm, request);
     }
 
-    private void populateFromInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
+    private Map getInstellingenMap(HttpServletRequest request) throws Exception {
 
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         Set roles = user.getRoles();
@@ -282,7 +290,6 @@ public class MeldingAction extends ViewerCrudAction {
         }
 
         String[] configRollen = null;
-
         if (rollenPrio != null && rollenPrio.getPropval() != null) {
             configRollen = rollenPrio.getPropval().split(",");
         }
@@ -310,28 +317,26 @@ public class MeldingAction extends ViewerCrudAction {
         if ((map == null) || (map.size() == 0)) {
             map = configKeeper.getConfigMap("default");
         }
+        return map;
+    }
 
-        String[] mts = ((String) map.get("meldingType")).split(",");
-        request.setAttribute("meldingTypes", mts);
-
-        String[] mss = ((String) map.get("meldingStatus")).split(",");
-        request.setAttribute("meldingStatus", mss);
-
+    private void populateFromInstellingen(Map instellingen, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
+        String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
         if (mss != null && mss.length > 0) {
             dynaForm.set("meldingStatus", mss[0]);
         }
-        dynaForm.set("welkomTekst", map.get("meldingWelkomtekst"));
-        dynaForm.set("prefixKenmerk", map.get("meldingPrefix"));
-        dynaForm.set("zendEmailMelder", map.get("meldingEmailmelder"));
-        dynaForm.set("layoutStylesheetMelder", map.get("meldingLayoutEmailMelder"));
-        dynaForm.set("naamBehandelaar", map.get("meldingNaam"));
-        dynaForm.set("emailBehandelaar", map.get("meldingEmail"));
-        dynaForm.set("zendEmailBehandelaar", map.get("meldingEmailBehandelaar"));
-        dynaForm.set("layoutStylesheetBehandelaar", map.get("meldingLayoutEmailBehandelaar"));
-        dynaForm.set("objectSoort", map.get("meldingObjectSoort"));
-        dynaForm.set("icoonTekentool", map.get("meldingTekentoolIcoon"));
+        dynaForm.set("welkomTekst", instellingen.get("meldingWelkomtekst"));
+        dynaForm.set("prefixKenmerk", instellingen.get("meldingPrefix"));
+        dynaForm.set("zendEmailMelder", instellingen.get("meldingEmailmelder"));
+        dynaForm.set("layoutStylesheetMelder", instellingen.get("meldingLayoutEmailMelder"));
+        dynaForm.set("naamBehandelaar", instellingen.get("meldingNaam"));
+        dynaForm.set("emailBehandelaar", instellingen.get("meldingEmail"));
+        dynaForm.set("zendEmailBehandelaar", instellingen.get("meldingEmailBehandelaar"));
+        dynaForm.set("layoutStylesheetBehandelaar", instellingen.get("meldingLayoutEmailBehandelaar"));
+        dynaForm.set("objectSoort", instellingen.get("meldingObjectSoort"));
+        dynaForm.set("icoonTekentool", instellingen.get("meldingTekentoolIcoon"));
         dynaForm.set("opmerking", "Nog geen melding verstuurd!");
-        dynaForm.set("gegevensbron", map.get("meldingGegevensbron"));
+        dynaForm.set("gegevensbron", instellingen.get("meldingGegevensbron"));
 
     }
 
