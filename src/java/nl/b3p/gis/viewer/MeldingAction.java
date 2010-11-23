@@ -90,16 +90,18 @@ public class MeldingAction extends ViewerCrudAction {
     protected void createLists(DynaValidatorForm form, HttpServletRequest request) throws Exception {
         super.createLists(form, request);
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        request.setAttribute("allMeldingen", sess.createQuery("from Meldingen order by kenmerk").list());
+        //request.setAttribute("allMeldingen", sess.createQuery("from Meldingen order by kenmerk").list());
     }
 
     private void useInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         Map instellingen = getInstellingenMap(request);
 
-        String[] mts = ((String) instellingen.get("meldingType")).split(",");
-        request.setAttribute("meldingTypes", mts);
-        String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
-        request.setAttribute("meldingStatus", mss);
+        if (instellingen != null) {
+            String[] mts = ((String) instellingen.get("meldingType")).split(",");
+            request.setAttribute("meldingTypes", mts);
+            String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
+            request.setAttribute("meldingStatus", mss);
+        }
 
         populateFromInstellingen(instellingen, dynaForm, request);
     }
