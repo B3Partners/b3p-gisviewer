@@ -115,37 +115,6 @@ public class SpatialUtil {
 
         List themadata = q.list();
 
-        /* Extra kolommen toevoegen als deze Gegevensbron nog kinderen heeft */
-        List bronnen = sess.createQuery("from Gegevensbron where parent = :parentId")
-                .setInteger("parentId", gb.getId()).list();
-
-        if (bronnen != null) {
-            Iterator iter = bronnen.iterator();
-
-            while (iter.hasNext()) {
-                Gegevensbron child = (Gegevensbron) iter.next();
-
-                ThemaData td = new ThemaData();
-                td.setLabel(child.getNaam());
-                td.setBasisregel(true);
-                td.setKolombreedte(50);
-
-                WaardeTypen wt = new WaardeTypen();
-                wt.setId(1);
-                td.setWaardeType(wt);
-
-                DataTypen dt = new DataTypen();
-                dt.setId(2);
-                td.setDataType(dt);
-                
-                td.setCommando("viewerdata.do?aanvullendeinfo=t&amp;gegevensbronid=" + child.getId() + "&amp;");
-                td.setDataorder(new Integer(1000));
-                td.setGegevensbron(gb);
-
-                themadata.add(td);
-            }
-        }
-
         return themadata;
     }
 

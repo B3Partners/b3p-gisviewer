@@ -16,11 +16,17 @@ import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.utils.ConfigKeeper;
+import nl.b3p.gis.viewer.admindata.GegevensBronBean;
+import nl.b3p.gis.viewer.admindata.LabelBean;
+import nl.b3p.gis.viewer.admindata.RecordBean;
+import nl.b3p.gis.viewer.admindata.RecordChildBean;
+import nl.b3p.gis.viewer.admindata.RecordValueBean;
 import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
+import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
@@ -29,6 +35,7 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.filter.Filter;
 
@@ -37,6 +44,7 @@ public class GetViewerDataAction extends BaseGisAction {
     private static final Log logger = LogFactory.getLog(GetViewerDataAction.class);
 
     protected static final String ADMINDATA = "admindata";
+    protected static final String MULTI_ADMINDATA = "multi_admindata";
     protected static final String AANVULLENDEINFO = "aanvullendeinfo";
     protected static final String METADATA = "metadata";
     protected static final String OBJECTDATA = "objectdata";
@@ -63,6 +71,12 @@ public class GetViewerDataAction extends BaseGisAction {
         hibProp.setAlternateForwardName(FAILURE);
         hibProp.setAlternateMessageKey("error.admindata.failed");
         map.put(ADMINDATA, hibProp);
+
+        hibProp = new ExtendedMethodProperties(MULTI_ADMINDATA);
+        hibProp.setDefaultForwardName(SUCCESS);
+        hibProp.setAlternateForwardName(FAILURE);
+        hibProp.setAlternateMessageKey("error.admindata.failed");
+        map.put(MULTI_ADMINDATA, hibProp);
 
         hibProp = new ExtendedMethodProperties(AANVULLENDEINFO);
         hibProp.setDefaultForwardName(SUCCESS);
@@ -208,6 +222,134 @@ public class GetViewerDataAction extends BaseGisAction {
 
         /* geen config gevonden of ingesteld pak de uitgebreide versie */
         return mapping.findForward("admindata1");
+    }
+
+    public ActionForward multi_admindata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        /* Ophalen aangevinkte themas (kaartlagen) */
+        List themas = getThemas(mapping, dynaForm, request);
+
+        if (themas == null) {
+            return mapping.findForward(MULTI_ADMINDATA);
+        }
+
+        List beans = new ArrayList();
+
+        /* Per thema een GegevensBronBean vullen */
+        Iterator iter = themas.iterator();
+        while(iter.hasNext()) {
+            Themas thema = (Themas)iter.next();
+            Gegevensbron gb = thema.getGegevensbron();
+
+            if (gb != null) {
+                int gbId = thema.getGegevensbron().getId().intValue();
+                GegevensBronBean bean = createTestGegevensBronBean(); //fillGegevensBronBean(thema, request);
+
+                if (bean != null) {
+                    beans.add(bean);
+                }
+            }
+        }
+
+        /* Klaarzetten List van GegevensBronBeans */
+        request.setAttribute("beans", beans);
+
+        return mapping.findForward(MULTI_ADMINDATA);
+    }
+
+    /* Extra kolommen toevoegen als deze Gegevensbron nog kinderen heeft
+    protected void getChildren() {
+
+        List bronnen = sess.createQuery("from Gegevensbron where parent = :parentId")
+                .setInteger("parentId", gb.getId()).list();
+
+        if (bronnen != null) {
+            Iterator iter = bronnen.iterator();
+
+            while (iter.hasNext()) {
+                Gegevensbron child = (Gegevensbron) iter.next();
+
+                ThemaData td = new ThemaData();
+                td.setLabel(child.getNaam());
+                td.setBasisregel(true);
+                td.setKolombreedte(50);
+
+                WaardeTypen wt = new WaardeTypen();
+                wt.setId(1);
+                td.setWaardeType(wt);
+
+                DataTypen dt = new DataTypen();
+                dt.setId(2);
+                td.setDataType(dt);
+
+                td.setCommando("viewerdata.do?aanvullendeinfo=t&amp;gegevensbronid=" + child.getId() + "&amp;");
+                td.setDataorder(new Integer(1000));
+                td.setGegevensbron(gb);
+
+                themadata.add(td);
+            }
+        }
+    }
+    */
+
+    protected GegevensBronBean createTestGegevensBronBean() {
+        GegevensBronBean gbBean = new GegevensBronBean();
+        gbBean.setId(1);
+        gbBean.setTitle("Test GegevensBronBean");
+
+        LabelBean labelId = new LabelBean();
+        labelId.setId(1);
+        labelId.setLabel("id");
+        labelId.setKolomBreedte(10);
+
+        LabelBean labelNaam = new LabelBean();
+        labelNaam.setId(2);
+        labelNaam.setLabel("naam");
+        labelNaam.setKolomBreedte(40);
+
+        gbBean.addLabel(labelId);
+        gbBean.addLabel(labelNaam);
+
+        RecordBean record1 = new RecordBean();
+        record1.setId(1);
+        record1.setWkt(null);
+
+        RecordValueBean value1 = new RecordValueBean();
+        value1.setValue("1");
+        value1.setType(RecordValueBean.TYPE_DATA);
+
+        RecordValueBean value2 = new RecordValueBean();
+        value2.setValue("Boy de Wit");
+        value2.setType(RecordValueBean.TYPE_DATA);
+
+        record1.addValue(value1);
+        record1.addValue(value2);
+
+        RecordBean record2 = new RecordBean();
+        record2.setId(2);
+        record2.setWkt(null);
+
+        RecordValueBean value3 = new RecordValueBean();
+        value3.setValue("2");
+        value3.setType(RecordValueBean.TYPE_DATA);
+
+        RecordValueBean value4 = new RecordValueBean();
+        value4.setValue("Chris van Lith");
+        value4.setType(RecordValueBean.TYPE_URL);
+
+        record2.addValue(value3);
+        record2.addValue(value4);
+
+        RecordChildBean child1 = new RecordChildBean();
+        child1.setGegevensBronBeanId(83);
+        child1.setTitle("Titel test child");
+        child1.setAantalRecords(25);
+
+        record2.addChild(child1);
+
+        gbBean.addRecord(record1);
+        gbBean.addRecord(record2);
+
+        return gbBean;
     }
 
     protected void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
@@ -413,7 +555,7 @@ public class GetViewerDataAction extends BaseGisAction {
                 fkId = (String) request.getAttribute("fkId");
 
                 if (fkId != null) {
-                    filter = FilterBuilder.createEqualsFilter(gb.getAdmin_fk(), fkId);
+                    filter = FilterBuilder.createEqualsFilter(fkField, fkId);
                 }
             }
 
