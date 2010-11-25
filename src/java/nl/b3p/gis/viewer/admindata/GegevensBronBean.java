@@ -78,6 +78,9 @@ public class GegevensBronBean {
 
         List kolomNamen = new ArrayList();
 
+        if (labels == null)
+            return kolomNamen;
+
         Iterator iter = labels.iterator();
         while(iter.hasNext()) {
             LabelBean lb = (LabelBean)iter.next();

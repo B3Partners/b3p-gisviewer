@@ -52,108 +52,120 @@ public class CollectAdmindata {
         return fillGegevensBronBean(gegevensBronId, themaId, wkt, cql, collectGeom, parentHtmlId);
     }
 
-    public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, boolean collectGeom, String parentHtmlId) throws Exception {
-        
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        sess.beginTransaction();
+    private GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, boolean collectGeom, String parentHtmlId) throws Exception {
+        GegevensBronBean bean = null;
 
-        Gegevensbron gb = (Gegevensbron)sess.get(Gegevensbron.class, gegevensBronId);
-        Themas thema = (Themas)sess.get(Themas.class, themaId);
+        try {
+            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+            sess.beginTransaction();
 
-        if (gb == null) {
-            return null;
-        }
+            Gegevensbron gb = (Gegevensbron)sess.get(Gegevensbron.class, gegevensBronId);
+            Themas thema = (Themas)sess.get(Themas.class, themaId);
 
-        /* addChilds */
-        List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId")
-            .setInteger("parentId", gb.getId()).list();
-
-        GegevensBronBean bean = new GegevensBronBean();
-
-        bean.setId(gb.getId());
-        bean.setParentHtmlId(parentHtmlId);
-
-        if (thema == null || thema.getNaam() == null || thema.getNaam().equals("")) {
-            bean.setTitle(gb.getNaam());
-        } else {
-            bean.setTitle(thema.getNaam());
-        }
-
-        // Per ThemaData een LabelBean toevoegen
-        List objectdata_items = SpatialUtil.getThemaData(gb, true);
-        Iterator iter = objectdata_items.iterator();
-        while(iter.hasNext()) {
-            ThemaData td = (ThemaData)iter.next();
-
-            if (!td.isBasisregel())
-                continue;
-
-            LabelBean lb = new LabelBean();
-
-            if (td.getId() != null) {
-                lb.setId(td.getId());
+            if (gb == null) {
+                return null;
             }
 
-            lb.setLabel(td.getLabel());
-            lb.setKolomBreedte(td.getKolombreedte());
-            lb.setKolomNaam(td.getKolomnaam());
-            lb.setCommando(td.getCommando());
+            /* addChilds */
+            List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId")
+                .setInteger("parentId", gb.getId()).list();
 
-            int typeId = td.getDataType().getId();
-            lb.setType(RecordValueBean.getStringType(typeId));
+            bean = new GegevensBronBean();
 
-            lb.setEenheid(td.getEenheid());
+            bean.setId(gb.getId());
+            bean.setParentHtmlId(parentHtmlId);
 
-            bean.addLabel(lb);
-        }
+            if (thema == null || thema.getNaam() == null || thema.getNaam().equals("")) {
+                bean.setTitle(gb.getNaam());
+            } else {
+                bean.setTitle(thema.getNaam());
+            }
 
-        /* het request kan via context worden opgehaald indien deze methode
-         * via dwr wordt aangeroepen */
-        WebContext ctx = WebContextFactory.get();
-        HttpServletRequest request = null;
-        
-        if (ctx != null) {
-            request = ctx.getHttpServletRequest();
-        }
+            // Per ThemaData een LabelBean toevoegen
+            List objectdata_items = SpatialUtil.getThemaData(gb, true);
+            Iterator iter = objectdata_items.iterator();
+            while(iter.hasNext()) {
+                ThemaData td = (ThemaData)iter.next();
 
-        Bron b = gb.getBron(request);
+                if (!td.isBasisregel())
+                    continue;
 
-        if (b == null) {
-            return null;
-        }
+                LabelBean lb = new LabelBean();
 
-        Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
-
-        List<String> propnames = bean.getKolomNamenList();
-        List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, CQL.toFilter(cql), propnames, null, false);
-
-        Iterator featureIter = features.iterator();
-        while (featureIter.hasNext()) {
-            Feature f = (Feature)featureIter.next();
-
-            RecordBean record = getRecordBean(f, gb, bean.getLabels());
-
-            Iterator iter4 = childBronnen.iterator();
-
-            while(iter4.hasNext()) {
-                Gegevensbron child = (Gegevensbron)iter4.next();
-
-                int count = 1; //getAantalChildRecords(child, bean, attrName, attrValue);
-
-                if (count > 0) {
-                    RecordChildBean childBean = new RecordChildBean();
-                    childBean.setId(child.getId().toString());
-                    childBean.setGegevensBronBeanId(bean.getId());
-                    childBean.setTitle(child.getNaam());
-                    childBean.setAantalRecords(count);
-                    childBean.setThemaId(new Integer(themaId).toString());
-                    childBean.setCql(cql);
-
-                    record.addChild(childBean);
+                if (td.getId() != null) {
+                    lb.setId(td.getId());
                 }
+
+                lb.setLabel(td.getLabel());
+                lb.setKolomBreedte(td.getKolombreedte());
+                lb.setKolomNaam(td.getKolomnaam());
+                lb.setCommando(td.getCommando());
+
+                int typeId = td.getDataType().getId();
+                lb.setType(RecordValueBean.getStringType(typeId));
+
+                lb.setEenheid(td.getEenheid());
+
+                bean.addLabel(lb);
             }
 
-            bean.addRecord(record);
+            /* het request kan via context worden opgehaald indien deze methode
+             * via dwr wordt aangeroepen */
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = null;
+
+            if (ctx != null) {
+                request = ctx.getHttpServletRequest();
+            }
+
+            Bron b = gb.getBron(request);
+
+            if (b == null) {
+                return null;
+            }
+
+            Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
+
+            List<String> propnames = bean.getKolomNamenList();
+            Filter filter = null;
+
+            if (cql != null && !cql.equals("")) {
+                filter = CQL.toFilter(cql);
+            }
+
+            List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, filter, propnames, null, false);
+
+            Iterator featureIter = features.iterator();
+            while (featureIter.hasNext()) {
+                Feature f = (Feature)featureIter.next();
+
+                RecordBean record = getRecordBean(f, gb, bean.getLabels());
+
+                Iterator iter4 = childBronnen.iterator();
+
+                while(iter4.hasNext()) {
+                    Gegevensbron child = (Gegevensbron)iter4.next();
+
+                    int count = 1; //getAantalChildRecords(child, bean, attrName, attrValue);
+
+                    if (count > 0) {
+                        RecordChildBean childBean = new RecordChildBean();
+                        childBean.setId(child.getId().toString());
+                        childBean.setGegevensBronBeanId(bean.getId());
+                        childBean.setTitle(child.getNaam());
+                        childBean.setAantalRecords(count);
+                        childBean.setThemaId(new Integer(themaId).toString());
+                        childBean.setCql(cql);
+
+                        record.addChild(childBean);
+                    }
+                }
+
+                bean.addRecord(record);
+            }
+
+        } catch (Exception ex) {
+            logger.error("", ex);
         }
 
         return bean;
@@ -171,6 +183,10 @@ public class CollectAdmindata {
         while (it.hasNext()) {
             LabelBean lb = (LabelBean) it.next();
             RecordValueBean rvb = new RecordValueBean();
+
+            rvb.setType(lb.getType());
+            rvb.setEenheid(lb.getEenheid());
+            rvb.setKolomBreedte(lb.getKolomBreedte());
 
             /*
              * Controleer of de kolomnaam van dit themadata object wel voorkomt in de feature.

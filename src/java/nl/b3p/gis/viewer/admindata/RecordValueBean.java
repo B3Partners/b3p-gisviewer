@@ -17,6 +17,8 @@ public class RecordValueBean {
     private String value;
     private String eenheid;
 
+    private int kolomBreedte;
+
     private List valueList;
 
     public String getEenheid() {
@@ -71,5 +73,13 @@ public class RecordValueBean {
             return RecordValueBean.TYPE_FUNCTION;
 
         return null;
+    }
+
+    public int getKolomBreedte() {
+        return kolomBreedte;
+    }
+
+    public void setKolomBreedte(int kolomBreedte) {
+        this.kolomBreedte = kolomBreedte;
     }
 }

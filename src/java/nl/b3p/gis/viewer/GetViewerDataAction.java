@@ -245,7 +245,10 @@ public class GetViewerDataAction extends BaseGisAction {
 
                 /* Filter naar CQL */
                 Filter filter = getExtraFilter(thema, request);
-                String cql = CQL.toCQL(filter);
+                String cql = null;
+
+                if (filter != null)
+                    cql = CQL.toCQL(filter);
 
                 /* List van RecordChildBeans klaarzetten */
                 int count = 1; //getAantalChildRecords(child, bean, attrName, attrValue);
