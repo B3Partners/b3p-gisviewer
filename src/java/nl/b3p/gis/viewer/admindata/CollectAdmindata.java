@@ -11,21 +11,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.geotools.DataStoreUtil;
-import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Gegevensbron;
-import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
-import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
-import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.directwebremoting.WebContext;
-import org.directwebremoting.WebContextFactory;
-import org.geotools.data.DataStore;
-import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
@@ -39,8 +30,9 @@ public class CollectAdmindata {
     private static final Log logger = LogFactory.getLog(CollectAdmindata.class);
 
     protected static final double DEFAULTTOLERANCE = 5.0;
-    
-    public GegevensBronBean fillGegevensBronBean(int gegevensBronId, String title, String wkt, String scale, String tolerance, String coordList) throws Exception {
+
+    /*
+    public GegevensBronBean fillGegevensBronBean(int gegevensBronId, String title, String wkt, String scale, String tolerance, String coordList, String attrName, String attrValue, boolean fetchGeom) throws Exception {
         Session sess = null;
         
         try {
@@ -61,7 +53,7 @@ public class CollectAdmindata {
                 bean.setTitle(title);
             }
 
-            /* Per ThemaData een LabelBean toevoegen */
+            // Per ThemaData een LabelBean toevoegen
             List objectdata_items = SpatialUtil.getThemaData(gb, true);
             Iterator iter = objectdata_items.iterator();
             while(iter.hasNext()) {
@@ -89,7 +81,7 @@ public class CollectAdmindata {
                 bean.addLabel(lb);
             }
 
-            /* Records ophalen en toevoegen */
+            //Records ophalen en toevoegen
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
 
@@ -172,7 +164,7 @@ public class CollectAdmindata {
                 i++;
             }
 
-            /* childs adden */
+            // childs adden
             Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
             List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId")
                 .setInteger("parentId", gb.getId()).list();
@@ -199,6 +191,7 @@ public class CollectAdmindata {
 
         return bean;
     }
+    */
 
     protected RecordBean getRecordBean(Feature f, Gegevensbron gb, List<LabelBean> label_bean_items) throws SQLException, UnsupportedEncodingException, Exception {
         RecordBean rb = new RecordBean();
@@ -537,4 +530,108 @@ public class CollectAdmindata {
     }
 
    */
+
+    public GegevensBronBean createTestGegevensBronBean(int id) {
+        GegevensBronBean gbBean = new GegevensBronBean();
+        gbBean.setId(id);
+        gbBean.setTitle("Test GegevensBronBean");
+
+        LabelBean labelId = new LabelBean();
+        labelId.setId(1);
+        labelId.setLabel("id");
+
+        LabelBean labelNaam = new LabelBean();
+        labelNaam.setId(2);
+        labelNaam.setLabel("naam");
+
+        LabelBean labelUrl = new LabelBean();
+        labelUrl.setId(3);
+        labelUrl.setLabel("url");
+
+        LabelBean labelQuery = new LabelBean();
+        labelQuery.setId(4);
+        labelQuery.setLabel("query");
+
+        LabelBean labelFunction = new LabelBean();
+        labelFunction.setId(5);
+        labelFunction.setLabel("function");
+
+        gbBean.addLabel(labelId);
+        gbBean.addLabel(labelNaam);
+        gbBean.addLabel(labelUrl);
+        gbBean.addLabel(labelQuery);
+        gbBean.addLabel(labelFunction);
+
+        RecordBean record1 = new RecordBean();
+        record1.setId(1);
+        record1.setWkt(null);
+
+        RecordValueBean value1 = new RecordValueBean();
+        value1.setValue("1");
+        value1.setType(RecordValueBean.TYPE_DATA);
+
+        RecordValueBean value2 = new RecordValueBean();
+        value2.setValue("Boy de Wit");
+        value2.setType(RecordValueBean.TYPE_DATA);
+
+        RecordValueBean value3 = new RecordValueBean();
+        value3.setValue("www.spellenenzo.nl");
+        value3.setType(RecordValueBean.TYPE_URL);
+
+        RecordValueBean value4 = new RecordValueBean();
+        value4.setValue("/viewerdata.do?kolom=BOY");
+        value4.setType(RecordValueBean.TYPE_QUERY);
+
+        RecordValueBean value5 = new RecordValueBean();
+        value5.setValue("jsDoStuff()");
+        value5.setType(RecordValueBean.TYPE_FUNCTION);
+
+        record1.addValue(value1);
+        record1.addValue(value2);
+        record1.addValue(value3);
+        record1.addValue(value4);
+        record1.addValue(value5);
+
+        RecordBean record2 = new RecordBean();
+        record2.setId(2);
+        record2.setWkt(null);
+
+        RecordValueBean value6 = new RecordValueBean();
+        value6.setValue("2");
+        value6.setType(RecordValueBean.TYPE_DATA);
+
+        RecordValueBean value7 = new RecordValueBean();
+        value7.setValue("Chris van Lith");
+        value7.setType(RecordValueBean.TYPE_DATA);
+
+        RecordValueBean value8 = new RecordValueBean();
+        value8.setValue("www.b3p.nl");
+        value8.setType(RecordValueBean.TYPE_URL);
+
+        RecordValueBean value9 = new RecordValueBean();
+        value9.setValue("/viewerdata.do?kolom=CHRIS");
+        value9.setType(RecordValueBean.TYPE_QUERY);
+
+        RecordValueBean value10 = new RecordValueBean();
+        value10.setValue("jsDoMoreStuff()");
+        value10.setType(RecordValueBean.TYPE_FUNCTION);
+
+        record2.addValue(value6);
+        record2.addValue(value7);
+        record2.addValue(value8);
+        record2.addValue(value9);
+        record2.addValue(value10);
+
+        RecordChildBean child1 = new RecordChildBean();
+        child1.setGegevensBronBeanId(83);
+        child1.setTitle("Test child bij record 2");
+        child1.setAantalRecords(25);
+
+        record2.addChild(child1);
+
+        gbBean.addRecord(record1);
+        gbBean.addRecord(record2);
+
+        return gbBean;
+    }
 }
