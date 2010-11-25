@@ -16,6 +16,8 @@ public class GegevensBronBean {
     private List<LabelBean> labels;
     private List<RecordBean> records;
 
+    private String parentHtmlId;
+
     public int getId() {
         return id;
     }
@@ -64,6 +66,14 @@ public class GegevensBronBean {
         records.add(rb);
     }
 
+    public String getParentHtmlId() {
+        return parentHtmlId;
+    }
+
+    public void setParentHtmlId(String parentHtmlId) {
+        this.parentHtmlId = parentHtmlId;
+    }
+
     public List<String> getKolomNamenList() {
 
         List kolomNamen = new ArrayList();
@@ -78,5 +88,29 @@ public class GegevensBronBean {
 
         return kolomNamen;
 
+    }
+
+    /* komma gescheiden String teruggeven met id's van bijbehorende records */
+    public String getRecordKeys() {
+        String keys = "";
+        List records = new ArrayList();
+
+        Iterator iter = records.iterator();
+        int i = 0;
+        while(iter.hasNext()) {
+            RecordBean rb = (RecordBean)iter.next();
+
+            if (rb.getId() != null) {
+
+                if (i == 0)
+                    keys += (String)rb.getId();
+                else
+                    keys += "," + (String)rb.getId();
+            }
+
+            i++;
+        }
+
+        return keys;
     }
 }

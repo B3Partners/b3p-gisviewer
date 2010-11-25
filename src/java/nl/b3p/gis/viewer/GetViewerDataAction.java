@@ -17,10 +17,6 @@ import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.admindata.GegevensBronBean;
-import nl.b3p.gis.viewer.admindata.LabelBean;
-import nl.b3p.gis.viewer.admindata.RecordBean;
-import nl.b3p.gis.viewer.admindata.RecordChildBean;
-import nl.b3p.gis.viewer.admindata.RecordValueBean;
 import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
@@ -37,6 +33,8 @@ import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.feature.Feature;
 import org.opengis.filter.Filter;
 import nl.b3p.gis.viewer.admindata.CollectAdmindata;
+import nl.b3p.gis.viewer.admindata.RecordChildBean;
+import org.geotools.filter.text.cql2.CQL;
 
 public class GetViewerDataAction extends BaseGisAction {
 
@@ -240,16 +238,35 @@ public class GetViewerDataAction extends BaseGisAction {
             Gegevensbron gb = thema.getGegevensbron();
 
             if (gb != null) {
-                int gbId = thema.getGegevensbron().getId().intValue();
 
-                CollectAdmindata cad = new CollectAdmindata();
-                GegevensBronBean bean = cad.createTestGegevensBronBean(99);
+                String gbId = thema.getGegevensbron().getId().toString();
+                String themaId = thema.getId().toString();
+                String themaNaam = thema.getNaam();
 
-                if (bean != null) {
-                    beans.add(bean);
+                /* Filter naar CQL */
+                Filter filter = getExtraFilter(thema, request);
+                String cql = CQL.toCQL(filter);
+
+                /* List van RecordChildBeans klaarzetten */
+                int count = 1; //getAantalChildRecords(child, bean, attrName, attrValue);
+
+                if (count > 0) {
+                    RecordChildBean childBean = new RecordChildBean();
+                    childBean.setId(gbId);
+                    childBean.setGegevensBronBeanId(0);
+                    childBean.setTitle(themaNaam);
+                    childBean.setAantalRecords(count);
+                    childBean.setThemaId(themaId);
+                    childBean.setCql(cql);
+
+                    beans.add(childBean);
                 }
             }
         }
+
+        /* geom op request */
+        String wkt = getGeometry(request).toText();
+        request.setAttribute("wkt", wkt);
 
         /* Klaarzetten List van GegevensBronBeans */
         request.setAttribute("beans", beans);

@@ -130,6 +130,20 @@ public class DataStoreUtil {
      * Het adminfilter wordt automatisch toegevoegd.
      */
     public static ArrayList<Feature> getFeatures(DataStore ds, Gegevensbron gb, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
+        FeatureCollection fc = getFeatureCollection(ds,gb,f,propNames,maximum,collectGeom);
+        FeatureIterator fi = fc.features();
+        ArrayList<Feature> features = new ArrayList();
+        try {
+            while (fi.hasNext()) {
+                features.add(fi.next());
+            }
+        } finally {
+            fc.close(fi);
+        }
+        return features;
+     }
+
+    public static FeatureCollection getFeatureCollection(DataStore ds, Gegevensbron gb, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
         ArrayList<Filter> filters = new ArrayList();
         if (f != null) {
             filters.add(f);
@@ -246,19 +260,9 @@ public class DataStoreUtil {
                 query.setPropertyNames(propNames);
             }
         }
-
         FeatureCollection fc = fs.getFeatures(query);
-        FeatureIterator fi = fc.features();
-        ArrayList<Feature> features = new ArrayList();
-        try {
-            while (fi.hasNext()) {
-                features.add(fi.next());
-            }
-        } finally {
-            fc.close(fi);
-        }
-        return features;
-     }
+        return fc;
+    }
 
 
     

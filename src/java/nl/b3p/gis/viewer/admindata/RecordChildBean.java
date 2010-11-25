@@ -6,10 +6,22 @@ package nl.b3p.gis.viewer.admindata;
  */
 public class RecordChildBean {
 
+    private String id;
     private String title;
     private int aantalRecords;
 
     private int gegevensBronBeanId;
+    
+    private String themaId;
+    private String cql;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public int getAantalRecords() {
         return aantalRecords;
@@ -38,5 +50,21 @@ public class RecordChildBean {
     public int getAantalRecords(int fk) {
 
         return -1;
+    }
+
+    public String getCql() {
+        return cql;
+    }
+
+    public void setCql(String cql) {
+        this.cql = cql;
+    }
+
+    public String getThemaId() {
+        return themaId;
+    }
+
+    public void setThemaId(String themaId) {
+        this.themaId = themaId;
     }
 }

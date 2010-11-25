@@ -125,6 +125,10 @@ public class Gegevensbron implements Comparable {
     }
 
     public Bron getBron(HttpServletRequest request) {
+        if (request == null) {
+            return bron;
+        }
+
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
 
         return getBron(user);
