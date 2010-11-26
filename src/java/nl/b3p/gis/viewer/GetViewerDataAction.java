@@ -16,7 +16,6 @@ import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.utils.ConfigKeeper;
-import nl.b3p.gis.viewer.admindata.GegevensBronBean;
 import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
@@ -32,7 +31,6 @@ import org.apache.struts.validator.DynaValidatorForm;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.feature.Feature;
 import org.opengis.filter.Filter;
-import nl.b3p.gis.viewer.admindata.CollectAdmindata;
 import nl.b3p.gis.viewer.admindata.RecordChildBean;
 import org.geotools.filter.text.cql2.CQL;
 
