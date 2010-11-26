@@ -97,10 +97,16 @@ public class MeldingAction extends ViewerCrudAction {
         Map instellingen = getInstellingenMap(request);
 
         if (instellingen != null) {
-            String[] mts = ((String) instellingen.get("meldingType")).split(",");
-            request.setAttribute("meldingTypes", mts);
-            String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
-            request.setAttribute("meldingStatus", mss);
+
+            if (instellingen.get("meldingType") != null) {
+                String[] mts = ((String) instellingen.get("meldingType")).split(",");
+                request.setAttribute("meldingTypes", mts);
+            }
+
+            if (instellingen.get("meldingStatus") != null) {
+                String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
+                request.setAttribute("meldingStatus", mss);
+            }
         }
 
         populateFromInstellingen(instellingen, dynaForm, request);
@@ -323,10 +329,16 @@ public class MeldingAction extends ViewerCrudAction {
     }
 
     private void populateFromInstellingen(Map instellingen, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
-        String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
+        String[] mss = null;
+
+        if (instellingen.get("meldingStatus") != null){
+            mss = ((String) instellingen.get("meldingStatus")).split(",");
+        }
+
         if (mss != null && mss.length > 0) {
             dynaForm.set("meldingStatus", mss[0]);
         }
+
         dynaForm.set("welkomTekst", instellingen.get("meldingWelkomtekst"));
         dynaForm.set("prefixKenmerk", instellingen.get("meldingPrefix"));
         dynaForm.set("zendEmailMelder", instellingen.get("meldingEmailmelder"));

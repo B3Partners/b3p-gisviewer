@@ -103,8 +103,10 @@ public class DataStoreUtil {
      */
     public static ArrayList<Feature> getFeatures(Bron b, Gegevensbron gb, Geometry geom, Filter extraFilter, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
         DataStore ds = b.toDatastore();
+        
         try {
             Filter geomFilter = createIntersectFilter(gb, ds, geom);
+            
             ArrayList<Filter> filters = new ArrayList();
             if (geomFilter != null) {
                 filters.add(geomFilter);
@@ -217,9 +219,24 @@ public class DataStoreUtil {
         }
         if (propNames != null) {
             //zorg er voor dat de pk ook wordt opgehaald
-            String adminPk = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
+            String adminPk = null;
+            String tmpAdminPk = gb.getAdmin_pk();
+            if (tmpAdminPk != null) {
+                adminPk = DataStoreUtil.convertFullnameToQName(tmpAdminPk).getLocalPart();
+            }
+            
             if (adminPk != null && adminPk.length() > 0 && !propNames.contains(adminPk)) {
                 propNames.add(adminPk);
+            }
+
+            String adminFk = null;
+            String tmpAdminFk = gb.getAdmin_fk();
+            if (tmpAdminFk != null) {
+                adminFk = DataStoreUtil.convertFullnameToQName(tmpAdminFk).getLocalPart();
+            }
+
+            if (adminFk != null && adminFk.length() > 0 && !propNames.contains(adminFk)) {
+                propNames.add(adminFk);
             }
 
             if (collectGeom) {
@@ -371,8 +388,10 @@ public class DataStoreUtil {
         }
         String geomAttributeName = getGeometryAttributeName(ds, gb);
         if (geomAttributeName == null) {
-            log.error("Thema heeft geen geometry");
-            throw new Exception("Thema heeft geen geometry");
+            log.warn("De datastore voor deze gegevensbron heeft geen geometry.");
+            return null;
+
+            //throw new Exception("Thema heeft geen geometry");
         }
         Filter filter = ff.intersects(ff.property(geomAttributeName), ff.literal(geom));
         if (ds instanceof WFS_1_0_0_DataStore) {

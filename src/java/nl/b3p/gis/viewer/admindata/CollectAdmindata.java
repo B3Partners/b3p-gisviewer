@@ -23,6 +23,8 @@ import org.apache.commons.logging.LogFactory;
 import org.directwebremoting.WebContext;
 import org.directwebremoting.WebContextFactory;
 import org.geotools.data.DataStore;
+import org.geotools.factory.CommonFactoryFinder;
+import org.geotools.factory.GeoTools;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.filter.text.cql2.CQL;
 import org.hibernate.Session;
@@ -30,6 +32,7 @@ import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
 import org.opengis.filter.Filter;
+import org.opengis.filter.FilterFactory2;
 
 /**
  *
@@ -38,6 +41,8 @@ import org.opengis.filter.Filter;
 public class CollectAdmindata {
 
     private static final Log logger = LogFactory.getLog(CollectAdmindata.class);
+
+    private static final FilterFactory2 filterFac = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
 
     protected static final double DEFAULTTOLERANCE = 5.0;
 
@@ -127,14 +132,27 @@ public class CollectAdmindata {
             Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
 
             List<String> propnames = bean.getKolomNamenList();
-            Filter filter = null;
+
+            /* Alle filters indien niet null toevoegen aan list
+             * zodat de factory hier straks een mooie Filter voor kan
+             * teruggeven
+             */
+            ArrayList<Filter> filters = new ArrayList();
+            Filter newFilter = null;
 
             if (cql != null && !cql.equals("")) {
-                filter = CQL.toFilter(cql);
+                Filter cqlFilter = CQL.toFilter(cql);
+                filters.add(cqlFilter);
             }
 
-            List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, filter, propnames, null, false);
+            if (filters.size() == 1)
+                newFilter = filters.get(0);
 
+            if (filters.size() > 1)
+                newFilter = filterFac.and(filters);
+
+            List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, newFilter, propnames, null, collectGeom);
+            
             Iterator featureIter = features.iterator();
             while (featureIter.hasNext()) {
                 Feature f = (Feature)featureIter.next();
@@ -146,7 +164,16 @@ public class CollectAdmindata {
                 while(iter4.hasNext()) {
                     Gegevensbron child = (Gegevensbron)iter4.next();
 
-                    int count = 1; //getAantalChildRecords(child, bean, attrName, attrValue);
+                    String fkField = child.getAdmin_fk();
+                    String recordId = record.getId().toString();
+                    Filter attrFilter = null;
+
+                    if (fkField != null && recordId != null) {
+                        attrFilter = FilterBuilder.createEqualsFilter(fkField, recordId);
+                        filters.add(attrFilter);
+                    }
+
+                    int count = getAantalChildRecords(child, attrFilter, geom);
 
                     if (count > 0) {
                         RecordChildBean childBean = new RecordChildBean();
@@ -155,7 +182,7 @@ public class CollectAdmindata {
                         childBean.setTitle(child.getNaam());
                         childBean.setAantalRecords(count);
                         childBean.setThemaId(new Integer(themaId).toString());
-                        childBean.setCql(cql);
+                        childBean.setCql(CQL.toCQL(attrFilter));
 
                         record.addChild(childBean);
                     }
@@ -179,6 +206,9 @@ public class CollectAdmindata {
             rb.setId(f.getProperty(adminPk).getValue());
         }
 
+        if (label_bean_items == null)
+            return null;
+        
         Iterator it = label_bean_items.iterator();
         while (it.hasNext()) {
             LabelBean lb = (LabelBean) it.next();
@@ -525,28 +555,12 @@ public class CollectAdmindata {
         return gbBean;
     }
 
-    protected int getAantalChildRecords(Gegevensbron childGb, GegevensBronBean bean, String attrName, String attrValue) throws Exception {
+    protected int getAantalChildRecords(Gegevensbron childGb, Filter filter, Geometry geom) throws Exception {
         int count = -1;
 
         if (childGb == null) {
             return count;
         }
-
-        String id = null;
-        Filter filter = null;
-
-        String fkField = childGb.getAdmin_fk();
-        String fkId = null;
-
-        if (fkField != null) {
-            fkId = attrValue;
-
-            if (fkId != null) {
-                filter = FilterBuilder.createEqualsFilter(fkField, fkId);
-            }
-        }
-
-        List regels = new ArrayList();
 
         WebContext ctx = WebContextFactory.get();
         HttpServletRequest request = null;
@@ -561,12 +575,35 @@ public class CollectAdmindata {
             return count;
         }
 
+        /* Ophalen count van een RO Online WFS duurt best lang */
+        if (b.getType().equals(Bron.TYPE_WFS))
+            return 1;
+
         DataStore ds = null;
 
         try {
             ds = b.toDatastore();
 
-            List<String> propnames = bean.getKolomNamenList();
+            /* geom filter toevoegen */
+            if (geom != null) {
+                Filter geomFilter = DataStoreUtil.createIntersectFilter(childGb, ds, geom);
+
+                if (geomFilter != null) {
+                    ArrayList<Filter> filters = new ArrayList();
+                    filters.add(geomFilter);
+
+                    if (filters.size() == 1)
+                        filter = filters.get(0);
+
+                    if (filters.size() > 1)
+                        filter = filterFac.and(filters);
+                }
+            }
+
+            List<String> propnames = new ArrayList<String>();
+
+            if (childGb.getAdmin_fk() != null)
+                propnames.add(childGb.getAdmin_fk());
 
             FeatureCollection fc = DataStoreUtil.getFeatureCollection(ds,childGb,filter,propnames,null,false);
             count = fc.size();

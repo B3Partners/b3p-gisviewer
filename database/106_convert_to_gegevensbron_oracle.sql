@@ -7,12 +7,12 @@ where t.admin_tabel IS NOT NULL and t.admin_pk IS NOT NULL;
 
 update thema_data td set gegevensbron = (select gegevensbron from themas t where td.thema = t.id);
 
-alter table themas drop 
-(connectie, admin_tabel_opmerkingen, admin_tabel, admin_pk, admin_pk_complex,
-admin_spatial_ref, admin_query, spatial_tabel_opmerkingen, spatial_tabel, spatial_pk,
-spatial_pk_complex, spatial_admin_ref);
+--alter table themas drop 
+--(connectie, admin_tabel_opmerkingen, admin_tabel, admin_pk, admin_pk_complex,
+--admin_spatial_ref, admin_query, spatial_tabel_opmerkingen, spatial_tabel, spatial_pk,
+--spatial_pk_complex, spatial_admin_ref);
 
-alter table thema_data drop (thema);
+--alter table thema_data drop (thema);
 
-delete from thema_data where gegevensbron IS NULL;
+--delete from thema_data where gegevensbron IS NULL;
 
