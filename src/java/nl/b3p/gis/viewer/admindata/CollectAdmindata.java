@@ -1,14 +1,18 @@
 package nl.b3p.gis.viewer.admindata;
 
 import com.vividsolutions.jts.geom.Geometry;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
@@ -27,6 +31,7 @@ import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.filter.text.cql2.CQL;
+import org.geotools.filter.text.cql2.CQLException;
 import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
@@ -41,159 +46,186 @@ import org.opengis.filter.FilterFactory2;
 public class CollectAdmindata {
 
     private static final Log logger = LogFactory.getLog(CollectAdmindata.class);
-
     private static final FilterFactory2 filterFac = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
-
     protected static final double DEFAULTTOLERANCE = 5.0;
-
     public static final String SEARCH = "search";
     public static final String SEARCHID = "searchId";
     public static final String SEARCHCLUSTERID = "searchClusterId";
 
     public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, String parentHtmlId) throws Exception {
 
-        boolean collectGeom = false;
+        boolean collectGeom = true;
 
         return fillGegevensBronBean(gegevensBronId, themaId, wkt, cql, collectGeom, parentHtmlId);
     }
 
-    private GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, boolean collectGeom, String parentHtmlId) throws Exception {
+    private GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, boolean collectGeom, String parentHtmlId) {
         GegevensBronBean bean = null;
 
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        sess.beginTransaction();
+
+        Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensBronId);
+        if (gb == null) {
+            return null;
+        }
+
+        /* addChilds */
+        List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId").setInteger("parentId", gb.getId()).list();
+
+        bean = new GegevensBronBean();
+
+        bean.setId(gb.getId());
+        bean.setParentHtmlId(parentHtmlId);
+
+        Themas thema = null;
+        if (themaId >0) {
+            thema = (Themas) sess.get(Themas.class, themaId);
+        }
+        if (thema == null || thema.getNaam() == null || thema.getNaam().equals("")) {
+            bean.setTitle(gb.getNaam());
+        } else {
+            bean.setTitle(thema.getNaam());
+        }
+
+        // Per ThemaData een LabelBean toevoegen
+        List objectdata_items = SpatialUtil.getThemaData(gb, true);
+        Iterator iter = objectdata_items.iterator();
+        while (iter.hasNext()) {
+            ThemaData td = (ThemaData) iter.next();
+
+            if (!td.isBasisregel()) {
+                continue;
+            }
+
+            LabelBean lb = new LabelBean();
+
+            if (td.getId() != null) {
+                lb.setId(td.getId());
+            }
+
+            lb.setLabel(td.getLabel());
+            lb.setKolomBreedte(td.getKolombreedte());
+            lb.setKolomNaam(td.getKolomnaam());
+            lb.setCommando(td.getCommando());
+
+            int typeId = td.getDataType().getId();
+            lb.setType(RecordValueBean.getStringType(typeId));
+
+            lb.setEenheid(td.getEenheid());
+
+            bean.addLabel(lb);
+        }
+
+        /* het request kan via context worden opgehaald indien deze methode
+         * via dwr wordt aangeroepen */
+        WebContext ctx = WebContextFactory.get();
+        HttpServletRequest request = null;
+
+        if (ctx != null) {
+            request = ctx.getHttpServletRequest();
+        }
+
+        Bron b = gb.getBron(request);
+
+        if (b == null) {
+            return null;
+        }
+
+        Geometry geom = null;
+        ;
         try {
-            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-            sess.beginTransaction();
-
-            Gegevensbron gb = (Gegevensbron)sess.get(Gegevensbron.class, gegevensBronId);
-            Themas thema = (Themas)sess.get(Themas.class, themaId);
-
-            if (gb == null) {
-                return null;
-            }
-
-            /* addChilds */
-            List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId")
-                .setInteger("parentId", gb.getId()).list();
-
-            bean = new GegevensBronBean();
-
-            bean.setId(gb.getId());
-            bean.setParentHtmlId(parentHtmlId);
-
-            if (thema == null || thema.getNaam() == null || thema.getNaam().equals("")) {
-                bean.setTitle(gb.getNaam());
-            } else {
-                bean.setTitle(thema.getNaam());
-            }
-
-            // Per ThemaData een LabelBean toevoegen
-            List objectdata_items = SpatialUtil.getThemaData(gb, true);
-            Iterator iter = objectdata_items.iterator();
-            while(iter.hasNext()) {
-                ThemaData td = (ThemaData)iter.next();
-
-                if (!td.isBasisregel())
-                    continue;
-
-                LabelBean lb = new LabelBean();
-
-                if (td.getId() != null) {
-                    lb.setId(td.getId());
-                }
-
-                lb.setLabel(td.getLabel());
-                lb.setKolomBreedte(td.getKolombreedte());
-                lb.setKolomNaam(td.getKolomnaam());
-                lb.setCommando(td.getCommando());
-
-                int typeId = td.getDataType().getId();
-                lb.setType(RecordValueBean.getStringType(typeId));
-
-                lb.setEenheid(td.getEenheid());
-
-                bean.addLabel(lb);
-            }
-
-            /* het request kan via context worden opgehaald indien deze methode
-             * via dwr wordt aangeroepen */
-            WebContext ctx = WebContextFactory.get();
-            HttpServletRequest request = null;
-
-            if (ctx != null) {
-                request = ctx.getHttpServletRequest();
-            }
-
-            Bron b = gb.getBron(request);
-
-            if (b == null) {
-                return null;
-            }
-
-            Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
-
-            List<String> propnames = bean.getKolomNamenList();
-
-            /* Alle filters indien niet null toevoegen aan list
-             * zodat de factory hier straks een mooie Filter voor kan
-             * teruggeven
-             */
-            ArrayList<Filter> filters = new ArrayList();
-            Filter newFilter = null;
-
-            if (cql != null && !cql.equals("")) {
-                Filter cqlFilter = CQL.toFilter(cql);
-                filters.add(cqlFilter);
-            }
-
-            if (filters.size() == 1)
-                newFilter = filters.get(0);
-
-            if (filters.size() > 1)
-                newFilter = filterFac.and(filters);
-
-            List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, newFilter, propnames, null, collectGeom);
-            
-            Iterator featureIter = features.iterator();
-            while (featureIter.hasNext()) {
-                Feature f = (Feature)featureIter.next();
-
-                RecordBean record = getRecordBean(f, gb, bean.getLabels());
-
-                Iterator iter4 = childBronnen.iterator();
-
-                while(iter4.hasNext()) {
-                    Gegevensbron child = (Gegevensbron)iter4.next();
-
-                    String fkField = child.getAdmin_fk();
-                    String recordId = record.getId().toString();
-                    Filter attrFilter = null;
-
-                    if (fkField != null && recordId != null) {
-                        attrFilter = FilterBuilder.createEqualsFilter(fkField, recordId);
-                        filters.add(attrFilter);
-                    }
-
-                    int count = getAantalChildRecords(child, attrFilter, geom);
-
-                    if (count > 0) {
-                        RecordChildBean childBean = new RecordChildBean();
-                        childBean.setId(child.getId().toString());
-                        childBean.setGegevensBronBeanId(bean.getId());
-                        childBean.setTitle(child.getNaam());
-                        childBean.setAantalRecords(count);
-                        childBean.setThemaId(new Integer(themaId).toString());
-                        childBean.setCql(CQL.toCQL(attrFilter));
-
-                        record.addChild(childBean);
-                    }
-                }
-
-                bean.addRecord(record);
-            }
-
+            geom = DataStoreUtil.createGeomFromWKTString(wkt);
         } catch (Exception ex) {
             logger.error("", ex);
         }
+
+        List<String> propnames = bean.getKolomNamenList();
+
+        /* Alle filters indien niet null toevoegen aan list
+         * zodat de factory hier straks een mooie Filter voor kan
+         * teruggeven
+         */
+        ArrayList<Filter> filters = new ArrayList();
+        Filter newFilter = null;
+
+        if (cql != null && !cql.equals("")) {
+            try {
+                Filter cqlFilter = CQL.toFilter(cql);
+                filters.add(cqlFilter);
+            } catch (CQLException ex) {
+                logger.error("", ex);
+            }
+        }
+
+        if (filters.size() == 1) {
+            newFilter = filters.get(0);
+        }
+
+        if (filters.size() > 1) {
+            newFilter = filterFac.and(filters);
+        }
+
+        List<Feature> features = null;
+        try {
+            features = DataStoreUtil.getFeatures(b, gb, geom, newFilter, propnames, null, collectGeom);
+        } catch (Exception ex) {
+            logger.error("", ex);
+        }
+
+        if (features==null || features.isEmpty() ) {
+            return null;
+        }
+        
+        Iterator featureIter = features.iterator();
+        while (featureIter.hasNext()) {
+            Feature f = (Feature) featureIter.next();
+
+            RecordBean record = null;
+            try {
+                record = getRecordBean(f, gb, bean.getLabels());
+             } catch (Exception ex) {
+                logger.error("", ex);
+                continue;
+            }
+
+            Iterator iter4 = childBronnen.iterator();
+
+            while (iter4.hasNext()) {
+                Gegevensbron child = (Gegevensbron) iter4.next();
+
+                String fkField = child.getAdmin_fk();
+                String recordId = record.getId().toString();
+                Filter attrFilter = null;
+
+                if (fkField != null && recordId != null) {
+                    attrFilter = FilterBuilder.createEqualsFilter(fkField, recordId);
+                    filters.add(attrFilter);
+                }
+
+                int count = 0;
+                try {
+                    count = getAantalChildRecords(child, attrFilter, geom);
+                } catch (Exception ex) {
+                    logger.error("", ex);
+                }
+
+                if (count > 0) {
+                    RecordChildBean childBean = new RecordChildBean();
+                    childBean.setId(child.getId().toString());
+                    childBean.setGegevensBronBeanId(bean.getId());
+                    childBean.setTitle(child.getNaam());
+                    childBean.setAantalRecords(count);
+                    childBean.setThemaId(new Integer(themaId).toString());
+                    childBean.setCql(CQL.toCQL(attrFilter));
+
+                    record.addChild(childBean);
+                }
+            }
+
+            bean.addRecord(record);
+        }
+
 
         return bean;
     }
@@ -206,9 +238,10 @@ public class CollectAdmindata {
             rb.setId(f.getProperty(adminPk).getValue());
         }
 
-        if (label_bean_items == null)
+        if (label_bean_items == null) {
             return null;
-        
+        }
+
         Iterator it = label_bean_items.iterator();
         while (it.hasNext()) {
             LabelBean lb = (LabelBean) it.next();
@@ -224,7 +257,7 @@ public class CollectAdmindata {
              * Als het dan nog steeds niet bestaat: een lege toevoegen.
              */
             String kolomnaam = lb.getKolomNaam();
-            if (kolomnaam!=null && kolomnaam.length()>0) {
+            if (kolomnaam != null && kolomnaam.length() > 0) {
                 kolomnaam = DataStoreUtil.convertFullnameToQName(lb.getKolomNaam()).getLocalPart();
             }
 
@@ -448,8 +481,6 @@ public class CollectAdmindata {
         return url.toString();
     }
 
-    
-
     public GegevensBronBean createTestGegevensBronBean(int id, String parentHtmlId) {
         GegevensBronBean gbBean = new GegevensBronBean();
         gbBean.setId(id);
@@ -576,8 +607,9 @@ public class CollectAdmindata {
         }
 
         /* Ophalen count van een RO Online WFS duurt best lang */
-        if (b.getType().equals(Bron.TYPE_WFS))
+        if (b.getType().equals(Bron.TYPE_WFS)) {
             return 1;
+        }
 
         DataStore ds = null;
 
@@ -592,23 +624,26 @@ public class CollectAdmindata {
                     ArrayList<Filter> filters = new ArrayList();
                     filters.add(geomFilter);
 
-                    if (filters.size() == 1)
+                    if (filters.size() == 1) {
                         filter = filters.get(0);
+                    }
 
-                    if (filters.size() > 1)
+                    if (filters.size() > 1) {
                         filter = filterFac.and(filters);
+                    }
                 }
             }
 
             List<String> propnames = new ArrayList<String>();
 
-            if (childGb.getAdmin_fk() != null)
+            if (childGb.getAdmin_fk() != null) {
                 propnames.add(childGb.getAdmin_fk());
+            }
 
-            FeatureCollection fc = DataStoreUtil.getFeatureCollection(ds,childGb,filter,propnames,null,false);
+            FeatureCollection fc = DataStoreUtil.getFeatureCollection(ds, childGb, filter, propnames, null, false);
             count = fc.size();
 
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             logger.error("Fout tijdens maken DataStore voor child Gegevensbron", ex);
         } finally {
             ds.dispose();
