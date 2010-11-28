@@ -254,7 +254,7 @@ public class GetViewerDataAction extends BaseGisAction {
                 if (count > 0) {
                     RecordChildBean childBean = new RecordChildBean();
                     childBean.setId(gbId);
-                    childBean.setGegevensBronBeanId(0);
+                    childBean.setGegevensBronBeanId(new Integer(0));
                     childBean.setTitle(themaNaam);
                     childBean.setAantalRecords(count);
                     childBean.setThemaId(themaId);

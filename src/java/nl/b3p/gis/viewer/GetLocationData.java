@@ -44,7 +44,7 @@ public class GetLocationData {
     public GetLocationData() {
     }
 
-    public String getWkt(String themaId, String attributeName, String compareValue) throws SQLException {
+    public String getWkt(String ggbId, String attributeName, String compareValue) throws SQLException {
         Session sess = null;
         String wkt = "";
 
@@ -55,7 +55,7 @@ public class GetLocationData {
             Integer id = -1;
 
             try {
-                id = new Integer(themaId);
+                id = new Integer(ggbId);
             } catch (NumberFormatException ex) {
                 log.error("Themaid is leeg. NumberFormatException bij maken Integer");
             }

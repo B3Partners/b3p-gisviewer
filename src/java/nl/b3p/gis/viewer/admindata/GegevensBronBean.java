@@ -1,29 +1,41 @@
 package nl.b3p.gis.viewer.admindata;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
  * @author Boy de Wit
  */
 public class GegevensBronBean {
-    private int id;
-    
-    private String title;
 
+    private Integer id;
+    private String adminPk;
+    private String title;
+    private String csvPks = "";
     private List<LabelBean> labels;
     private List<RecordBean> records;
-
     private String parentHtmlId;
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
+    }
+
+    public String getAdminPk() {
+        return adminPk;
+    }
+
+    public void setAdminPk(String adminPk) {
+        this.adminPk = adminPk;
     }
 
     public List<LabelBean> getLabels() {
@@ -78,42 +90,52 @@ public class GegevensBronBean {
 
         List kolomNamen = new ArrayList();
 
-        if (labels == null)
+        if (labels == null) {
             return kolomNamen;
+        }
 
         Iterator iter = labels.iterator();
-        while(iter.hasNext()) {
-            LabelBean lb = (LabelBean)iter.next();
+        while (iter.hasNext()) {
+            LabelBean lb = (LabelBean) iter.next();
 
-            if (lb.getKolomNaam() != null)
+            if (lb.getKolomNaam() != null) {
                 kolomNamen.add(lb.getKolomNaam());
+            }
         }
 
         return kolomNamen;
 
     }
 
-    /* komma gescheiden String teruggeven met id's van bijbehorende records */
-    public String getRecordKeys() {
-        String keys = "";
-        List records = new ArrayList();
+    public String getCsvPks() {
+        return csvPks;
+    }
 
-        Iterator iter = records.iterator();
-        int i = 0;
-        while(iter.hasNext()) {
-            RecordBean rb = (RecordBean)iter.next();
+    public void setCsvPks(String csvPks) {
+        this.csvPks = csvPks;
+    }
 
-            if (rb.getId() != null) {
-
-                if (i == 0)
-                    keys += (String)rb.getId();
-                else
-                    keys += "," + (String)rb.getId();
-            }
-
-            i++;
+    /* komma gescheiden String berekenen met id's van bijbehorende records */
+    public void setCsvPksFromRecordBeans() {
+        List<RecordBean> records = this.getRecords();
+        if (records == null || records.isEmpty()) {
+            return;
         }
-
-        return keys;
+        String keys = "";
+        for (int i = 0; i < records.size(); i++) {
+            RecordBean rb = records.get(i);
+            if (rb.getId() == null) {
+                continue;
+            }
+            if (i > 0) {
+                keys += ",";
+            }
+            keys += rb.getId().toString();
+        }
+        try {
+            this.csvPks = URLEncoder.encode(keys.trim(), "utf-8");
+        } catch (UnsupportedEncodingException ex) {
+            this.csvPks = "";
+        }
     }
 }

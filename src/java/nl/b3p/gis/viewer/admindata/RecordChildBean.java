@@ -10,7 +10,7 @@ public class RecordChildBean {
     private String title;
     private int aantalRecords;
 
-    private int gegevensBronBeanId;
+    private Integer gegevensBronBeanId;
     
     private String themaId;
     private String cql;
@@ -31,11 +31,11 @@ public class RecordChildBean {
         this.aantalRecords = aantalRecords;
     }
 
-    public int getGegevensBronBeanId() {
+    public Integer getGegevensBronBeanId() {
         return gegevensBronBeanId;
     }
 
-    public void setGegevensBronBeanId(int gegevensBronBeanId) {
+    public void setGegevensBronBeanId(Integer gegevensBronBeanId) {
         this.gegevensBronBeanId = gegevensBronBeanId;
     }
 

@@ -1,18 +1,14 @@
 package nl.b3p.gis.viewer.admindata;
 
 import com.vividsolutions.jts.geom.Geometry;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
@@ -54,7 +50,7 @@ public class CollectAdmindata {
 
     public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, String parentHtmlId) throws Exception {
 
-        boolean collectGeom = true;
+        boolean collectGeom = false;
 
         return fillGegevensBronBean(gegevensBronId, themaId, wkt, cql, collectGeom, parentHtmlId);
     }
@@ -76,6 +72,7 @@ public class CollectAdmindata {
         bean = new GegevensBronBean();
 
         bean.setId(gb.getId());
+        bean.setAdminPk(gb.getAdmin_pk());
         bean.setParentHtmlId(parentHtmlId);
 
         Themas thema = null;
@@ -133,7 +130,6 @@ public class CollectAdmindata {
         }
 
         Geometry geom = null;
-        ;
         try {
             geom = DataStoreUtil.createGeomFromWKTString(wkt);
         } catch (Exception ex) {
@@ -226,7 +222,7 @@ public class CollectAdmindata {
             bean.addRecord(record);
         }
 
-
+        bean.setCsvPksFromRecordBeans();
         return bean;
     }
 
@@ -261,6 +257,18 @@ public class CollectAdmindata {
                 kolomnaam = DataStoreUtil.convertFullnameToQName(lb.getKolomNaam()).getLocalPart();
             }
 
+            List valueList = null;
+            Object value = null;
+            if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
+                value = f.getProperty(kolomnaam).getValue();
+                //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
+                valueList = splitObject(value, ",");
+            }
+            Object pkValue = null;
+            if (adminPk != null) {
+                pkValue = f.getProperty(adminPk).getValue();
+            }
+
             /*
              * Controleer om welk datatype dit themadata object om draait.
              * Binnen het Datatype zijn er drie mogelijkheden, namelijk echt data,
@@ -273,13 +281,13 @@ public class CollectAdmindata {
              * en aan de arraylist regel toegevoegd te worden.
              */
             if (lb.getType().equals(RecordValueBean.TYPE_DATA) && kolomnaam != null) {
-                if (f.getProperty(kolomnaam).getValue() != null) {
-                    rvb.setValue(f.getProperty(kolomnaam).getValue().toString());
+                if (value != null) {
+                    rvb.setValue(value.toString());
                 }
                 /*
                  * In het tweede geval dient de informatie in de thema data als link naar een andere
-                 * informatiebron. Deze link zal enigszins aangepast moeten worden om tot vollende
-                 * werkende link te dienen.
+                 * informatiebron. Deze link zal enigszins aangepast moeten worden om tot 
+                 * werkende link te komen.
                  */
             } else if (lb.getType().equals(RecordValueBean.TYPE_URL)) {
                 StringBuffer url;
@@ -294,25 +302,19 @@ public class CollectAdmindata {
                 url.append("=");
                 url.append(gb.getId());
 
-                Object value = null;
-                if (adminPk != null) {
-                    value = f.getProperty(adminPk).getValue();
-                    if (value != null) {
-                        url.append("&");
-                        url.append(adminPk);
-                        url.append("=");
-                        url.append(URLEncoder.encode(value.toString().trim(), "utf-8"));
-                    }
+                if (adminPk != null && pkValue!=null) {
+                    pkValue = f.getProperty(adminPk).getValue();
+                    url.append("&");
+                    url.append(adminPk);
+                    url.append("=");
+                    url.append(URLEncoder.encode(pkValue.toString().trim(), "utf-8"));
                 }
 
-                if (kolomnaam != null && kolomnaam.length() > 0 && !kolomnaam.equalsIgnoreCase(adminPk)) {
-                    value = f.getProperty(kolomnaam).getValue();
-                    if (value != null) {
-                        url.append("&");
-                        url.append(kolomnaam);
-                        url.append("=");
-                        url.append(URLEncoder.encode(value.toString().trim(), "utf-8"));
-                    }
+                if (value != null && !kolomnaam.equalsIgnoreCase(adminPk)) {
+                    url.append("&");
+                    url.append(kolomnaam);
+                    url.append("=");
+                    url.append(URLEncoder.encode(value.toString().trim(), "utf-8"));
                 }
 
                 rvb.setValue(url.toString());
@@ -322,59 +324,42 @@ public class CollectAdmindata {
                  * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
                  */
             } else if (lb.getType().equals(RecordValueBean.TYPE_QUERY)) {
-                StringBuffer url;
                 if (lb.getCommando() != null) {
-                    url = new StringBuffer(lb.getCommando());
-                    String commando = url.toString();
-                    //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
-                    Object valueToSplit = null;
-                    if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
-                        valueToSplit = f.getProperty(kolomnaam).getValue();
-                    }
                     HashMap fhm = toHashMap(f);
-                    List values = splitObject(valueToSplit, ",");
                     List regelValues = new ArrayList();
-                    for (int i = 0; i < values.size(); i++) {
-                        Object value = values.get(i);
+                    for (int i = 0; i < valueList.size(); i++) {
+                        String commando = lb.getCommando().toString();
+                        Object localValue = valueList.get(i);
                         if (commando.contains("[") || commando.contains("]")) {
                             //vervang de eventuele csv in 1 waarde van die csv
                             if (kolomnaam != null) {
-                                fhm.put(kolomnaam, value);
+                                fhm.put(kolomnaam, localValue);
                             }
                             String newCommando = replaceValuesInString(commando, fhm);
                             regelValues.add(newCommando);
+                        } else if (localValue != null) {
+                            commando += localValue.toString().trim();
+                            regelValues.add(commando);
                         } else {
-                            if (value != null) {
-                                url.append(value.toString().trim());
-                                regelValues.add(url.toString());
-                            } else {
-                                regelValues.add("");
-                            }
+                            regelValues.add("");
                         }
                     }
-
                     rvb.setValueList(regelValues);
 
-                } else {
-
-                    if (f.getProperty(kolomnaam).getValue() != null) {
-                        rvb.setValue(f.getProperty(kolomnaam).getValue().toString());
-                    }
+                } else if (value != null) {
+                    // enkele waarde in lijst voor eenduidigheid tbv front-end
+                    rvb.setValueList(valueList);
                 }
 
             } else if (lb.getType().equals(RecordValueBean.TYPE_FUNCTION)) {
-                Object keyValue = null;
-                if (adminPk != null) {
-                    keyValue = f.getProperty(adminPk).getValue();
-                }
-                if (keyValue != null) {
+                 if (pkValue != null) {
                     String attributeName = kolomnaam;
                     Object attributeValue = null;
                     if (attributeName != null) {
                         attributeValue = f.getProperty(attributeName).getValue();
                     } else {
                         attributeName = adminPk;
-                        attributeValue = keyValue;
+                        attributeValue = pkValue;
                     }
 
                     // De attributeValue ook eerst vooraan erbij zetten om die te kunnen tonen op de admindata pagina - Drie hekjes als scheidingsteken
@@ -386,7 +371,7 @@ public class CollectAdmindata {
                     function.append(",");
                     function.append("'").append(adminPk).append("'");
                     function.append(",");
-                    function.append("'").append(keyValue).append("'");
+                    function.append("'").append(pkValue).append("'");
                     function.append(",");
                     function.append("'").append(attributeName).append("'");
                     function.append(",");
@@ -396,6 +381,9 @@ public class CollectAdmindata {
                     function.append(")");
 
                     rvb.setValue(function.toString());
+
+               } else if (value != null) {
+                    rvb.setValue(value.toString());
                 }
             }
 
