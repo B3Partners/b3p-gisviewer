@@ -592,9 +592,9 @@ public class CollectAdmindata {
         }
 
         /* Ophalen count van een RO Online WFS duurt best lang */
-//        if (b.getType().equals(Bron.TYPE_WFS)) {
-//            return 1;
-//        }
+        if (b.getType().equals(Bron.TYPE_WFS)) {
+            return 1;
+        }
 
         DataStore ds = null;
         try {
