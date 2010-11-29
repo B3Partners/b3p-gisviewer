@@ -22,6 +22,7 @@
  */
 package nl.b3p.gis.viewer.db;
 
+import java.util.Comparator;
 import java.util.Set;
 
 public class Clusters implements Comparable {
@@ -305,5 +306,21 @@ public class Clusters implements Comparable {
         return tn.compareTo(on);
     }
 
+    public static class NameComparator implements Comparator {
+
+        public int compare(Object o1, Object o2) {
+            if (!(o1 instanceof Clusters)) {
+                throw new ClassCastException("A Clusters object 1 expected.");
+            }
+            if (!(o2 instanceof Clusters)) {
+                throw new ClassCastException("A Clusters object 2 expected.");
+            }
+
+            String o1n = ((Clusters) o1).getNaam();
+            String o2n = ((Clusters) o2).getNaam();
+
+            return o1n.compareTo(o2n);
+        }
+    }
 
 }

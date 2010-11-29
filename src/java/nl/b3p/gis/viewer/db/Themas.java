@@ -2,6 +2,7 @@ package nl.b3p.gis.viewer.db;
 
 import java.util.Set;
 import java.sql.Connection;
+import java.util.Comparator;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.zoeker.configuratie.Bron;
@@ -12,7 +13,6 @@ public class Themas implements Comparable {
 
     private static final Log log = LogFactory.getLog(Themas.class);
     public static final String THEMAID = "themaid";
-
     private Integer id;
     private String code;
     private String naam;
@@ -287,23 +287,26 @@ public class Themas implements Comparable {
         Gegevensbron gb = getGegevensbron();
         Bron b = null;
 
-        if (gb != null)
+        if (gb != null) {
             b = gb.getBron();
+        }
 
-        if (b == null && user != null)
+        if (b == null && user != null) {
             b = user.getKbWfsConnectie();
+        }
 
         return b;
     }
-    
+
     public Connection getJDBCConnection() {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
     public boolean hasValidAdmindataSource(GisPrincipal user) {
 
-        if (getGegevensbron() == null)
+        if (getGegevensbron() == null) {
             return false;
+        }
 
         Gegevensbron gb = getGegevensbron();
         Bron b = gb.getBron();
@@ -315,6 +318,23 @@ public class Themas implements Comparable {
         } else {
             // andere externe bronnen checken we niet, mogelijk later
             return true;
+        }
+    }
+
+    public static class NameComparator implements Comparator {
+
+        public int compare(Object o1, Object o2) {
+            if (!(o1 instanceof Themas)) {
+                throw new ClassCastException("A Themas object 1 expected.");
+            }
+            if (!(o2 instanceof Themas)) {
+                throw new ClassCastException("A Themas object 2 expected.");
+            }
+
+            String o1n = ((Themas) o1).getNaam();
+            String o2n = ((Themas) o2).getNaam();
+
+            return o1n.compareTo(o2n);
         }
     }
 }

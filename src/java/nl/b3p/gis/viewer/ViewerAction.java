@@ -31,11 +31,13 @@ import com.vividsolutions.jts.geom.PrecisionModel;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
@@ -220,7 +222,12 @@ public class ViewerAction extends BaseGisAction {
             }
         }
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        request.setAttribute("tree", createJasonObject(rootClusterMap, actieveThemas, actieveClusters, user));
+        JSONObject treeObject = createJasonObject(rootClusterMap, actieveThemas, actieveClusters, user);
+
+//        int order = convertLayerOrderPlim(treeObject, 0);
+//        convertTreeOrderPlim(treeObject);
+
+        request.setAttribute("tree", treeObject);
 
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(PrecisionModel.FLOATING), 28992);
         Polygon extentBbox = null;
@@ -512,6 +519,62 @@ public class ViewerAction extends BaseGisAction {
             }
         }
         return children;
+    }
+
+//    private JSONObject convertOrderPlim(JSONObject treeObject, int order) throws JSONException {
+//        treeObject.put("order", order);
+//        String title = treeObject.getString("title");
+//        treeObject.put("title", title + "(" + order + ")");
+//        if (!treeObject.isNull("children")) {
+//            JSONArray childArray = treeObject.getJSONArray("children");
+//            for (int i = 0; i<childArray.length(); i++) {
+//                JSONObject childObject = childArray.getJSONObject(i);
+//                convertOrderPlim(childObject, order++);
+//            }
+//        }
+//
+//
+//                id:
+//                type:
+//                title:
+//                children:
+//                        id: met c
+//                        type:
+//                            en meer
+//                        children:
+//
+//        return treeObject;
+//    }
+    private int convertLayerOrderPlim(JSONObject treeObject, int order) throws JSONException {
+        order++;
+        treeObject.put("order", order);
+        String title = treeObject.getString("title");
+        treeObject.put("title", title + "(" + order + ")");
+        if (!treeObject.isNull("children")) {
+            JSONArray childArray = treeObject.getJSONArray("children");
+            for (int i = 0; i<childArray.length(); i++) {
+                JSONObject childObject = childArray.getJSONObject(i);
+                order = convertLayerOrderPlim(childObject, order);
+            }
+        }
+        return order;
+    }
+    private void convertTreeOrderPlim(JSONObject treeObject) throws JSONException {
+        if (!treeObject.isNull("children")) {
+            JSONArray childArray = treeObject.getJSONArray("children");
+            TreeMap tm = new TreeMap();
+            for (int i = 0; i<childArray.length(); i++) {
+                JSONObject childObject = childArray.getJSONObject(i);
+                convertTreeOrderPlim(childObject);
+                String title = childObject.getString("title");
+                tm.put(title, childObject);
+            }
+            Collection c = tm.values();
+            JSONArray newChildArray = new JSONArray();
+            newChildArray.put(c);
+            treeObject.put("children", newChildArray);
+        }
+        return;
     }
 
     protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas, List actieveClusters, GisPrincipal user) throws JSONException {

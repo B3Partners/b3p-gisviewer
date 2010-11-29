@@ -76,7 +76,7 @@ public class CollectAdmindata {
         bean.setParentHtmlId(parentHtmlId);
 
         Themas thema = null;
-        if (themaId >0) {
+        if (themaId > 0) {
             thema = (Themas) sess.get(Themas.class, themaId);
         }
         if (thema == null || thema.getNaam() == null || thema.getNaam().equals("")) {
@@ -169,10 +169,10 @@ public class CollectAdmindata {
             logger.error("", ex);
         }
 
-        if (features==null || features.isEmpty() ) {
+        if (features == null || features.isEmpty()) {
             return null;
         }
-        
+
         Iterator featureIter = features.iterator();
         while (featureIter.hasNext()) {
             Feature f = (Feature) featureIter.next();
@@ -180,8 +180,10 @@ public class CollectAdmindata {
             RecordBean record = null;
             try {
                 record = getRecordBean(f, gb, bean.getLabels());
-             } catch (Exception ex) {
+            } catch (Exception ex) {
                 logger.error("", ex);
+            }
+            if (record == null) {
                 continue;
             }
 
@@ -302,7 +304,7 @@ public class CollectAdmindata {
                 url.append("=");
                 url.append(gb.getId());
 
-                if (adminPk != null && pkValue!=null) {
+                if (adminPk != null && pkValue != null) {
                     pkValue = f.getProperty(adminPk).getValue();
                     url.append("&");
                     url.append(adminPk);
@@ -352,7 +354,7 @@ public class CollectAdmindata {
                 }
 
             } else if (lb.getType().equals(RecordValueBean.TYPE_FUNCTION)) {
-                 if (pkValue != null) {
+                if (pkValue != null) {
                     String attributeName = kolomnaam;
                     Object attributeValue = null;
                     if (attributeName != null) {
@@ -382,7 +384,7 @@ public class CollectAdmindata {
 
                     rvb.setValue(function.toString());
 
-               } else if (value != null) {
+                } else if (value != null) {
                     rvb.setValue(value.toString());
                 }
             }

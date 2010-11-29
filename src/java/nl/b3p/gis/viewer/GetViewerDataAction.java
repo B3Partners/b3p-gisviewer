@@ -37,12 +37,13 @@ import org.geotools.filter.text.cql2.CQL;
 public class GetViewerDataAction extends BaseGisAction {
 
     private static final Log logger = LogFactory.getLog(GetViewerDataAction.class);
-
     protected static final String ADMINDATA = "admindata";
-    protected static final String MULTI_ADMINDATA = "multi_admindata";
     protected static final String AANVULLENDEINFO = "aanvullendeinfo";
     protected static final String METADATA = "metadata";
     protected static final String OBJECTDATA = "objectdata";
+    protected static final String ADMINDATAFW = "admindata1";
+    protected static final String MULTI_ADMINDATAFW = "multi_admindata";
+    protected static final String DEFAULT_ADMINDATAFW = MULTI_ADMINDATAFW;
     protected static final String PK_FIELDNAME_PARAM = "pkFieldName";
 
     /**
@@ -66,12 +67,6 @@ public class GetViewerDataAction extends BaseGisAction {
         hibProp.setAlternateForwardName(FAILURE);
         hibProp.setAlternateMessageKey("error.admindata.failed");
         map.put(ADMINDATA, hibProp);
-
-        hibProp = new ExtendedMethodProperties(MULTI_ADMINDATA);
-        hibProp.setDefaultForwardName(SUCCESS);
-        hibProp.setAlternateForwardName(FAILURE);
-        hibProp.setAlternateMessageKey("error.admindata.failed");
-        map.put(MULTI_ADMINDATA, hibProp);
 
         hibProp = new ExtendedMethodProperties(AANVULLENDEINFO);
         hibProp.setDefaultForwardName(SUCCESS);
@@ -119,28 +114,50 @@ public class GetViewerDataAction extends BaseGisAction {
      * regels
      */
     public ActionForward admindata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        ArrayList themas = getThemas(mapping, dynaForm, request);
-        ArrayList regels = new ArrayList();
-        ArrayList ti = new ArrayList();
-        if (themas == null) {
-            request.setAttribute("regels_list", regels);
-            request.setAttribute("thema_items_list", ti);
-            return mapping.findForward("admindata");
+        List themas = getThemas(mapping, dynaForm, request);
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+
+        String layoutForward = findDataAdminLayout(themas, user);
+        if (layoutForward == null) {
+            layoutForward = DEFAULT_ADMINDATAFW;
         }
 
-        collectThemaRegels(mapping, request, themas, regels, ti, false);
-        request.setAttribute("regels_list", regels);
-        request.setAttribute("thema_items_list", ti);
+        if (MULTI_ADMINDATAFW.equals(layoutForward)) {
+            List ggbBeans = new ArrayList();
+            if (themas != null) {
+                ggbBeans = collectGegevensbronBeans(request, themas, false);
+            }
+            request.setAttribute("beans", ggbBeans);
+            String wkt = getGeometry(request).toText();
+            request.setAttribute("wkt", wkt);
+        } else {
+            ArrayList regels = new ArrayList();
+            ArrayList ti = new ArrayList();
+            if (themas != null) {
+                collectThemaRegels(mapping, request, themas, regels, ti, false);
+            }
+            request.setAttribute("regels_list", regels);
+            request.setAttribute("thema_items_list", ti);
+        }
 
+        return mapping.findForward(layoutForward);
+    }
+
+    private String findDataAdminLayout(List themas, GisPrincipal user) throws Exception {
         /* Bepalen welke jsp (layout) voor admindata gebruikt moet worden
          * 1 = uitgebreide jsp
          * 2 = simpel naast elkaar
          * TODO: 3 = simpel onder elkaar
+         * 4: multi_admin -> komt later in de plaats van uitgebreide jsp (1)
          */
+
+        if (themas == null || user == null) {
+            return null;
+        }
+
         int aantalThemas = themas.size();
 
         /* Default ophalen uit configKeeper */
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         Set roles = user.getRoles();
 
         /* Ophalen rollen in configuratie database */
@@ -212,27 +229,24 @@ public class GetViewerDataAction extends BaseGisAction {
                 layoutAdminData = (String) map.get("layoutAdminData");
             }
 
-            return mapping.findForward(layoutAdminData);
+            return layoutAdminData;
         }
 
-        /* geen config gevonden of ingesteld pak de uitgebreide versie */
-        return mapping.findForward("admindata1");
+        /* geen config gevonden of ingesteld pak de default */
+        return null;
+
     }
 
-    public ActionForward multi_admindata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        /* Ophalen aangevinkte themas (kaartlagen) */
-        List themas = getThemas(mapping, dynaForm, request);
-
-        if (themas == null) {
-            return mapping.findForward(MULTI_ADMINDATA);
-        }
-
+    protected List collectGegevensbronBeans(HttpServletRequest request, List themas, boolean locatie) {
         List beans = new ArrayList();
 
         /* Per thema een GegevensBronBean vullen */
         Iterator iter = themas.iterator();
-        while(iter.hasNext()) {
-            Themas thema = (Themas)iter.next();
+        while (iter.hasNext()) {
+            Themas thema = (Themas) iter.next();
+            if (locatie && !thema.isLocatie_thema()) {
+                continue;
+            }
             Gegevensbron gb = thema.getGegevensbron();
 
             if (gb != null) {
@@ -245,8 +259,9 @@ public class GetViewerDataAction extends BaseGisAction {
                 Filter filter = getExtraFilter(thema, request);
                 String cql = null;
 
-                if (filter != null)
+                if (filter != null) {
                     cql = CQL.toCQL(filter);
+                }
 
                 /* List van RecordChildBeans klaarzetten */
                 int count = 1; //getAantalChildRecords(child, bean, attrName, attrValue);
@@ -264,19 +279,11 @@ public class GetViewerDataAction extends BaseGisAction {
                 }
             }
         }
-
-        /* geom op request */
-        String wkt = getGeometry(request).toText();
-        request.setAttribute("wkt", wkt);
-
-        /* Klaarzetten List van GegevensBronBeans */
-        request.setAttribute("beans", beans);
-
-        return mapping.findForward(MULTI_ADMINDATA);
+        return beans;
     }
 
     protected void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
-            ArrayList themas, ArrayList regels, ArrayList ti, boolean locatie) {
+            List themas, List regels, List ti, boolean locatie) {
         for (int i = 0; i < themas.size(); i++) {
             Themas t = (Themas) themas.get(i);
             if (locatie && !t.isLocatie_thema()) {

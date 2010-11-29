@@ -9,14 +9,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import nl.b3p.gis.viewer.db.Clusters;
-import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
-import nl.b3p.gis.viewer.db.WaardeTypen;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.Query;
@@ -85,8 +82,6 @@ public class SpatialUtil {
         
         return gb;
     }
-
-
 
     public static List getValidThemas(boolean locatie) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -161,6 +156,7 @@ public class SpatialUtil {
         conn.setAutoCommit(orgAutoCommit);
         return newValue;
     }
+
 
     public static Geometry geometrieFromText(String wktgeom, int srid) {
         WKTReader wktreader = new WKTReader(new GeometryFactory(new PrecisionModel(), srid));

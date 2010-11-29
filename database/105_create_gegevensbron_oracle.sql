@@ -14,7 +14,10 @@ create table gegevensbron (
 alter table gegevensbron 
         add constraint FK_PARENT 
         foreign key (parent) 
-        references clusters;
+        references gegevensbron;
+--scripts foutieve fk te herstellen     
+--alter table gegevensbron drop constraint fk_parent;
+--ALTER TABLE gegevensbron ADD CONSTRAINT fk_parent FOREIGN KEY (parent) REFERENCES gegevensbron (id);        
 		
 create sequence gegevensbron_id_seq;
 
