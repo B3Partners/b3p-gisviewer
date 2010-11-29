@@ -137,34 +137,16 @@ public class CollectAdmindata {
         }
 
         List<String> propnames = bean.getKolomNamenList();
-
-        /* Alle filters indien niet null toevoegen aan list
-         * zodat de factory hier straks een mooie Filter voor kan
-         * teruggeven
-         */
-        ArrayList<Filter> filters = new ArrayList();
-        Filter newFilter = null;
-
-        if (cql != null && !cql.equals("")) {
+        Filter cqlFilter = null;
             try {
-                Filter cqlFilter = CQL.toFilter(cql);
-                filters.add(cqlFilter);
-            } catch (CQLException ex) {
-                logger.error("", ex);
-            }
+            cqlFilter = CQL.toFilter(cql);
+        } catch (CQLException ex) {
+            logger.error("", ex);
         }
-
-        if (filters.size() == 1) {
-            newFilter = filters.get(0);
-        }
-
-        if (filters.size() > 1) {
-            newFilter = filterFac.and(filters);
-        }
-
+ 
         List<Feature> features = null;
         try {
-            features = DataStoreUtil.getFeatures(b, gb, geom, newFilter, propnames, null, collectGeom);
+            features = DataStoreUtil.getFeatures(b, gb, geom, cqlFilter, propnames, null, collectGeom);
         } catch (Exception ex) {
             logger.error("", ex);
         }
@@ -194,16 +176,29 @@ public class CollectAdmindata {
 
                 String fkField = child.getAdmin_fk();
                 String recordId = record.getId().toString();
-                Filter attrFilter = null;
 
+                Filter childFilter = null;
+                ArrayList<Filter> filters = new ArrayList();
+                if (cqlFilter!=null) {
+                    filters.add(cqlFilter);
+                }
+                Filter attrFilter = null;
                 if (fkField != null && recordId != null) {
                     attrFilter = FilterBuilder.createEqualsFilter(fkField, recordId);
+                }
+                if (attrFilter!=null) {
                     filters.add(attrFilter);
+                }
+                if (filters.size() == 1) {
+                    childFilter = filters.get(0);
+                }
+                if (filters.size() > 1) {
+                    childFilter = filterFac.and(filters);
                 }
 
                 int count = 0;
                 try {
-                    count = getAantalChildRecords(child, attrFilter, geom);
+                    count = getAantalChildRecords(child, childFilter, geom);
                 } catch (Exception ex) {
                     logger.error("", ex);
                 }
@@ -597,31 +592,32 @@ public class CollectAdmindata {
         }
 
         /* Ophalen count van een RO Online WFS duurt best lang */
-        if (b.getType().equals(Bron.TYPE_WFS)) {
-            return 1;
-        }
+//        if (b.getType().equals(Bron.TYPE_WFS)) {
+//            return 1;
+//        }
 
         DataStore ds = null;
-
         try {
             ds = b.toDatastore();
 
+            Filter childGeomFilter = null;
+            ArrayList<Filter> filters = new ArrayList();
+            if (filter != null) {
+                filters.add(filter);
+            }
             /* geom filter toevoegen */
+            Filter geomFilter = null;
             if (geom != null) {
-                Filter geomFilter = DataStoreUtil.createIntersectFilter(childGb, ds, geom);
-
-                if (geomFilter != null) {
-                    ArrayList<Filter> filters = new ArrayList();
-                    filters.add(geomFilter);
-
-                    if (filters.size() == 1) {
-                        filter = filters.get(0);
-                    }
-
-                    if (filters.size() > 1) {
-                        filter = filterFac.and(filters);
-                    }
-                }
+                geomFilter = DataStoreUtil.createIntersectFilter(childGb, ds, geom);
+            }
+            if (geomFilter != null) {
+                filters.add(geomFilter);
+            }
+            if (filters.size() == 1) {
+                childGeomFilter = filters.get(0);
+            }
+            if (filters.size() > 1) {
+                childGeomFilter = filterFac.and(filters);
             }
 
             List<String> propnames = new ArrayList<String>();
@@ -630,7 +626,7 @@ public class CollectAdmindata {
                 propnames.add(childGb.getAdmin_fk());
             }
 
-            FeatureCollection fc = DataStoreUtil.getFeatureCollection(ds, childGb, filter, propnames, null, false);
+            FeatureCollection fc = DataStoreUtil.getFeatureCollection(ds, childGb, childGeomFilter, propnames, null, false);
             count = fc.size();
 
         } catch (Exception ex) {
