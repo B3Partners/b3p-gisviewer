@@ -25,6 +25,7 @@ public class Gegevensbron implements Comparable {
     private Set children = new HashSet();
     private String admin_fk;
     private String admin_tabel_opmerkingen;
+    private Integer volgordenr;
 
     private Set themaData;
     private Set themas;
@@ -150,5 +151,13 @@ public class Gegevensbron implements Comparable {
 
     public void setThemas(Set themas) {
         this.themas = themas;
+    }
+
+    public Integer getVolgordenr() {
+        return volgordenr;
+    }
+
+    public void setVolgordenr(Integer volgordenr) {
+        this.volgordenr = volgordenr;
     }
 }

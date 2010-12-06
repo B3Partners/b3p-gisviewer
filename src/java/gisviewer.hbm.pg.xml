@@ -132,6 +132,8 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         </set>
         <property name="admin_fk"/>
         <property name="admin_tabel_opmerkingen"/>
+        <property name="volgordenr"/>
+        
         <set name="themaData" lazy="false" cascade="all-delete-orphan" order-by="dataorder, basisregel desc, label">
             <key column="gegevensbron"/>
             <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>

@@ -67,7 +67,8 @@ public class CollectAdmindata {
         }
 
         /* addChilds */
-        List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId").setInteger("parentId", gb.getId()).list();
+        List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId order by volgordenr, naam")
+                .setInteger("parentId", gb.getId()).list();
 
         bean = new GegevensBronBean();
 
