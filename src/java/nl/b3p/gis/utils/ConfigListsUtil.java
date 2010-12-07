@@ -6,6 +6,8 @@ package nl.b3p.gis.utils;
 
 import nl.b3p.gis.geotools.DataStoreUtil;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
@@ -30,6 +32,8 @@ public class ConfigListsUtil {
 
     private static final Log log = LogFactory.getLog(ConfigListsUtil.class);
 
+    private static final StringArrayComperator stringArrayComperator= new StringArrayComperator();
+    
     private static Bron getBron(Session sess, Integer bronId) {
         WebContext ctx = WebContextFactory.get();
         HttpServletRequest request = ctx.getHttpServletRequest();
@@ -107,6 +111,7 @@ public class ConfigListsUtil {
         }finally{
             ds.dispose();
         }
+        Collections.sort(returnValue,stringArrayComperator);
         return returnValue;
     }
     /**
@@ -141,4 +146,25 @@ public class ConfigListsUtil {
         }
         return returnValue;
     }    
+    
+    private static class StringArrayComperator implements Comparator{
+        public int compare(Object o1, Object o2) {
+            if (o1 instanceof String[] && o2 instanceof String[]){
+                String[] s1=(String[])o1;
+                String[] s2=(String[])o2;
+                //compare alle strings met elkaar
+                for (int i=0; i < s1.length; i++){
+                    int compare=s1[i].compareToIgnoreCase(s2[i]);
+                    if (compare!=0){
+                        return compare;
+                    }
+                }
+                //return of de ene langer is dan de ander
+                return s1.length - s2.length;
+            }
+            return 0;
+        }
+         
+    }
+
 }
