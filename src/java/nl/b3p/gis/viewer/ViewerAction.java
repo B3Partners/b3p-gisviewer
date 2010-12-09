@@ -163,15 +163,11 @@ public class ViewerAction extends BaseGisAction {
         }
         createLists(dynaForm, request);
 
-        // tijdelijke hack om simple viewer te tonen, later als echte instelling
         Map configMap = (Map) request.getAttribute("configMap");
         if (configMap != null) {
-            Boolean usePopup = (Boolean) configMap.get("usePopup");
-            Boolean usePanelControls = (Boolean) configMap.get("usePanelControls");
-            if (usePopup == null || !usePopup) {
-                if (usePanelControls == null || !usePanelControls) {
+            String viewerTemplate = (String) configMap.get("viewerTemplate");
+             if (viewerTemplate != null && viewerTemplate.equals("embedded")) {
                     return mapping.findForward(SIMPLE_VIEWER_FW);
-                }
             }
         }
         return mapping.findForward(SUCCESS);
