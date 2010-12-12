@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
@@ -67,8 +69,7 @@ public class CollectAdmindata {
         }
 
         /* addChilds */
-        List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId order by volgordenr, naam")
-                .setInteger("parentId", gb.getId()).list();
+        List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId order by volgordenr, naam").setInteger("parentId", gb.getId()).list();
 
         bean = new GegevensBronBean();
 
@@ -139,12 +140,12 @@ public class CollectAdmindata {
 
         List<String> propnames = bean.getKolomNamenList();
         Filter cqlFilter = null;
-            try {
+        try {
             cqlFilter = CQL.toFilter(cql);
         } catch (CQLException ex) {
             logger.error("", ex);
         }
- 
+
         List<Feature> features = null;
         try {
             features = DataStoreUtil.getFeatures(b, gb, geom, cqlFilter, propnames, null, collectGeom);
@@ -180,14 +181,14 @@ public class CollectAdmindata {
 
                 Filter childFilter = null;
                 ArrayList<Filter> filters = new ArrayList();
-                if (cqlFilter!=null) {
+                if (cqlFilter != null) {
                     filters.add(cqlFilter);
                 }
                 Filter attrFilter = null;
                 if (fkField != null && recordId != null) {
                     attrFilter = FilterBuilder.createEqualsFilter(fkField, recordId);
                 }
-                if (attrFilter!=null) {
+                if (attrFilter != null) {
                     filters.add(attrFilter);
                 }
                 if (filters.size() == 1) {
@@ -236,6 +237,8 @@ public class CollectAdmindata {
             return null;
         }
 
+        String ggbId = Integer.toString(gb.getId());
+
         Iterator it = label_bean_items.iterator();
         while (it.hasNext()) {
             LabelBean lb = (LabelBean) it.next();
@@ -245,22 +248,20 @@ public class CollectAdmindata {
             rvb.setEenheid(lb.getEenheid());
             rvb.setKolomBreedte(lb.getKolomBreedte());
 
-            /*
-             * Controleer of de kolomnaam van dit themadata object wel voorkomt in de feature.
-             * zoniet kan het zijn dat er een prefix ns in staat. Die moet er dan van afgehaald worden.
-             * Als het dan nog steeds niet bestaat: een lege toevoegen.
-             */
+            String commando = lb.getCommando();
+            String eenheid = lb.getEenheid();
+
             String kolomnaam = lb.getKolomNaam();
             if (kolomnaam != null && kolomnaam.length() > 0) {
                 kolomnaam = DataStoreUtil.convertFullnameToQName(lb.getKolomNaam()).getLocalPart();
             }
 
-            List valueList = null;
-            Object value = null;
+            List attributeValueList = null;
+            Object attributeValue = null;
             if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
-                value = f.getProperty(kolomnaam).getValue();
+                attributeValue = f.getProperty(kolomnaam).getValue();
                 //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
-                valueList = splitObject(value, ",");
+                attributeValueList = splitObject(attributeValue, ",");
             }
             Object pkValue = null;
             if (adminPk != null) {
@@ -269,126 +270,189 @@ public class CollectAdmindata {
 
             /*
              * Controleer om welk datatype dit themadata object om draait.
-             * Binnen het Datatype zijn er drie mogelijkheden, namelijk echt data,
-             * een URL of een Query.
-             * In alle drie de gevallen moeten er verschillende handelingen verricht
+             * Binnen het Datatype zijn er vier mogelijkheden, namelijk echt data,
+             * een URL of een Query of een javascript function.
+             * In alle vier de gevallen moeten er verschillende handelingen verricht
              * worden om deze informatie op het scherm te krijgen.
-             *
-             * In het eerste geval, wanneer het gaat om data, betreft dit de kolomnaam.
-             * Als deze kolomnaam ingevuld staat hoeft deze alleen opgehaald te worden
-             * en aan de arraylist regel toegevoegd te worden.
+             * In alle gevallen wordt een enkele waarde berekend en een lijstwaarde
+             * voor het geval er komma's in de waarde zitten.
              */
-            if (lb.getType().equals(RecordValueBean.TYPE_DATA) && kolomnaam != null) {
-                if (value != null) {
-                    rvb.setValue(value.toString());
-                }
-                /*
-                 * In het tweede geval dient de informatie in de thema data als link naar een andere
-                 * informatiebron. Deze link zal enigszins aangepast moeten worden om tot 
-                 * werkende link te komen.
-                 */
-            } else if (lb.getType().equals(RecordValueBean.TYPE_URL)) {
-                StringBuffer url;
-                if (lb.getCommando() != null) {
-                    url = new StringBuffer(lb.getCommando());
-                } else {
-                    url = new StringBuffer();
-                }
+            List resultList = new ArrayList();
+            String resultValue = null;
+            if (lb.getType().equals(RecordValueBean.TYPE_DATA)) {
+                resultValue = createData(attributeValue);
 
-                /* TODO: BOY: Welk id moet hier geappend worden ? */
-                url.append(Themas.THEMAID);
-                url.append("=");
-                url.append(gb.getId());
-
-                if (adminPk != null && pkValue != null) {
-                    pkValue = f.getProperty(adminPk).getValue();
-                    url.append("&");
-                    url.append(adminPk);
-                    url.append("=");
-                    url.append(URLEncoder.encode(pkValue.toString().trim(), "utf-8"));
-                }
-
-                if (value != null && !kolomnaam.equalsIgnoreCase(adminPk)) {
-                    url.append("&");
-                    url.append(kolomnaam);
-                    url.append("=");
-                    url.append(URLEncoder.encode(value.toString().trim(), "utf-8"));
-                }
-
-                rvb.setValue(url.toString());
-
-                /*
-                 * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu een
-                 * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
-                 */
-            } else if (lb.getType().equals(RecordValueBean.TYPE_QUERY)) {
-                if (lb.getCommando() != null) {
-                    HashMap fhm = toHashMap(f);
-                    List regelValues = new ArrayList();
-                    for (int i = 0; i < valueList.size(); i++) {
-                        String commando = lb.getCommando().toString();
-                        Object localValue = valueList.get(i);
-                        if (commando.contains("[") || commando.contains("]")) {
-                            //vervang de eventuele csv in 1 waarde van die csv
-                            if (kolomnaam != null) {
-                                fhm.put(kolomnaam, localValue);
-                            }
-                            String newCommando = replaceValuesInString(commando, fhm);
-                            regelValues.add(newCommando);
-                        } else if (localValue != null) {
-                            commando += localValue.toString().trim();
-                            regelValues.add(commando);
-                        } else {
-                            regelValues.add("");
-                        }
+                if (attributeValueList != null && attributeValueList.size() > 1) {
+                    for (int i = 0; i < attributeValueList.size(); i++) {
+                        Object localValue = attributeValueList.get(i);
+                        String lData = createData(localValue);
+                        resultList.add(lData);
                     }
-                    rvb.setValueList(regelValues);
+                }
+            } else if (lb.getType().equals(RecordValueBean.TYPE_URL)) {
+                resultValue = createUrl(kolomnaam, attributeValue, adminPk, pkValue,
+                        /* TODO: BOY: Welk id moet hier geappend worden ? */ Themas.THEMAID, ggbId, commando);
 
-                } else if (value != null) {
-                    // enkele waarde in lijst voor eenduidigheid tbv front-end
-                    rvb.setValueList(valueList);
+                if (attributeValueList != null && attributeValueList.size() > 1) {
+                    for (int i = 0; i < attributeValueList.size(); i++) {
+                        Object localValue = attributeValueList.get(i);
+                        String lUrl = createUrl(kolomnaam, localValue, adminPk, pkValue, Themas.THEMAID, ggbId, commando);
+                        resultList.add(lUrl);
+                    }
+                }
+            } else if (lb.getType().equals(RecordValueBean.TYPE_QUERY)) {
+                HashMap fhm = toHashMap(f);
+                resultValue = createQuery(kolomnaam, attributeValue, commando, fhm);
+
+                if (attributeValueList != null && attributeValueList.size() > 1) {
+                    for (int i = 0; i < attributeValueList.size(); i++) {
+                        Object localValue = attributeValueList.get(i);
+                        String lQuery = createQuery(kolomnaam, localValue, commando, fhm);
+                        resultList.add(lQuery);
+                    }
+                } else {
+                    // dit is nodig omdat kolomnaam leeg kan zijn, waarbij attribuutwaarden
+                    // via [] vervangingen worden ingevuld.
+                    String lQuery = createQuery(kolomnaam, null, commando, fhm);
+                    resultList.add(lQuery);
                 }
 
             } else if (lb.getType().equals(RecordValueBean.TYPE_FUNCTION)) {
-                if (pkValue != null) {
-                    String attributeName = kolomnaam;
-                    Object attributeValue = null;
-                    if (attributeName != null) {
-                        attributeValue = f.getProperty(attributeName).getValue();
-                    } else {
-                        attributeName = adminPk;
-                        attributeValue = pkValue;
+                resultValue = createFunction(kolomnaam, attributeValue, adminPk, pkValue, ggbId, commando, eenheid);
+
+                if (attributeValueList != null && attributeValueList.size() > 1) {
+                    for (int i = 0; i < attributeValueList.size(); i++) {
+                        Object localValue = attributeValueList.get(i);
+                        String lFunction = createFunction(kolomnaam, localValue, adminPk, pkValue, ggbId, commando, eenheid);
+                        resultList.add(lFunction);
                     }
-
-                    // De attributeValue ook eerst vooraan erbij zetten om die te kunnen tonen op de admindata pagina - Drie hekjes als scheidingsteken
-                    StringBuilder function = new StringBuilder("");
-                    function.append(attributeValue);
-                    function.append("###").append(lb.getCommando());
-                    function.append("(this, ");
-                    function.append("'").append(gb.getId()).append("'");
-                    function.append(",");
-                    function.append("'").append(adminPk).append("'");
-                    function.append(",");
-                    function.append("'").append(pkValue).append("'");
-                    function.append(",");
-                    function.append("'").append(attributeName).append("'");
-                    function.append(",");
-                    function.append("'").append(attributeValue).append("'");
-                    function.append(",");
-                    function.append("'").append(lb.getEenheid()).append("'");
-                    function.append(")");
-
-                    rvb.setValue(function.toString());
-
-                } else if (value != null) {
-                    rvb.setValue(value.toString());
                 }
             }
+            rvb.setValue(resultValue);
+            rvb.setValueList(resultList);
 
             rb.addValue(rvb);
         }
 
         return rb;
+    }
+
+    /**
+     * In het eerste geval, wanneer het gaat om data, betreft dit de kolomnaam.
+     * Als deze kolomnaam ingevuld staat hoeft deze alleen opgehaald te worden
+     * en aan de arraylist regel toegevoegd te worden.
+     * */
+    private String createData(Object attributeValue) {
+        if (attributeValue==null) {
+            return null;
+        }
+        return attributeValue.toString();
+    }
+
+    /**
+     * In het tweede geval dient de informatie in de thema data als link naar een andere
+     * informatiebron. Deze link zal enigszins aangepast moeten worden om tot 
+     * werkende link te komen.
+     */
+    private String createUrl(String attributeName, Object attributeValue, String adminPk, Object pkValue, String ggbIdName, String ggbId, String commando) {
+        StringBuffer url;
+        if (commando != null) {
+            url = new StringBuffer(commando);
+        } else {
+            url = new StringBuffer();
+        }
+
+        url.append(ggbIdName);
+        url.append("=");
+        url.append(ggbId);
+
+        if (adminPk != null && pkValue != null) {
+            url.append("&");
+            url.append(adminPk);
+            url.append("=");
+            try {
+                url.append(URLEncoder.encode(pkValue.toString().trim(), "utf-8"));
+            } catch (UnsupportedEncodingException ex) {
+                logger.error("", ex);
+            }
+        }
+
+        if (attributeValue != null && attributeName != null && !attributeName.equalsIgnoreCase(adminPk)) {
+            url.append("&");
+            url.append(attributeName);
+            url.append("=");
+            try {
+                url.append(URLEncoder.encode(attributeValue.toString().trim(), "utf-8"));
+            } catch (UnsupportedEncodingException ex) {
+                logger.error("", ex);
+            }
+        }
+
+        return url.toString();
+
+    }
+
+    /**
+     * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu een
+     * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
+     */
+    private String createQuery(String attributeName, Object attributeValue, String commando, HashMap fhm) {
+        if (commando == null) {
+            return null;
+        }
+        if (commando.contains("[") && commando.contains("]")) {
+            //vervang de eventuele csv in 1 waarde van die csv
+            if (attributeName != null) {
+                fhm.put(attributeName, attributeValue);
+            }
+            String newCommando = null;
+            try {
+                newCommando = replaceValuesInString(commando, fhm);
+            } catch (Exception ex) {
+                logger.error("", ex);
+            }
+            return newCommando;
+        }
+        if (attributeValue != null) {
+            commando += attributeValue.toString().trim();
+            return commando;
+        }
+        return null;
+
+    }
+
+    private String createFunction(String attributeName, Object attributeValue, String adminPk, Object pkValue, String ggbId, String commando, String eenheid) {
+        if (pkValue == null && attributeValue == null) {
+            return null;
+        }
+        if (pkValue == null) {
+            return attributeValue.toString();
+        }
+
+        if (attributeName == null || attributeValue == null) {
+            attributeName = adminPk;
+            attributeValue = pkValue;
+        }
+
+        // De attributeValue ook eerst vooraan erbij zetten om die te kunnen tonen op de admindata pagina - Drie hekjes als scheidingsteken
+        StringBuilder function = new StringBuilder("");
+        function.append(attributeValue);
+        function.append("###").append(commando);
+        function.append("(this, ");
+        function.append("'").append(ggbId).append("'");
+        function.append(",");
+        function.append("'").append(adminPk).append("'");
+        function.append(",");
+        function.append("'").append(pkValue).append("'");
+        function.append(",");
+        function.append("'").append(attributeName).append("'");
+        function.append(",");
+        function.append("'").append(attributeValue).append("'");
+        function.append(",");
+        function.append("'").append(eenheid).append("'");
+        function.append(")");
+
+        return function.toString();
     }
 
     private List splitObject(Object value, String seperator) {
