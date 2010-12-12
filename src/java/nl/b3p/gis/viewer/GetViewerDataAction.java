@@ -42,6 +42,8 @@ public class GetViewerDataAction extends BaseGisAction {
     protected static final String METADATA = "metadata";
     protected static final String OBJECTDATA = "objectdata";
     protected static final String ADMINDATAFW = "admindata1";
+    protected static final String ADMINDATA2FW = "admindata2";
+    protected static final String ADMINDATA3FW = "admindata3";
     protected static final String MULTI_ADMINDATAFW = "multi_admindata";
     protected static final String DEFAULT_ADMINDATAFW = MULTI_ADMINDATAFW;
     protected static final String PK_FIELDNAME_PARAM = "pkFieldName";
@@ -122,15 +124,7 @@ public class GetViewerDataAction extends BaseGisAction {
             layoutForward = DEFAULT_ADMINDATAFW;
         }
 
-        if (MULTI_ADMINDATAFW.equals(layoutForward)) {
-            List ggbBeans = new ArrayList();
-            if (themas != null) {
-                ggbBeans = collectGegevensbronBeans(request, themas, false);
-            }
-            request.setAttribute("beans", ggbBeans);
-            String wkt = getGeometry(request).toText();
-            request.setAttribute("wkt", wkt);
-        } else {
+        if (ADMINDATAFW.equals(layoutForward)) {
             ArrayList regels = new ArrayList();
             ArrayList ti = new ArrayList();
             if (themas != null) {
@@ -138,6 +132,14 @@ public class GetViewerDataAction extends BaseGisAction {
             }
             request.setAttribute("regels_list", regels);
             request.setAttribute("thema_items_list", ti);
+        } else {
+            List ggbBeans = new ArrayList();
+            if (themas != null) {
+                ggbBeans = collectGegevensbronBeans(request, themas, false);
+            }
+            request.setAttribute("beans", ggbBeans);
+            String wkt = getGeometry(request).toText();
+            request.setAttribute("wkt", wkt);
         }
 
         return mapping.findForward(layoutForward);
