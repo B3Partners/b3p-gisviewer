@@ -14,6 +14,7 @@ public class RecordChildBean {
     
     private String themaId;
     private String cql;
+    private String wkt;
 
     public String getId() {
         return id;
@@ -66,5 +67,13 @@ public class RecordChildBean {
 
     public void setThemaId(String themaId) {
         this.themaId = themaId;
+    }
+
+    public String getWkt() {
+        return wkt;
+    }
+
+    public void setWkt(String wkt) {
+        this.wkt = wkt;
     }
 }

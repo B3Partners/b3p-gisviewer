@@ -1,22 +1,23 @@
 package nl.b3p.gis.viewer;
 
 import nl.b3p.gis.geotools.DataStoreUtil;
-import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
-import nl.b3p.gis.utils.ConfigKeeper;
-import nl.b3p.gis.viewer.db.Configuratie;
+import nl.b3p.gis.viewer.admindata.CollectAdmindata;
+import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
@@ -30,9 +31,9 @@ import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.feature.Feature;
+import org.opengis.feature.type.FeatureType;
+import org.opengis.feature.type.PropertyDescriptor;
 import org.opengis.filter.Filter;
-import nl.b3p.gis.viewer.admindata.RecordChildBean;
-import org.geotools.filter.text.cql2.CQL;
 
 public class GetViewerDataAction extends BaseGisAction {
 
@@ -41,11 +42,7 @@ public class GetViewerDataAction extends BaseGisAction {
     protected static final String AANVULLENDEINFO = "aanvullendeinfo";
     protected static final String METADATA = "metadata";
     protected static final String OBJECTDATA = "objectdata";
-    protected static final String ADMINDATAFW = "admindata1";
-    protected static final String ADMINDATA2FW = "admindata2";
-    protected static final String ADMINDATA3FW = "admindata3";
-    protected static final String MULTI_ADMINDATAFW = "multi_admindata";
-    protected static final String DEFAULT_ADMINDATAFW = MULTI_ADMINDATAFW;
+    protected static final String ADMINDATAFW = "admindata";
     protected static final String PK_FIELDNAME_PARAM = "pkFieldName";
 
     /**
@@ -117,231 +114,13 @@ public class GetViewerDataAction extends BaseGisAction {
      */
     public ActionForward admindata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         List themas = getThemas(mapping, dynaForm, request);
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-
-        String layoutForward = findDataAdminLayout(themas, user);
-        if (layoutForward == null) {
-            layoutForward = DEFAULT_ADMINDATAFW;
+        List ggbBeans = new ArrayList();
+        if (themas != null) {
+            ggbBeans = CollectAdmindata.collectGegevensbronRecordChilds(request, themas, false);
         }
+        request.setAttribute("beans", ggbBeans);
 
-        if (ADMINDATAFW.equals(layoutForward)) {
-            ArrayList regels = new ArrayList();
-            ArrayList ti = new ArrayList();
-            if (themas != null) {
-                collectThemaRegels(mapping, request, themas, regels, ti, false);
-            }
-            request.setAttribute("regels_list", regels);
-            request.setAttribute("thema_items_list", ti);
-        } else {
-            List ggbBeans = new ArrayList();
-            if (themas != null) {
-                ggbBeans = collectGegevensbronBeans(request, themas, false);
-            }
-            request.setAttribute("beans", ggbBeans);
-            String wkt = getGeometry(request).toText();
-            request.setAttribute("wkt", wkt);
-        }
-
-        return mapping.findForward(layoutForward);
-    }
-
-    private String findDataAdminLayout(List themas, GisPrincipal user) throws Exception {
-        /* Bepalen welke jsp (layout) voor admindata gebruikt moet worden
-         * 1 = uitgebreide jsp
-         * 2 = simpel naast elkaar
-         * TODO: 3 = simpel onder elkaar
-         * 4: multi_admin -> komt later in de plaats van uitgebreide jsp (1)
-         */
-
-        if (themas == null || user == null) {
-            return null;
-        }
-
-        int aantalThemas = themas.size();
-
-        /* Default ophalen uit configKeeper */
-        Set roles = user.getRoles();
-
-        /* Ophalen rollen in configuratie database */
-        ConfigKeeper configKeeper = new ConfigKeeper();
-        Configuratie rollenPrio = null;
-
-        try {
-            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
-        } catch (Exception ex) {
-            logger.debug("Fout bij ophalen configKeeper configuratie: " + ex);
-        }
-
-        /* alleen doen als configuratie tabel bestaat */
-        if (rollenPrio != null && rollenPrio.getPropval() != null) {
-            String[] configRollen = rollenPrio.getPropval().split(",");
-
-            /* init loop vars */
-            String rolnaam = "";
-            String inlogRol = "";
-
-            Map map = null;
-            Boolean foundRole = false;
-
-            /* Zoeken of gebruiker een rol heeft die in de rollen
-             * configuratie voorkomt. Hoogste rol wordt geladen */
-            for (int i = 0; i < configRollen.length; i++) {
-
-                if (foundRole) {
-                    break;
-                }
-
-                rolnaam = configRollen[i];
-
-                /* per rol uit config database loopen door
-                 * toegekende rollen */
-                Iterator iter = roles.iterator();
-
-                while (iter.hasNext()) {
-                    inlogRol = iter.next().toString();
-
-                    if (rolnaam.equals(inlogRol)) {
-                        map = configKeeper.getConfigMap(rolnaam);
-                        foundRole = true;
-
-                        break;
-                    }
-                }
-            }
-
-            /* als gevonden rol geen configuratie records heeft dan defaults laden */
-            if ((map == null) || (map.size() < 1)) {
-                map = configKeeper.getConfigMap("default");
-            }
-
-            String layoutAdminData = "";
-
-            /* Indien maar 1 thema pak dan de instelling van Thema object
-            of als deze niet ingesteld is pak dan de global configuratie setting */
-            if (aantalThemas == 1) {
-                Themas t = (Themas) themas.get(0);
-                String themaLayout = t.getLayoutadmindata();
-
-                if ((themaLayout == null) || themaLayout.equals("")) {
-                    layoutAdminData = (String) map.get("layoutAdminData");
-                } else {
-                    layoutAdminData = themaLayout;
-                }
-            } else {
-                layoutAdminData = (String) map.get("layoutAdminData");
-            }
-
-            return layoutAdminData;
-        }
-
-        /* geen config gevonden of ingesteld pak de default */
-        return null;
-
-    }
-
-    protected List collectGegevensbronBeans(HttpServletRequest request, List themas, boolean locatie) {
-        List beans = new ArrayList();
-
-        /* Per thema een GegevensBronBean vullen */
-        Iterator iter = themas.iterator();
-        while (iter.hasNext()) {
-            Themas thema = (Themas) iter.next();
-            if (locatie && !thema.isLocatie_thema()) {
-                continue;
-            }
-            Gegevensbron gb = thema.getGegevensbron();
-
-            if (gb != null) {
-
-                String gbId = thema.getGegevensbron().getId().toString();
-                String themaId = thema.getId().toString();
-                String themaNaam = thema.getNaam();
-
-                /* Filter naar CQL */
-                Filter filter = getExtraFilter(thema, request);
-                String cql = null;
-
-                if (filter != null) {
-                    cql = CQL.toCQL(filter);
-                }
-
-                /* List van RecordChildBeans klaarzetten */
-                int count = 1; //getAantalChildRecords(child, bean, attrName, attrValue);
-
-                if (count > 0) {
-                    RecordChildBean childBean = new RecordChildBean();
-                    childBean.setId(gbId);
-                    childBean.setGegevensBronBeanId(new Integer(0));
-                    childBean.setTitle(themaNaam);
-                    childBean.setAantalRecords(count);
-                    childBean.setThemaId(themaId);
-                    childBean.setCql(cql);
-
-                    beans.add(childBean);
-                }
-            }
-        }
-        return beans;
-    }
-
-    protected void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
-            List themas, List regels, List ti, boolean locatie) {
-        for (int i = 0; i < themas.size(); i++) {
-            Themas t = (Themas) themas.get(i);
-            if (locatie && !t.isLocatie_thema()) {
-                continue;
-            }
-
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            if (t.hasValidAdmindataSource(user)) {
-                try {
-                    Gegevensbron gb = t.getGegevensbron();
-                    List thema_items = SpatialUtil.getThemaData(gb, true);
-                    int themadatanummer = 0;
-                    themadatanummer = ti.size();
-                    for (int a = 0; a < ti.size(); a++) {
-                        if (compareThemaDataLists((List) ti.get(a), thema_items)) {
-                            themadatanummer = a;
-                            break;
-                        }
-                    }
-
-                    Bron b = gb.getBron(request);
-                    List l = null;
-                    if (b != null) {
-                        if (themadatanummer == regels.size()) {
-                            regels.add(new ArrayList());
-                        }
-                        l = getThemaObjectsWithGeom(t, thema_items, request);
-                    }
-                    if (l != null && l.size() > 0) {
-                        ((ArrayList) regels.get(themadatanummer)).addAll(l);
-                        if (themadatanummer == ti.size()) {
-                            ti.add(thema_items);
-                        }
-                    }
-                } catch (Exception e) {
-                    String mapserver4Hack = "msQueryByRect(): Search returned no results. No matching record(s) found.";
-                    if (mapserver4Hack.equalsIgnoreCase(e.getMessage())) {
-                        // mapserver 4 returns service exception when no hits, this is not compliant.
-                    } else {
-                        String msg = e.getMessage();
-
-                        if (msg != null) {
-                            if (msg.contains("PropertyDescriptor is null - did you request a property that does not exist?")) {
-                                msg = "U vraagt een attribuut op dat niet bestaat, waarschijnlijk is de configuratie niet in orde, raadpleeg de beheerder!";
-                            }
-                        } else {
-                            msg = "Kon objectinfo niet ophalen.";
-                        }
-
-                        logger.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
-                        addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + msg);
-                    }
-                }
-            }
-        }
-
+        return mapping.findForward(ADMINDATAFW);
     }
 
     /**
@@ -437,7 +216,83 @@ public class GetViewerDataAction extends BaseGisAction {
         return mapping.findForward("objectdata");
     }
 
-    protected List<AdminDataRowBean> getThemaObjectsWithGeom(Themas t, List<ThemaData> thema_items, HttpServletRequest request) throws Exception {
+    /**
+     * Onderstaande code is deprecated en wordt alleen nog gebruikt voor de oude
+     * versie van bovenstaande methodes. dit moet allemaal via
+     * CollectAdmindata gaan lopen
+     *
+     * @deprecated
+     */
+    private void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
+            List themas, List regels, List ti, boolean locatie) {
+        for (int i = 0; i < themas.size(); i++) {
+            Themas t = (Themas) themas.get(i);
+            if (locatie && !t.isLocatie_thema()) {
+                continue;
+            }
+
+            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+            if (t.hasValidAdmindataSource(user)) {
+                try {
+                    Gegevensbron gb = t.getGegevensbron();
+                    List thema_items = SpatialUtil.getThemaData(gb, true);
+                    int themadatanummer = 0;
+                    themadatanummer = ti.size();
+                    for (int a = 0; a < ti.size(); a++) {
+                        if (compareThemaDataLists((List) ti.get(a), thema_items)) {
+                            themadatanummer = a;
+                            break;
+                        }
+                    }
+
+                    Bron b = gb.getBron(request);
+                    List l = null;
+                    if (b != null) {
+                        if (themadatanummer == regels.size()) {
+                            regels.add(new ArrayList());
+                        }
+                        l = getThemaObjectsWithGeom(t, thema_items, request);
+                    }
+                    if (l != null && l.size() > 0) {
+                        ((ArrayList) regels.get(themadatanummer)).addAll(l);
+                        if (themadatanummer == ti.size()) {
+                            ti.add(thema_items);
+                        }
+                    }
+                } catch (Exception e) {
+                    String mapserver4Hack = "msQueryByRect(): Search returned no results. No matching record(s) found.";
+                    if (mapserver4Hack.equalsIgnoreCase(e.getMessage())) {
+                        // mapserver 4 returns service exception when no hits, this is not compliant.
+                    } else {
+                        String msg = e.getMessage();
+
+                        if (msg != null) {
+                            if (msg.contains("PropertyDescriptor is null - did you request a property that does not exist?")) {
+                                msg = "U vraagt een attribuut op dat niet bestaat, waarschijnlijk is de configuratie niet in orde, raadpleeg de beheerder!";
+                            }
+                        } else {
+                            msg = "Kon objectinfo niet ophalen.";
+                        }
+
+                        logger.error("Fout bij laden admindata voor thema: " + t.getNaam() + ":", e);
+                        addAlternateMessage(mapping, request, "", "thema: " + t.getNaam() + ", " + msg);
+                    }
+                }
+            }
+        }
+
+    }
+
+    /**
+     *
+     * @param t
+     * @param thema_items
+     * @param request
+     * @return
+     * @throws Exception
+     * @deprecated
+     */
+    private List<AdminDataRowBean> getThemaObjectsWithGeom(Themas t, List<ThemaData> thema_items, HttpServletRequest request) throws Exception {
         if (t == null) {
             return null;
         }
@@ -445,8 +300,8 @@ public class GetViewerDataAction extends BaseGisAction {
             //throw new Exception("Er is geen themadata geconfigureerd voor thema: " + t.getNaam() + " met id: " + t.getId());
             return null;
         }
-        Geometry geom = getGeometry(request);
-        Filter extraFilter = getExtraFilter(t, request);
+        Geometry geom = CollectAdmindata.getGeometry(request);
+        Filter extraFilter = CollectAdmindata.getExtraFilter(t, request);
 
         // filter op locatie thema's
 
@@ -463,7 +318,16 @@ public class GetViewerDataAction extends BaseGisAction {
         return regels;
     }
 
-    protected List getThemaObjectsWithId(Gegevensbron gb, List thema_items, HttpServletRequest request) throws Exception {
+    /**
+     *
+     * @param gb
+     * @param thema_items
+     * @param request
+     * @return
+     * @throws Exception
+     * @deprecated
+     */
+    private List getThemaObjectsWithId(Gegevensbron gb, List thema_items, HttpServletRequest request) throws Exception {
         if (gb == null) {
             return null;
         }
@@ -531,28 +395,343 @@ public class GetViewerDataAction extends BaseGisAction {
         return regels;
     }
 
-    private Geometry getGeometry(HttpServletRequest request) {
-        String geom = request.getParameter("geom");
-        double distance = getDistance(request);
-        Geometry geometry = null;
-        if (geom != null) {
-            geometry = SpatialUtil.geometrieFromText(geom, 28992);
-        } else {
-            GeometryFactory gf = new GeometryFactory();
-            double[] coords = getCoords(request);
-            if (coords.length == 2) {
-                geometry = gf.createPoint(new Coordinate(coords[0], coords[1]));
-            } else if (coords.length == 10) {
-                Coordinate[] coordinates = new Coordinate[5];
-                for (int i = 0; i < coordinates.length; i++) {
-                    coordinates[i] = new Coordinate(coords[i * 2], coords[i * 2 + 1]);
+    /**
+     *
+     * @param f
+     * @param gb
+     * @param thema_items
+     * @return
+     * @throws SQLException
+     * @throws UnsupportedEncodingException
+     * @throws Exception
+     * @deprecated
+     */
+    protected AdminDataRowBean getRegel(Feature f, Gegevensbron gb, List<ThemaData> thema_items) throws SQLException, UnsupportedEncodingException, Exception {
+        AdminDataRowBean regel = new AdminDataRowBean();
+
+        String adminPk = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
+        if (adminPk != null) {
+            regel.setPrimaryKey(f.getProperty(adminPk).getValue());
+        }
+        Iterator it = thema_items.iterator();
+        while (it.hasNext()) {
+            ThemaData td = (ThemaData) it.next();
+            /*
+             * Controleer of de kolomnaam van dit themadata object wel voorkomt in de feature.
+             * zoniet kan het zijn dat er een prefix ns in staat. Die moet er dan van afgehaald worden.
+             * Als het dan nog steeds niet bestaat: een lege toevoegen.
+             */
+            String kolomnaam = td.getKolomnaam();
+            if (kolomnaam != null && kolomnaam.length() > 0) {
+                kolomnaam = DataStoreUtil.convertFullnameToQName(td.getKolomnaam()).getLocalPart();
+            }
+            /*
+             * Controleer om welk datatype dit themadata object om draait.
+             * Binnen het Datatype zijn er drie mogelijkheden, namelijk echt data,
+             * een URL of een Query.
+             * In alle drie de gevallen moeten er verschillende handelingen verricht
+             * worden om deze informatie op het scherm te krijgen.
+             *
+             * In het eerste geval, wanneer het gaat om data, betreft dit de kolomnaam.
+             * Als deze kolomnaam ingevuld staat hoeft deze alleen opgehaald te worden
+             * en aan de arraylist regel toegevoegd te worden.
+             */
+            if (td.getDataType().getId() == DataTypen.DATA && kolomnaam != null) {
+                if (f.getProperty(kolomnaam).getValue() == null) {
+                    regel.addValue(null);
+                } else {
+                    regel.addValue(f.getProperty(kolomnaam).getValue().toString());
                 }
-                geometry = gf.createPolygon(gf.createLinearRing(coordinates), null);
+                /*
+                 * In het tweede geval dient de informatie in de thema data als link naar een andere
+                 * informatiebron. Deze link zal enigszins aangepast moeten worden om tot vollende
+                 * werkende link te dienen.
+                 */
+            } else if (td.getDataType().getId() == DataTypen.URL) {
+                StringBuffer url;
+                if (td.getCommando() != null) {
+                    url = new StringBuffer(td.getCommando());
+                } else {
+                    url = new StringBuffer();
+                }
+
+                /* BOY: Welk id moet hier geappend worden ? */
+                url.append(Themas.THEMAID);
+                url.append("=");
+                url.append(gb.getId());
+
+                Object value = null;
+                if (adminPk != null) {
+                    value = f.getProperty(adminPk).getValue();
+                    if (value != null) {
+                        url.append("&");
+                        url.append(adminPk);
+                        url.append("=");
+                        url.append(URLEncoder.encode(value.toString().trim(), "utf-8"));
+                    }
+                }
+
+                if (kolomnaam != null && kolomnaam.length() > 0 && !kolomnaam.equalsIgnoreCase(adminPk)) {
+                    value = f.getProperty(kolomnaam).getValue();
+                    if (value != null) {
+                        url.append("&");
+                        url.append(kolomnaam);
+                        url.append("=");
+                        url.append(URLEncoder.encode(value.toString().trim(), "utf-8"));
+                    }
+                }
+
+                regel.addValue(url.toString());
+
+                /*
+                 * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu een
+                 * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
+                 */
+            } else if (td.getDataType().getId() == DataTypen.QUERY) {
+                StringBuffer url;
+                if (td.getCommando() != null) {
+                    url = new StringBuffer(td.getCommando());
+                    String commando = url.toString();
+                    //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
+                    Object valueToSplit = null;
+                    if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
+                        valueToSplit = f.getProperty(kolomnaam).getValue();
+                    }
+                    HashMap fhm = toHashMap(f);
+                    List values = splitObject(valueToSplit, ",");
+                    List regelValues = new ArrayList();
+                    for (int i = 0; i < values.size(); i++) {
+                        Object value = values.get(i);
+                        if (commando.contains("[") || commando.contains("]")) {
+                            //vervang de eventuele csv in 1 waarde van die csv
+                            if (kolomnaam != null) {
+                                fhm.put(kolomnaam, value);
+                            }
+                            String newCommando = replaceValuesInString(commando, fhm);
+                            regelValues.add(newCommando);
+                        } else {
+                            if (value != null) {
+                                url.append(value.toString().trim());
+                                regelValues.add(url.toString());
+                            } else {
+                                regelValues.add("");
+                            }
+                        }
+                    }
+                    regel.addValue(regelValues);
+                } else {
+                    if (f.getProperty(kolomnaam).getValue() == null) {
+                        regel.addValue(null);
+                    } else {
+                        regel.addValue(f.getProperty(kolomnaam).getValue().toString());
+                    }
+                }
+            } else if (td.getDataType().getId() == DataTypen.FUNCTION) {
+                Object keyValue = null;
+                if (adminPk != null) {
+                    keyValue = f.getProperty(adminPk).getValue();
+                }
+                if (keyValue != null) {
+                    String attributeName = kolomnaam;
+                    Object attributeValue = null;
+                    if (attributeName != null) {
+                        attributeValue = f.getProperty(attributeName).getValue();
+                    } else {
+                        attributeName = adminPk;
+                        attributeValue = keyValue;
+                    }
+
+                    // De attributeValue ook eerst vooraan erbij zetten om die te kunnen tonen op de admindata pagina - Drie hekjes als scheidingsteken
+                    StringBuilder function = new StringBuilder("");
+                    function.append(attributeValue);
+                    function.append("###").append(td.getCommando());
+                    function.append("(this, ");
+                    function.append("'").append(td.getGegevensbron().getId()).append("'");
+                    function.append(",");
+                    function.append("'").append(adminPk).append("'");
+                    function.append(",");
+                    function.append("'").append(keyValue).append("'");
+                    function.append(",");
+                    function.append("'").append(attributeName).append("'");
+                    function.append(",");
+                    function.append("'").append(attributeValue).append("'");
+                    function.append(",");
+                    function.append("'").append(td.getEenheid()).append("'");
+                    function.append(")");
+                    regel.addValue(function.toString());
+                } else {
+                    regel.addValue("");
+                }
+            } else /*
+             * Indien een datatype aan geen van de voorwaarden voldoet wordt er een
+             * lege regel aan de regel arraylist toegevoegd.
+             */ {
+                regel.addValue("");
             }
         }
-        if (geometry != null) {
-            geometry = geometry.buffer(distance);
+        return regel;
+    }
+
+    /**
+     * DOCUMENT ME!!!
+     *
+     * @param params Map
+     * @param key String
+     *
+     * @return String
+     * @deprecated
+     */
+    protected String getStringFromParam(Map params, String key) {
+        Object ob = params.get(key);
+        String string = null;
+        if (ob instanceof String) {
+            string = (String) ob;
         }
-        return geometry;
+        if (ob instanceof String[]) {
+            string = ((String[]) ob)[0];
+        }
+        return string;
+    }
+
+    /**
+     *Compare 2 thema datalists voor het tonen in de admindata. (dus niet volledige vergelijking maar alleen op label en basisregel)
+     *
+     * @deprecated
+     */
+    protected boolean compareThemaDataLists(List list1, List list2) {
+        if (list1 == null || list2 == null) {
+            return false;
+        }
+        if (list1.size() != list2.size()) {
+            return false;
+        }
+        int basisRegelTeller1 = 0;
+        int basisRegelTeller2 = 0;
+        for (int i1 = 0; i1 < list1.size(); i1++) {
+            ThemaData td1 = (ThemaData) list1.get(i1);
+            if (td1.isBasisregel()) {
+                basisRegelTeller1++;
+            }
+            if (td1.isBasisregel() && td1.getLabel() != null) {
+                boolean bevatGelijke = false;
+                for (int i2 = 0; i2 < list2.size(); i2++) {
+                    ThemaData td2 = (ThemaData) list2.get(i2);
+                    if (td2.isBasisregel()) {
+                        basisRegelTeller2++;
+                    }
+                    if (td2.isBasisregel() && td1.getLabel().equalsIgnoreCase(td2.getLabel())) {
+                        bevatGelijke = true;
+                        break;
+                    }
+                }
+                if (!bevatGelijke) {
+                    return false;
+                }
+            }
+        }
+        if (basisRegelTeller1 == basisRegelTeller2) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     *
+     * @param f
+     * @return
+     * @throws Exception
+     * @deprecated
+     */
+    private HashMap toHashMap(Feature f) throws Exception {
+        HashMap result = new HashMap();
+        FeatureType ft = f.getType();
+        Iterator it = ft.getDescriptors().iterator();
+        while (it.hasNext()) {
+            PropertyDescriptor pd = (PropertyDescriptor) it.next();
+            String key = pd.getName().getLocalPart();
+            Object value = f.getProperty(pd.getName()).getValue();
+            result.put(key, value);
+        }
+        return result;
+    }
+
+    /**
+     * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
+     * Bijvoorbeeld:
+     * http://plannen.kaartenbalie.nl/[planeigenaar]/[plannaam]/[planidentificyaty].html
+     * Kan dan worden:
+     * http://plannen.kaartenbalie.nl/gemeente/plansoen/p38.html
+     *
+     * @deprecated
+     */
+    private String replaceValuesInString(String string, HashMap values) throws Exception {
+        if (!string.contains("[") && !string.contains("]")) {
+            return string;
+        }
+        StringBuffer url;
+        if (string != null) {
+            url = new StringBuffer(string);
+        } else {
+            url = new StringBuffer();
+        }
+
+        int begin = -1;
+        int eind = -1;
+        for (int i = 0; i < url.length(); i++) {
+            char c = url.charAt(i);
+            if (c == '[') {
+                if (begin == -1) {
+                    begin = i;
+                } else {
+                    logger.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+                    throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+                }
+            } else if (c == ']') {
+                eind = i;
+                if (begin != -1 && eind != -1) {
+                    String kolomnaam = url.substring(begin + 1, eind);
+                    if (kolomnaam == null || kolomnaam.length() == 0) {
+                        logger.error("Commando \"" + string + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                        throw new Exception("Commando \"" + string + "\" is niet correct. Geen kolomnaam aanwezig tussen [ en ].");
+                    }
+                    Object value = values.get(kolomnaam);
+                    if (value == null) {
+                        value = "";
+                    }
+                    url.replace(begin, eind + 1, value.toString().trim());
+                    begin = -1;
+                    eind = -1;
+                    i = 0;
+                } else {
+                    logger.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een [ .");
+                    throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een [ .");
+                }
+            } else if (i == url.length() - 1 && begin != -1) {
+                logger.error("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+                throw new Exception("Commando \"" + string + "\" is niet correct. Er ontbreekt een ] .");
+            }
+        }
+        return url.toString();
+    }
+
+    /**
+     *
+     * @param value
+     * @param seperator
+     * @return
+     * @deprecated
+     */
+    private List splitObject(Object value, String seperator) {
+        ArrayList values = new ArrayList();
+        if (value == null) {
+            values.add(value);
+        } else if (value instanceof String) {
+            String[] tokens = ((String) value).split(seperator);
+            values.addAll(Arrays.asList(tokens));
+        } else {
+            values.add(value);
+        }
+        return values;
     }
 }

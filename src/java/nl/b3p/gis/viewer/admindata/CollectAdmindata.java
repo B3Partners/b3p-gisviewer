@@ -1,6 +1,8 @@
 package nl.b3p.gis.viewer.admindata;
 
+import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.SQLException;
@@ -9,16 +11,25 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
+import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
+import nl.b3p.gis.utils.ConfigKeeper;
+import nl.b3p.gis.viewer.ViewerAction;
+import nl.b3p.gis.viewer.db.Clusters;
+import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
+import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +60,7 @@ public class CollectAdmindata {
     public static final String SEARCH = "search";
     public static final String SEARCHID = "searchId";
     public static final String SEARCHCLUSTERID = "searchClusterId";
+    public static final String DEFAULT_LAYOUT = "admindata";
 
     public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, String parentHtmlId) throws Exception {
 
@@ -87,6 +99,24 @@ public class CollectAdmindata {
             bean.setTitle(thema.getNaam());
         }
 
+        WebContext ctx = WebContextFactory.get();
+        HttpServletRequest request = null;
+        if (ctx != null) {
+            request = ctx.getHttpServletRequest();
+        }
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+
+        String layout = null;
+        try {
+            layout = findDataAdminLayout(thema, user);
+        } catch (Exception ex) {
+            logger.error("", ex);
+        }
+        if (layout == null) {
+            layout = DEFAULT_LAYOUT;
+        }
+        bean.setLayout(layout);
+
         // Per ThemaData een LabelBean toevoegen
         List objectdata_items = SpatialUtil.getThemaData(gb, true);
         Iterator iter = objectdata_items.iterator();
@@ -114,15 +144,6 @@ public class CollectAdmindata {
             lb.setEenheid(td.getEenheid());
 
             bean.addLabel(lb);
-        }
-
-        /* het request kan via context worden opgehaald indien deze methode
-         * via dwr wordt aangeroepen */
-        WebContext ctx = WebContextFactory.get();
-        HttpServletRequest request = null;
-
-        if (ctx != null) {
-            request = ctx.getHttpServletRequest();
         }
 
         Bron b = gb.getBron(request);
@@ -213,6 +234,7 @@ public class CollectAdmindata {
                     childBean.setAantalRecords(count);
                     childBean.setThemaId(new Integer(themaId).toString());
                     childBean.setCql(CQL.toCQL(attrFilter));
+                    childBean.setWkt(wkt);
 
                     record.addChild(childBean);
                 }
@@ -343,7 +365,7 @@ public class CollectAdmindata {
      * en aan de arraylist regel toegevoegd te worden.
      * */
     private String createData(Object attributeValue) {
-        if (attributeValue==null) {
+        if (attributeValue == null) {
             return null;
         }
         return attributeValue.toString();
@@ -701,5 +723,283 @@ public class CollectAdmindata {
         }
 
         return count;
+    }
+
+    static private String findDataAdminLayout(Themas thema, GisPrincipal user) throws Exception {
+        /* Bepalen welke jsp (layout) voor admindata gebruikt moet worden
+         * 1 = uitgebreide jsp
+         * 2 = simpel naast elkaar
+         * TODO: 3 = simpel onder elkaar
+         * 4: multi_admin -> komt later in de plaats van uitgebreide jsp (1)
+         */
+
+        if (thema == null || user == null) {
+            return null;
+        }
+
+        /* Default ophalen uit configKeeper */
+        Set roles = user.getRoles();
+
+        /* Ophalen rollen in configuratie database */
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Configuratie rollenPrio = null;
+
+        try {
+            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
+        } catch (Exception ex) {
+            logger.debug("Fout bij ophalen configKeeper configuratie: " + ex);
+        }
+
+        /* alleen doen als configuratie tabel bestaat */
+        if (rollenPrio == null || rollenPrio.getPropval() == null) {
+            /* geen config gevonden of ingesteld pak de default */
+            return null;
+        }
+
+        String[] configRollen = rollenPrio.getPropval().split(",");
+
+        /* init loop vars */
+        String rolnaam = "";
+        String inlogRol = "";
+
+        Map map = null;
+        Boolean foundRole = false;
+
+        /* Zoeken of gebruiker een rol heeft die in de rollen
+         * configuratie voorkomt. Hoogste rol wordt geladen */
+        for (int i = 0; i < configRollen.length; i++) {
+
+            if (foundRole) {
+                break;
+            }
+
+            rolnaam = configRollen[i];
+
+            /* per rol uit config database loopen door
+             * toegekende rollen */
+            Iterator iter = roles.iterator();
+
+            while (iter.hasNext()) {
+                inlogRol = iter.next().toString();
+
+                if (rolnaam.equals(inlogRol)) {
+                    map = configKeeper.getConfigMap(rolnaam);
+                    foundRole = true;
+
+                    break;
+                }
+            }
+        }
+
+        /* als gevonden rol geen configuratie records heeft dan defaults laden */
+        if ((map == null) || (map.size() < 1)) {
+            map = configKeeper.getConfigMap("default");
+        }
+
+        String layoutAdminData = "";
+        String themaLayout = thema.getLayoutadmindata();
+        if ((themaLayout == null) || themaLayout.equals("")) {
+            layoutAdminData = (String) map.get("layoutAdminData");
+        } else {
+            layoutAdminData = themaLayout;
+        }
+        return layoutAdminData;
+
+    }
+
+    static public List collectGegevensbronRecordChilds(HttpServletRequest request, List themas, boolean locatie) {
+        String wkt = getGeometry(request).toText();
+
+        List beans = new ArrayList();
+
+        /* Per thema een GegevensBronBean vullen */
+        Iterator iter = themas.iterator();
+        while (iter.hasNext()) {
+            Themas thema = (Themas) iter.next();
+            if (locatie && !thema.isLocatie_thema()) {
+                continue;
+            }
+            Gegevensbron gb = thema.getGegevensbron();
+
+            if (gb != null) {
+
+                String gbId = thema.getGegevensbron().getId().toString();
+                String themaId = thema.getId().toString();
+                String themaNaam = thema.getNaam();
+
+                /* Filter naar CQL */
+                Filter filter = getExtraFilter(thema, request);
+                String cql = null;
+
+                if (filter != null) {
+                    cql = CQL.toCQL(filter);
+                }
+
+                RecordChildBean childBean = new RecordChildBean();
+                childBean.setId(gbId);
+                childBean.setGegevensBronBeanId(new Integer(0));
+                childBean.setTitle(themaNaam);
+                childBean.setAantalRecords(1);
+                childBean.setThemaId(themaId);
+                childBean.setCql(cql);
+                childBean.setWkt(wkt);
+
+                beans.add(childBean);
+            }
+        }
+        return beans;
+    }
+
+    static public Geometry getGeometry(HttpServletRequest request) {
+        String geom = request.getParameter("geom");
+        double distance = getDistance(request);
+        Geometry geometry = null;
+        if (geom != null) {
+            geometry = SpatialUtil.geometrieFromText(geom, 28992);
+        } else {
+            GeometryFactory gf = new GeometryFactory();
+            double[] coords = getCoords(request);
+            if (coords.length == 2) {
+                geometry = gf.createPoint(new Coordinate(coords[0], coords[1]));
+            } else if (coords.length == 10) {
+                Coordinate[] coordinates = new Coordinate[5];
+                for (int i = 0; i < coordinates.length; i++) {
+                    coordinates[i] = new Coordinate(coords[i * 2], coords[i * 2 + 1]);
+                }
+                geometry = gf.createPolygon(gf.createLinearRing(coordinates), null);
+            }
+        }
+        if (geometry != null) {
+            geometry = geometry.buffer(distance);
+        }
+        return geometry;
+    }
+
+    static private double[] getCoords(HttpServletRequest request) {
+        double[] coords = null;
+        if (request.getParameter("coords") != null && !request.getParameter("coords").equals("")) {
+            String[] coordString = request.getParameter("coords").split(",");
+            coords = new double[coordString.length];
+            for (int i = 0; i < coordString.length; i++) {
+                coords[i] = Double.parseDouble(coordString[i]);
+            }
+        }
+        return coords;
+    }
+
+    static private double getDistance(HttpServletRequest request) {
+        String s = request.getParameter("scale");
+        double scale = 0.0;
+        try {
+            if (s != null) {
+                scale = Double.parseDouble(s);
+                //af ronden op 6 decimalen
+                scale = Math.round((scale * 1000000));
+                scale = scale / 1000000;
+            }
+        } catch (NumberFormatException nfe) {
+            scale = 0.0;
+            logger.debug("Scale is geen double dus wordt genegeerd");
+        }
+        String tolerance = request.getParameter("tolerance");
+        double clickTolerance = DEFAULTTOLERANCE;
+        try {
+            if (tolerance != null) {
+                clickTolerance = Double.parseDouble(tolerance);
+            }
+        } catch (NumberFormatException nfe) {
+            clickTolerance = DEFAULTTOLERANCE;
+            logger.debug("Tolerance is geen double dus de default wordt gebruikt: " + DEFAULTTOLERANCE + " pixels");
+        }
+        double distance = clickTolerance;
+        if (scale > 0.0) {
+            distance = scale * (clickTolerance);
+        }
+        return distance;
+    }
+
+    static public Filter getExtraFilter(Themas t, HttpServletRequest request) {
+        //controleer of er een extra filter meegegeven is en of die op dit thema moet worden toegepast.
+        Filter sldFilter = createSldFilter(t, request);
+        //controleer of er een organization code is voor dit thema
+        String organizationcodekey = t.getOrganizationcodekey();
+        String organizationcode = getOrganizationCode(request);
+        if (FormUtils.nullIfEmpty(organizationcodekey) != null
+                && FormUtils.nullIfEmpty(organizationcode) != null) {
+            Filter organizationFilter = FilterBuilder.createEqualsFilter(organizationcodekey, organizationcode);
+            if (sldFilter == null) {
+                return organizationFilter;
+            } else {
+                return FilterBuilder.getFactory().and(sldFilter, organizationFilter);
+            }
+        }
+        return sldFilter;
+    }
+
+    static private Filter createSldFilter(Themas t, HttpServletRequest request) {
+        if (doExtraSearchFilter(t, request)) {
+            return FilterBuilder.createEqualsFilter(t.getSldattribuut(), request.getParameter(ViewerAction.SEARCH));
+        }
+        return null;
+    }
+
+    static private boolean doExtraSearchFilter(Themas t, HttpServletRequest request) {
+        if (FormUtils.nullIfEmpty(t.getSldattribuut()) != null && FormUtils.nullIfEmpty(request.getParameter(ViewerAction.SEARCH)) != null) {
+            String searchId = request.getParameter(ViewerAction.SEARCHID);
+            String searchClusterId = request.getParameter(ViewerAction.SEARCHCLUSTERID);
+            if (FormUtils.nullIfEmpty(searchId) != null) {
+                String[] searchIds = searchId.split(",");
+                for (int i = 0; i < searchIds.length; i++) {
+                    try {
+                        if (t.getId().intValue() == Integer.parseInt(searchIds[i])) {
+                            return true;
+                        }
+                    } catch (NumberFormatException nfe) {
+                    }
+                }
+            }
+            if (FormUtils.nullIfEmpty(searchClusterId) != null) {
+                String[] clusterIds = searchClusterId.split(",");
+                for (int i = 0; i < clusterIds.length; i++) {
+                    try {
+                        if (isInCluster(t.getCluster(), Integer.parseInt(clusterIds[i]))) {
+                            return true;
+                        }
+                    } catch (NumberFormatException nfe) {
+                    }
+                }
+            }
+
+        }
+        return false;
+    }
+
+    /**
+     * this cluster is or is in the cluster with id==clusterId
+     */
+    static private boolean isInCluster(Clusters themaCluster, int clusterId) {
+        if (themaCluster == null) {
+            return false;
+        } else if (themaCluster.getId() == clusterId) {
+            return true;
+        } else {
+            return isInCluster(themaCluster.getParent(), clusterId);
+        }
+    }
+
+    static public String getOrganizationCode(HttpServletRequest request) {
+        GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
+        if (gp != null) {
+            ServiceProvider sp = gp.getSp();
+            if (sp != null) {
+                return sp.getOrganizationCode();
+            } else {
+                logger.error("Er is geen serviceprovider aanwezig bij GisPrincipal met naam: " + gp.getName());
+                return null;
+            }
+        } else {
+            logger.error("Er is geen GisPrincipal aanwezig.");
+            return null;
+        }
     }
 }

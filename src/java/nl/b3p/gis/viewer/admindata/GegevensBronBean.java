@@ -5,8 +5,6 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -21,6 +19,7 @@ public class GegevensBronBean {
     private List<LabelBean> labels;
     private List<RecordBean> records;
     private String parentHtmlId;
+    private String layout;
 
     public Integer getId() {
         return id;
@@ -137,5 +136,19 @@ public class GegevensBronBean {
         } catch (UnsupportedEncodingException ex) {
             this.csvPks = "";
         }
+    }
+
+    /**
+     * @return the layout
+     */
+    public String getLayout() {
+        return layout;
+    }
+
+    /**
+     * @param layout the layout to set
+     */
+    public void setLayout(String layout) {
+        this.layout = layout;
     }
 }
