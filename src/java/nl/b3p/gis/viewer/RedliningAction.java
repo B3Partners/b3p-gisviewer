@@ -1,6 +1,12 @@
 package nl.b3p.gis.viewer;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -23,10 +29,15 @@ import org.apache.struts.validator.DynaValidatorForm;
 import org.hibernate.Session;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Redlining;
-import org.apache.struts.action.ActionMessage;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.geotools.data.DataStore;
+import org.geotools.data.FeatureSource;
 import org.geotools.data.FeatureWriter;
 import org.geotools.data.Transaction;
+import org.geotools.feature.FeatureCollection;
+import org.geotools.feature.FeatureIterator;
+import org.geotools.filter.text.cql2.CQL;
+import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 
@@ -40,13 +51,7 @@ public class RedliningAction extends ViewerCrudAction {
     protected static final String PREPARE_REDLINING = "prepareRedlining";
     protected static final String SEND_REDLINING = "sendRedlining";
     protected static final String REDLINING_FORWARD = "redlining";
-
-    /* Database gegevens worden uit gegevensbron gehaald echter zijn de
-     * namen van de redlining tabellen hardcoded */
-    protected static final String TABLE_RL_OBJECT = "redlining_object";
-    protected static final String TABLE_RL_GROEP_PROJECT = "redlining_groep_project";
-    protected static final String TABLE_RL_PROJECT = "redlining_project";
-
+    
     /*
      * Return een hashmap die een property koppelt aan een Action.
      * @return Map hashmap met action properties.
@@ -97,8 +102,6 @@ public class RedliningAction extends ViewerCrudAction {
     @Override
     protected void createLists(DynaValidatorForm form, HttpServletRequest request) throws Exception {
         super.createLists(form, request);
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        //request.setAttribute("allMeldingen", sess.createQuery("from Meldingen order by kenmerk").list());
     }
 
     private void useInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
@@ -143,12 +146,12 @@ public class RedliningAction extends ViewerCrudAction {
         Redlining rl = new Redlining();
         populateRedliningObject(dynaForm, rl, request);
 
-        Integer ggbId = 201; //(Integer) dynaForm.get("gegevensbron");
+        Integer ggbId = (Integer) dynaForm.get("gegevensbron");
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Gegevensbron ggb = (Gegevensbron) sess.get(Gegevensbron.class, ggbId);
         DataStore ds = ggb.getBron().toDatastore();
         try {
-            String typename = TABLE_RL_OBJECT; //ggb.getAdmin_tabel();
+            String typename = ggb.getAdmin_tabel();
             SimpleFeatureType ft = ds.getSchema(typename);
             SimpleFeature f = rl.getFeature(ft);
             writeRedlining(ds, f);
@@ -184,6 +187,7 @@ public class RedliningAction extends ViewerCrudAction {
         if (rl == null) {
             rl = getFirstRedlining();
         }
+
         populateRedliningForm(rl, dynaForm, request);
 
         prepareMethod(dynaForm, request, EDIT, LIST);
@@ -283,14 +287,29 @@ public class RedliningAction extends ViewerCrudAction {
             dynaForm.set("redliningID", Integer.toString(rl.getId().intValue()));
         }
 
-        dynaForm.set("projectid", rl.getProjectid().toString());
-        dynaForm.set("fillcolor", rl.getFillcolor());
+        String orgCode = getOrganizationCode(request);
+        
+        if (orgCode != null)
+            dynaForm.set("groepnaam", orgCode);
+
+        /* klaarzetten huidige projecten */
+        Integer ggbId = (Integer) dynaForm.get("gegevensbron");
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, ggbId);
+        List projecten = getDistinctProjectenForGroep(gb, orgCode);
+        request.setAttribute("projecten", projecten);
     }
 
     private Map getInstellingenMap(HttpServletRequest request) throws Exception {
 
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        Set roles = user.getRoles();
+        Set roles = null;
+
+        if (user != null){
+            roles = user.getRoles();
+        }
+        
 
         ConfigKeeper configKeeper = new ConfigKeeper();
         Configuratie rollenPrio = null;
@@ -313,13 +332,16 @@ public class RedliningAction extends ViewerCrudAction {
                 break;
             }
             String rolnaam = configRollen[i];
-            Iterator iter = roles.iterator();
-            while (iter.hasNext()) {
-                String inlogRol = iter.next().toString();
-                if (rolnaam.equals(inlogRol)) {
-                    echteRol = rolnaam;
-                    foundRole = true;
-                    break;
+
+            if (roles != null) {
+                Iterator iter = roles.iterator();
+                while (iter.hasNext()) {
+                    String inlogRol = iter.next().toString();
+                    if (rolnaam.equals(inlogRol)) {
+                        echteRol = rolnaam;
+                        foundRole = true;
+                        break;
+                    }
                 }
             }
         }
@@ -332,30 +354,99 @@ public class RedliningAction extends ViewerCrudAction {
     }
 
     private void populateFromInstellingen(Map instellingen, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
-        String[] mss = null;
 
-        /*
-        dynaForm.set("welkomTekst", instellingen.get("meldingWelkomtekst"));
-        dynaForm.set("prefixKenmerk", instellingen.get("meldingPrefix"));
-        dynaForm.set("zendEmailMelder", instellingen.get("meldingEmailmelder"));
-        dynaForm.set("layoutStylesheetMelder", instellingen.get("meldingLayoutEmailMelder"));
-        dynaForm.set("naamBehandelaar", instellingen.get("meldingNaam"));
-        dynaForm.set("emailBehandelaar", instellingen.get("meldingEmail"));
-        dynaForm.set("zendEmailBehandelaar", instellingen.get("meldingEmailBehandelaar"));
-        dynaForm.set("layoutStylesheetBehandelaar", instellingen.get("meldingLayoutEmailBehandelaar"));
-        dynaForm.set("objectSoort", instellingen.get("meldingObjectSoort"));
-        dynaForm.set("icoonTekentool", instellingen.get("meldingTekentoolIcoon"));
-        dynaForm.set("opmerking", "Nog geen melding verstuurd!");
-        dynaForm.set("gegevensbron", instellingen.get("meldingGegevensbron"));
-        */
+        String orgCode = getOrganizationCode(request);
 
+        if (orgCode != null)
+            dynaForm.set("groepnaam", orgCode);
+
+        Integer gbId = (Integer)instellingen.get("redliningGegevensbron");
+        dynaForm.set("gegevensbron", gbId);
+
+        /* klaarzetten huidige projecten */
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gbId);
+
+        List projecten = getDistinctProjectenForGroep(gb, orgCode);
+        request.setAttribute("projecten", projecten);
+    }
+
+    /* Omdat DISTINCT met een Datastore niet kan wordt hier via
+     * een Connection en PreparedStatement een List teruggegeven van projectnamen */
+    private List getDistinctProjectenForGroep(Gegevensbron gb, String groepnaam) throws SQLException {
+        List projecten = new ArrayList();
+
+        Bron bron = gb.getBron();
+
+        String tabel = gb.getAdmin_tabel();
+
+        String url = bron.getUrl();
+        String user = bron.getGebruikersnaam();
+        String passw = bron.getWachtwoord();
+
+        String sql = "SELECT DISTINCT(projectnaam) FROM " + tabel + " ORDER BY projectnaam";
+
+        if (bron != null) {
+            Connection conn = null;
+
+            try {
+                conn = DriverManager.getConnection(url,user,passw);
+                PreparedStatement doSQL = conn.prepareStatement(sql);
+
+                ResultSet rs = doSQL.executeQuery();
+                while (rs.next()) {
+                    String projectnaam = rs.getString(1);
+                    projecten.add(projectnaam);
+                }
+            } catch (SQLException ex) {
+                logger.error("Ophalen projectenlijst uit redlining database mislukt: ", ex);
+            } finally {
+                conn.close();
+            }
+        }
+
+        return projecten;
+    }
+
+    /* List van Features ophalen met een Filter op projectnaam */
+    private List<Feature> getFeaturesInProject(Gegevensbron gb, String projectnaam) throws IOException, Exception {
+        List projecten = new ArrayList();
+
+        DataStore ds = gb.getBron().toDatastore();
+
+        try {
+            FeatureSource fs = ds.getFeatureSource(gb.getAdmin_tabel());
+            FeatureCollection fc = fs.getFeatures(CQL.toFilter("projectnaam = '"+projectnaam+"'"));
+            FeatureIterator it = fc.features();
+
+            while (it.hasNext()) {
+                Feature f = (Feature) it.next();
+
+                if (f != null) {
+                    projecten.add(f);
+                }
+            }
+        } finally {
+            ds.dispose();
+        }
+
+        return projecten;
     }
 
     private void populateRedliningObject(DynaValidatorForm dynaForm, Redlining rl, HttpServletRequest request) {
 
-        Integer projectid = FormUtils.StringToInteger(dynaForm.getString("projectid"));
+        String groepnaam = dynaForm.getString("groepnaam");
+        String projectnaam = dynaForm.getString("projectnaam");
 
-        rl.setProjectid(projectid);
+        String new_projectnaam = dynaForm.getString("new_projectnaam");
+
+        if (new_projectnaam != null && !new_projectnaam.equals("") && new_projectnaam.length() > 0) {
+            rl.setProjectnaam(new_projectnaam);
+        } else {
+            rl.setProjectnaam(projectnaam);
+        }
+
+        rl.setGroepnaam(groepnaam);
         rl.setFillcolor(dynaForm.getString("fillcolor"));
         rl.setOpmerking(dynaForm.getString("opmerking"));
 

@@ -41,9 +41,10 @@ import org.hibernate.Transaction;
 
 public class ViewerCrudAction extends CrudAction {
 
-    private static Log log = LogFactory.getLog(ViewerCrudAction.class);
+    private static Log logger = LogFactory.getLog(ViewerCrudAction.class);
     protected static final String ACKNOWLEDGE_MESSAGES = "acknowledgeMessages";
 
+    @Override
     protected ActionForward getUnspecifiedAlternateForward(ActionMapping mapping, HttpServletRequest request) {
         return mapping.findForward(FAILURE);
     }
@@ -52,6 +53,7 @@ public class ViewerCrudAction extends CrudAction {
         GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
         if (gp != null) {
             ServiceProvider sp = gp.getSp();
+
             if (sp != null) {
                 return sp.getOrganizationCode();
             } else {
@@ -64,6 +66,7 @@ public class ViewerCrudAction extends CrudAction {
         }
     }
 
+    @Override
     protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         String organizationcode = getOrganizationCode(request);
         if (organizationcode != null && organizationcode.length() > 0) {
@@ -72,6 +75,7 @@ public class ViewerCrudAction extends CrudAction {
         }
     }
 
+    @Override
     public ActionForward execute(ActionMapping mapping, ActionForm form, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
 

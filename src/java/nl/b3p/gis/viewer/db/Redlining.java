@@ -15,7 +15,8 @@ import org.opengis.feature.type.AttributeDescriptor;
 public class Redlining {
 
     private Integer id;
-    private Integer projectid;
+    private String groepnaam;
+    private String projectnaam;
     private String fillcolor;
     private String opmerking;
     private Geometry the_geom;
@@ -26,6 +27,14 @@ public class Redlining {
 
     public void setFillcolor(String fillcolor) {
         this.fillcolor = fillcolor;
+    }
+
+    public String getGroepnaam() {
+        return groepnaam;
+    }
+
+    public void setGroepnaam(String groepnaam) {
+        this.groepnaam = groepnaam;
     }
 
     public Integer getId() {
@@ -44,12 +53,12 @@ public class Redlining {
         this.opmerking = opmerking;
     }
 
-    public Integer getProjectid() {
-        return projectid;
+    public String getProjectnaam() {
+        return projectnaam;
     }
 
-    public void setProjectid(Integer projectid) {
-        this.projectid = projectid;
+    public void setProjectnaam(String projectnaam) {
+        this.projectnaam = projectnaam;
     }
 
     public Geometry getThe_geom() {
@@ -63,7 +72,8 @@ public class Redlining {
     public HashMap getAttributesMap() {
         HashMap hm = new HashMap();
 
-        hm.put("projectid", projectid);
+        hm.put("groepnaam", groepnaam);
+        hm.put("projectnaam", projectnaam);
         hm.put("fillcolor", fillcolor);
         hm.put("opmerking", opmerking);
         hm.put("the_geom", the_geom);
