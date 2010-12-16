@@ -41,7 +41,7 @@ import org.hibernate.Transaction;
 
 public class ViewerCrudAction extends CrudAction {
 
-    private static Log logger = LogFactory.getLog(ViewerCrudAction.class);
+    private static Log log = LogFactory.getLog(ViewerCrudAction.class);
     protected static final String ACKNOWLEDGE_MESSAGES = "acknowledgeMessages";
 
     @Override
