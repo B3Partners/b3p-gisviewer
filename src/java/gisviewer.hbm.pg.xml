@@ -143,4 +143,17 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
             <one-to-many class="nl.b3p.gis.viewer.db.Themas"/>
         </set>
     </class>
+    <class name="nl.b3p.gis.viewer.db.Tekstblok" table="tekstblok">
+        <id name="id">
+          <generator class="identity"/>
+        </id>
+        <property name="titel" not-null="true" type="string" />
+        <property name="tekst" type="text"/>
+        <property name="url" type="string"/>
+        <property name="toonUrl" type="boolean" column="toonurl" />
+        <property name="pagina" not-null="true" type="string"/>
+        <property name="volgordeNr" type="integer" column="volgordenr"/>
+        <property name="auteur" type="string"/>
+        <property name="cdate" not-null="true" type="timestamp"/>
+    </class>
 </hibernate-mapping>
