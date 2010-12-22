@@ -44,6 +44,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.*;
 import org.apache.struts.validator.DynaValidatorForm;
+import org.hibernate.Session;
 import org.securityfilter.filter.SecurityFilter;
 import org.securityfilter.filter.SecurityRequestWrapper;
 
@@ -53,11 +54,17 @@ import org.securityfilter.filter.SecurityRequestWrapper;
 public class IndexAction extends BaseGisAction {
 
     private static final Log log = LogFactory.getLog(IndexAction.class);
+
     protected static final String LOGIN = "login";
     protected static final String LOGINERROR = "loginError";
     protected static final String LOGOUT = "logout";
     protected static final String LIST = "list";
     protected static final String RESET_CACHE = "resetCache";
+    protected static final String HELP = "help";
+
+    private static final String PAGE_GISVIEWER_HOME = "gisviewer_home";
+    private static final String PAGE_GISVIEWER_HELP = "gisviewer_help";
+    private static final String PAGE_GISVIEWER_LOGIN = "gisviewer_login";
 
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
@@ -92,6 +99,13 @@ public class IndexAction extends BaseGisAction {
         hibProp.setAlternateForwardName(SUCCESS);
         map.put(RESET_CACHE, hibProp);
 
+        hibProp = new ExtendedMethodProperties(HELP);
+        hibProp.setDefaultMessageKey("algemeen.resetcache.success");
+        hibProp.setDefaultForwardName(HELP);
+        hibProp.setAlternateMessageKey("algemeen.resetcache.failure");
+        hibProp.setAlternateForwardName(HELP);
+        map.put(HELP, hibProp);
+
         return map;
     }
 
@@ -108,7 +122,22 @@ public class IndexAction extends BaseGisAction {
      */
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         createLists(dynaForm, request);
+
+        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_HOME);
+        request.setAttribute("tekstBlokken", tekstBlokken);
+
         return mapping.findForward(SUCCESS);
+    }
+
+    private List getTekstBlokken(String pagina) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List tekstBlokken = sess.createQuery("from Tekstblok where pagina = :pagina"
+                + " order by volgordenr, cdate")
+                .setParameter("pagina", pagina)
+                .list();
+
+        return tekstBlokken;
     }
 
     private String findCodeinUrl(String url) throws MalformedURLException {
@@ -165,11 +194,18 @@ public class IndexAction extends BaseGisAction {
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
+        
+        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_LOGIN);
+        request.setAttribute("tekstBlokken", tekstBlokken);
+
         return getDefaultForward(mapping, request);
     }
 
     public ActionForward loginError(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
+        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_LOGIN);
+        request.setAttribute("tekstBlokken", tekstBlokken);
+        
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
@@ -216,6 +252,10 @@ public class IndexAction extends BaseGisAction {
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
+
+        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_HOME);
+        request.setAttribute("tekstBlokken", tekstBlokken);
+        
         return getDefaultForward(mapping, request);
     }
 
@@ -257,6 +297,13 @@ public class IndexAction extends BaseGisAction {
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
+        return getDefaultForward(mapping, request);
+    }
+
+    public ActionForward help(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_HELP);
+        request.setAttribute("tekstBlokken", tekstBlokken);
+
         return getDefaultForward(mapping, request);
     }
 }
