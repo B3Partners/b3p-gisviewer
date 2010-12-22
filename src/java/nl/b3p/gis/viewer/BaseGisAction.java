@@ -305,4 +305,14 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         return objectThema;
     }
 
+    protected List getTekstBlokken(String pagina) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List tekstBlokken = sess.createQuery("from Tekstblok where pagina = :pagina"
+                + " order by volgordenr, cdate")
+                .setParameter("pagina", pagina)
+                .list();
+
+        return tekstBlokken;
+    }
 }

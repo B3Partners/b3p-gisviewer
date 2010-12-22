@@ -1,25 +1,3 @@
-/*
- * B3P Gisviewer is an extension to Flamingo MapComponents making
- * it a complete webbased GIS viewer and configuration tool that
- * works in cooperation with B3P Kaartenbalie.
- *
- * Copyright 2006, 2007, 2008 B3Partners BV
- * 
- * This file is part of B3P Gisviewer.
- * 
- * B3P Gisviewer is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * B3P Gisviewer is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
- */
 package nl.b3p.gis.viewer.services;
 
 import java.net.MalformedURLException;
@@ -44,7 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.*;
 import org.apache.struts.validator.DynaValidatorForm;
-import org.hibernate.Session;
 import org.securityfilter.filter.SecurityFilter;
 import org.securityfilter.filter.SecurityRequestWrapper;
 
@@ -53,7 +30,7 @@ import org.securityfilter.filter.SecurityRequestWrapper;
  */
 public class IndexAction extends BaseGisAction {
 
-    private static final Log log = LogFactory.getLog(IndexAction.class);
+    private static final Log logger = LogFactory.getLog(IndexAction.class);
 
     protected static final String LOGIN = "login";
     protected static final String LOGINERROR = "loginError";
@@ -129,16 +106,7 @@ public class IndexAction extends BaseGisAction {
         return mapping.findForward(SUCCESS);
     }
 
-    private List getTekstBlokken(String pagina) {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-        List tekstBlokken = sess.createQuery("from Tekstblok where pagina = :pagina"
-                + " order by volgordenr, cdate")
-                .setParameter("pagina", pagina)
-                .list();
-
-        return tekstBlokken;
-    }
+    
 
     private String findCodeinUrl(String url) throws MalformedURLException {
 
@@ -185,7 +153,7 @@ public class IndexAction extends BaseGisAction {
                     request.getSession().invalidate();
                 }
                 srw.setUserPrincipal(user);
-                log.debug("Automatic login for user: " + HibernateUtil.ANONYMOUS_USER);
+                logger.debug("Automatic login for user: " + HibernateUtil.ANONYMOUS_USER);
                 // This is the url that the user was initially accessing before being prompted for login.
                 response.sendRedirect(response.encodeRedirectURL(savedURL));
                 return null;
@@ -215,7 +183,7 @@ public class IndexAction extends BaseGisAction {
         HttpSession session = request.getSession();
         String sesId = session.getId();
         session.invalidate();
-        log.info("Logged out from session: " + sesId);
+        logger.info("Logged out from session: " + sesId);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
