@@ -39,6 +39,7 @@ public class Clusters implements Comparable {
     private boolean extra_level;
     private boolean callable;
     private boolean default_visible;
+    private boolean exclusive_childs;
     private Clusters parent;
     private Set children;
     private Set themas;
@@ -304,6 +305,20 @@ public class Clusters implements Comparable {
             return verschil;
         }
         return tn.compareTo(on);
+    }
+
+    /**
+     * @return the exclusive_childs
+     */
+    public boolean isExclusive_childs() {
+        return exclusive_childs;
+    }
+
+    /**
+     * @param exclusive_childs the exclusive_childs to set
+     */
+    public void setExclusive_childs(boolean exclusive_childs) {
+        this.exclusive_childs = exclusive_childs;
     }
 
     public static class NameComparator implements Comparator {

@@ -784,5 +784,10 @@ public class ViewerAction extends BaseGisAction {
         } else {
             jsonCluster.put("callable", false);
         }
+        if (cluster.isExclusive_childs()){
+            jsonCluster.put("exclusive_childs", true);
+        } else {
+            jsonCluster.put("exclusive_childs", false);
+        }
     }
 }

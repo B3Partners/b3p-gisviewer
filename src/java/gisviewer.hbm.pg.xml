@@ -38,6 +38,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="extra_level" not-null="true"/>
     <property name="callable" not-null="true"/>
     <property name="default_visible" not-null="true"/>
+    <property name="exclusive_childs" not-null="true"/>
         <many-to-one name="parent" column="parent"/>
         <set name="children" inverse="true" cascade="all-delete-orphan">
       <key column="parent"/>
