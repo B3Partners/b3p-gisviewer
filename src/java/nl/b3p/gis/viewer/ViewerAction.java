@@ -603,6 +603,12 @@ public class ViewerAction extends BaseGisAction {
             jsonCluster.put("type", "child");
             jsonCluster.put("title", cluster.getNaam());
             jsonCluster.put("cluster", true);
+
+            if (cluster.isExclusive_childs()){
+                jsonCluster.put("exclusive_childs", true);
+            } else {
+                jsonCluster.put("exclusive_childs", false);
+            }
             setExtraClusterProperties(jsonCluster, cluster);
             if (actieveClusters != null && actieveClusters.contains(cluster.getId())) {
                 jsonCluster.put("active", true);
@@ -783,11 +789,6 @@ public class ViewerAction extends BaseGisAction {
             jsonCluster.put("callable", true);
         } else {
             jsonCluster.put("callable", false);
-        }
-        if (cluster.isExclusive_childs()){
-            jsonCluster.put("exclusive_childs", true);
-        } else {
-            jsonCluster.put("exclusive_childs", false);
         }
     }
 }
