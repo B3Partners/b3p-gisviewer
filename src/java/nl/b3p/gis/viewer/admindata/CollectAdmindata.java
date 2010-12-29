@@ -324,7 +324,10 @@ public class CollectAdmindata {
                 }
             } else if (lb.getType().equals(RecordValueBean.TYPE_QUERY)) {
                 HashMap fhm = toHashMap(f);
-                resultValue = createQuery(kolomnaam, attributeValue, commando, fhm);
+                if (attributeValue!=null){
+                    resultValue= attributeValue.toString();
+                }
+                //resultValue = createQuery(kolomnaam, attributeValue, commando, fhm);
 
                 if (attributeValueList != null && attributeValueList.size() > 1) {
                     for (int i = 0; i < attributeValueList.size(); i++) {
