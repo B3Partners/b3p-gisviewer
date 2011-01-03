@@ -1,0 +1,1 @@
+alter table clusters add exclusive_childs  number(1) default 0 NOT NULL;
