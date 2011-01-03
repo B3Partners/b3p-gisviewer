@@ -166,8 +166,8 @@ public class ViewerAction extends BaseGisAction {
         Map configMap = (Map) request.getAttribute("configMap");
         if (configMap != null) {
             String viewerTemplate = (String) configMap.get("viewerTemplate");
-             if (viewerTemplate != null && viewerTemplate.equals("embedded")) {
-                    return mapping.findForward(SIMPLE_VIEWER_FW);
+            if (viewerTemplate != null && viewerTemplate.equals("embedded")) {
+                return mapping.findForward(SIMPLE_VIEWER_FW);
             }
         }
         return mapping.findForward(SUCCESS);
@@ -219,10 +219,6 @@ public class ViewerAction extends BaseGisAction {
         }
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         JSONObject treeObject = createJasonObject(rootClusterMap, actieveThemas, actieveClusters, user);
-
-//        int order = convertLayerOrderPlim(treeObject, 0);
-//        convertTreeOrderPlim(treeObject);
-
         request.setAttribute("tree", treeObject);
 
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(PrecisionModel.FLOATING), 28992);
@@ -452,6 +448,14 @@ public class ViewerAction extends BaseGisAction {
                 map = configKeeper.getConfigMap("default");
             }
 
+            /* tree op alfabet zetten voor bepaalde klanten */
+            if (map != null) {
+                String treeOrder = (String) map.get("treeOrder");
+                if (treeOrder != null && treeOrder.equals("alphabet")) {
+                    convertTreeOrderPlim(treeObject);
+                }
+            }
+
             request.setAttribute("configMap", map);
         }
     }
@@ -517,58 +521,18 @@ public class ViewerAction extends BaseGisAction {
         return children;
     }
 
-//    private JSONObject convertOrderPlim(JSONObject treeObject, int order) throws JSONException {
-//        treeObject.put("order", order);
-//        String title = treeObject.getString("title");
-//        treeObject.put("title", title + "(" + order + ")");
-//        if (!treeObject.isNull("children")) {
-//            JSONArray childArray = treeObject.getJSONArray("children");
-//            for (int i = 0; i<childArray.length(); i++) {
-//                JSONObject childObject = childArray.getJSONObject(i);
-//                convertOrderPlim(childObject, order++);
-//            }
-//        }
-//
-//
-//                id:
-//                type:
-//                title:
-//                children:
-//                        id: met c
-//                        type:
-//                            en meer
-//                        children:
-//
-//        return treeObject;
-//    }
-    private int convertLayerOrderPlim(JSONObject treeObject, int order) throws JSONException {
-        order++;
-        treeObject.put("order", order);
-        String title = treeObject.getString("title");
-        treeObject.put("title", title + "(" + order + ")");
-        if (!treeObject.isNull("children")) {
-            JSONArray childArray = treeObject.getJSONArray("children");
-            for (int i = 0; i<childArray.length(); i++) {
-                JSONObject childObject = childArray.getJSONObject(i);
-                order = convertLayerOrderPlim(childObject, order);
-            }
-        }
-        return order;
-    }
     private void convertTreeOrderPlim(JSONObject treeObject) throws JSONException {
         if (!treeObject.isNull("children")) {
             JSONArray childArray = treeObject.getJSONArray("children");
             TreeMap tm = new TreeMap();
-            for (int i = 0; i<childArray.length(); i++) {
+            for (int i = 0; i < childArray.length(); i++) {
                 JSONObject childObject = childArray.getJSONObject(i);
                 convertTreeOrderPlim(childObject);
                 String title = childObject.getString("title");
                 tm.put(title, childObject);
             }
             Collection c = tm.values();
-            JSONArray newChildArray = new JSONArray();
-            newChildArray.put(c);
-            treeObject.put("children", newChildArray);
+            treeObject.put("children", c);
         }
         return;
     }
@@ -582,12 +546,12 @@ public class ViewerAction extends BaseGisAction {
         if (clusterMaps == null || clusterMaps.isEmpty()) {
             return root;
         }
-        root.put("children", getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user));
+        root.put("children", getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0));
 
         return root;
     }
 
-    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas, List actieveClusters, GisPrincipal user) throws JSONException {
+    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas, List actieveClusters, GisPrincipal user, int order) throws JSONException {
         if (subclusterMaps == null) {
             return clusterArray;
         }
@@ -604,7 +568,7 @@ public class ViewerAction extends BaseGisAction {
             jsonCluster.put("title", cluster.getNaam());
             jsonCluster.put("cluster", true);
 
-            if (cluster.isExclusive_childs()){
+            if (cluster.isExclusive_childs()) {
                 jsonCluster.put("exclusive_childs", true);
             } else {
                 jsonCluster.put("exclusive_childs", false);
@@ -626,9 +590,11 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("metadatalink", "#");
             }
             List childrenList = (List) clMap.get("children");
-            JSONArray childrenArray = getChildren(childrenList, actieveThemas, user);
+
+            JSONArray childrenArray = new JSONArray();
+            order = getChildren(childrenArray, childrenList, actieveThemas, user, order);
             List subsubclusterMaps = (List) clMap.get("subclusters");
-            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user);
+            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order);
             jsonCluster.put("children", childrenArray);
 
             if (clusterArray == null) {
@@ -640,11 +606,11 @@ public class ViewerAction extends BaseGisAction {
         return clusterArray;
     }
 
-    private JSONArray getChildren(List children, List actieveThemas, GisPrincipal user) throws JSONException {
-        if (children == null) {
-            return null;
+    private int getChildren(JSONArray childrenArray, List children, List actieveThemas, GisPrincipal user, int order) throws JSONException {
+        if (children == null || childrenArray == null) {
+            return order;
         }
-        JSONArray childrenArray = null;
+
         Iterator it = children.iterator();
         while (it.hasNext()) {
             Themas th = (Themas) it.next();
@@ -660,6 +626,13 @@ public class ViewerAction extends BaseGisAction {
             Integer themaId = th.getId();
             String ttitel = th.getNaam();
             JSONObject jsonCluster = new JSONObject().put("id", themaId).put("type", "child").put("title", ttitel).put("cluster", false);
+
+            order++;
+            jsonCluster.put("order", order);
+            if (log.isDebugEnabled()) {
+                String title = jsonCluster.getString("title");
+                jsonCluster.put("title", title + "(" + order + ")");
+            }
 
             if (th.getOrganizationcodekey() != null && th.getOrganizationcodekey().length() > 0) {
                 jsonCluster.put("organizationcodekey", th.getOrganizationcodekey().toUpperCase());
@@ -750,13 +723,10 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("metadatalink", "#");
             }
 
-            if (childrenArray == null) {
-                childrenArray = new JSONArray();
-            }
             childrenArray.put(jsonCluster);
         }
 
-        return childrenArray;
+        return order;
     }
 
     private void setExtraClusterProperties(JSONObject jsonCluster, Clusters cluster) throws JSONException {
