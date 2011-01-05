@@ -364,11 +364,13 @@ public class RedliningAction extends ViewerCrudAction {
         dynaForm.set("gegevensbron", gbId);
 
         /* klaarzetten huidige projecten */
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gbId);
+        if (gbId != null && gbId > 0) {
+            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+            Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gbId);
 
-        List projecten = getDistinctProjectenForGroep(gb, orgCode);
-        request.setAttribute("projecten", projecten);
+            List projecten = getDistinctProjectenForGroep(gb, orgCode);
+            request.setAttribute("projecten", projecten);
+        }
     }
 
     /* Omdat DISTINCT met een Datastore niet kan wordt hier via
