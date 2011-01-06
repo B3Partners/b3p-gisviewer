@@ -70,6 +70,8 @@ public class ViewerAction extends BaseGisAction {
     protected static final String LOGIN = "login";
     protected static final String SIMPLE_VIEWER_FW = "simpleviewer";
 
+    private static final String PAGE_GISVIEWER_TAB="gisviewer_tab";
+
     /*Mogelijke request waarden*/
     //De themaid's die zichtbaar moeten zijn in de kaart en aangevinkt moeten zijn. Komma gescheiden
     public static final String ID = "id";
@@ -458,6 +460,9 @@ public class ViewerAction extends BaseGisAction {
 
             request.setAttribute("configMap", map);
         }
+        //get tekstblokken
+        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_TAB);
+        request.setAttribute("tekstBlokken", tekstBlokken);
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
