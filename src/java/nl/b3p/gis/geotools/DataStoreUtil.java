@@ -277,7 +277,22 @@ public class DataStoreUtil {
                 query.setPropertyNames(propNames);
             }
         }
-        FeatureCollection fc = fs.getFeatures(query);
+        FeatureCollection fc=null;
+        try{
+            fc = fs.getFeatures(query);
+        }catch(Exception e){
+            //create a helpfull message.
+            String message = "FeatureType: "+query.getTypeName()+"\n";
+            message+="PropertyNames: ";
+            for (int i=0; i < propNames.size(); i++){
+                if (i!=0){
+                    message+=",";
+                }
+                message+=propNames.get(i);
+            }
+            log.error(message);
+            throw e;
+        }
         return fc;
     }
 
