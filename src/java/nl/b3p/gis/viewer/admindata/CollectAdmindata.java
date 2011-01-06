@@ -427,7 +427,7 @@ public class CollectAdmindata {
         }
         if (commando.contains("[") && commando.contains("]")) {
             //vervang de eventuele csv in 1 waarde van die csv
-            if (attributeName != null) {
+            if (attributeName != null && attributeValue!=null) {
                 fhm.put(attributeName, attributeValue);
             }
             String newCommando = null;
