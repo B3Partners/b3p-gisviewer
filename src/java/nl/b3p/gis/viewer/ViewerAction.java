@@ -668,6 +668,17 @@ public class ViewerAction extends BaseGisAction {
                     jsonCluster.put("analyse", "off");
                 }
             }
+
+            /* Extra property die gebruikt wordt voor highLightThemaObject
+             * deze gebruikte eerste analyse property maar de highlight knop
+             * hoeft nu alleen maar te highlighten en geen info meer op te halen.
+             * Dus analyse moet ook aanstaan als er geen valdAdmindatasource is.
+             */
+            if (th.isAnalyse_thema())
+                jsonCluster.put("highlight", "on");
+            else
+                jsonCluster.put("highlight", "off");
+
             /*Set some cluster properties that are used by the thema.*/
             Clusters cluster = th.getCluster();
             if (cluster.getId() != null) {
