@@ -4,6 +4,8 @@ create table redlining_object (
 	projectnaam varchar(255),
 	fillcolor varchar(255),
 	opmerking text,
-	the_geom geometry,        
 	primary key (id)
 );
+
+SELECT AddGeometryColumn ('the_geom',28992,'GEOMETRY',2);
+

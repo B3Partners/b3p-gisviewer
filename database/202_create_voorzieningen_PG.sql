@@ -1,14 +1,18 @@
-CREATE TABLE voorzieningen (
+CREATE TABLE meldingen (
 	id serial NOT NULL,
-	soort character varying(255),  
-	straatnaam character varying(255),
-	huisnummer integer,
-	postcode character varying(15), 
-	the_geom geometry,
-	CONSTRAINT voorzieningen_pkey PRIMARY KEY (id),
-	CONSTRAINT enforce_dims_the_geom CHECK (ndims(the_geom) = 2),
-	CONSTRAINT enforce_geotype_the_geom CHECK (geometrytype(the_geom) = 'POINT'::text OR the_geom IS NULL),
-	CONSTRAINT enforce_srid_the_geom CHECK (srid(the_geom) = 28992)
-)
-WITHOUT OIDS;
-ALTER TABLE vergunningen OWNER TO postgres;
+	naam_zender character varying(255),
+	adres_zender character varying(255),
+	email_zender character varying(255),
+	melding_type character varying(255),
+	melding_tekst text,
+	melding_status character varying(255),
+	melding_commentaar text,
+	naam_ontvanger character varying(255),
+	datum_ontvangst timestamp without time zone,
+	datum_afhandeling timestamp without time zone,
+	primary key (id)
+);
+
+SELECT AddGeometryColumn ('meldingen','the_geom',28992,'GEOMETRY',2);
+
+--drop table meldingen;
