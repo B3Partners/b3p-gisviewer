@@ -12,4 +12,4 @@ CREATE TABLE vergunningen (
 	primary key (id)
 );
 
-SELECT AddGeometryColumn ('the_geom',28992,'GEOMETRY',2);
+SELECT AddGeometryColumn ('vergunningen','the_geom',28992,'GEOMETRY',2);

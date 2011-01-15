@@ -7,5 +7,5 @@ create table redlining_object (
 	primary key (id)
 );
 
-SELECT AddGeometryColumn ('the_geom',28992,'GEOMETRY',2);
+SELECT AddGeometryColumn ('redlining_object','the_geom',28992,'GEOMETRY',2);
 
