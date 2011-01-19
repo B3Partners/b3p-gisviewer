@@ -283,14 +283,10 @@ public class CollectAdmindata {
             if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
                 attributeValue = f.getProperty(kolomnaam).getValue();
                 //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
-
                 if(commando != null && (commando.contains(kolomnaam) || lb.getType().equals(RecordValueBean.TYPE_URL))){
                     attributeValueList = splitObject(attributeValue, ",");
                 }
             }
-            /*else if (kolomnaam != null && f.getProperty(kolomnaam) != null){
-                attributeValue = f.getProperty(kolomnaam).getValue();
-            }*/
             Object pkValue = null;
             if (adminPk != null) {
                 pkValue = f.getProperty(adminPk).getValue();
