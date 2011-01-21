@@ -299,7 +299,8 @@ public class GisPrincipal implements Principal {
          if (gp == null || (flushCache)) { //(flushCache && isAdmin)
             // log in new principal
             SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
-            srw.setUserPrincipal(GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode));
+            gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
+            srw.setUserPrincipal(gp);
             log.debug("Refresh login for user: " + gpUsername);
         }
 
