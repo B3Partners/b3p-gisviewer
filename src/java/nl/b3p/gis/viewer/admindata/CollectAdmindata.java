@@ -162,7 +162,9 @@ public class CollectAdmindata {
         List<String> propnames = bean.getKolomNamenList();
         Filter cqlFilter = null;
         try {
-            cqlFilter = CQL.toFilter(cql);
+            if (cql!=null && cql.length()>0) {
+                cqlFilter = CQL.toFilter(cql);
+            }
         } catch (CQLException ex) {
             logger.error("", ex);
         }

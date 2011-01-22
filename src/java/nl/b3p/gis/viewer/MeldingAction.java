@@ -287,9 +287,15 @@ public class MeldingAction extends ViewerCrudAction {
     private Map getInstellingenMap(HttpServletRequest request) throws Exception {
 
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        ConfigKeeper configKeeper = new ConfigKeeper();
+
+        if (user==null) {
+            //TODO waarom komt dit soms voor?
+            return configKeeper.getConfigMap("default");
+        }
+        
         Set roles = user.getRoles();
 
-        ConfigKeeper configKeeper = new ConfigKeeper();
         Configuratie rollenPrio = null;
         try {
             rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
