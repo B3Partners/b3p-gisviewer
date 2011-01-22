@@ -90,12 +90,6 @@ public class GisPrincipal implements Principal {
                 roles.add(sprole);
             }
         }
-
-        try {
-            kbWfsFeatures = ConfigListsUtil.getPossibleFeatures(kbWfsConnectie);
-        } catch (Exception ex) {
-            log.info("Cannot collect Kaartenbalie WFS features, cause: ", ex);
-        }
     }
 
     public String getName() {
@@ -149,8 +143,8 @@ public class GisPrincipal implements Principal {
             Layer layer = (Layer) it.next();
             String name = layer.getName();
             if (name != null && name.length() > 0) {
-                if ((legendGraphicOnly && hasLegendGraphic(layer)) ||
-                        !legendGraphicOnly) {
+                if ((legendGraphicOnly && hasLegendGraphic(layer))
+                        || !legendGraphicOnly) {
                     allLayers.add(name);
                 }
             }
@@ -173,10 +167,10 @@ public class GisPrincipal implements Principal {
         Iterator it = layers.iterator();
         while (it.hasNext()) {
             Layer layer = (Layer) it.next();
-            if ((legendGraphicOnly && hasLegendGraphic(layer)) ||
-                    !legendGraphicOnly) {
-                if ((nameOnly && layer.getName() != null) ||
-                        !nameOnly) {
+            if ((legendGraphicOnly && hasLegendGraphic(layer))
+                    || !legendGraphicOnly) {
+                if ((nameOnly && layer.getName() != null)
+                        || !nameOnly) {
                     allLayers.add(layer);
                 }
             }
@@ -250,11 +244,12 @@ public class GisPrincipal implements Principal {
     }
 
     public boolean acceptWfsFeatureType(String ftn) {
-        if (kbWfsFeatures == null) {
+        List wfsfs = getKbWfsFeatures();
+        if (wfsfs == null) {
             return false;
         }
-        for (int i=0; i<kbWfsFeatures.size(); i++) {
-            String[] fna = (String[])kbWfsFeatures.get(i);
+        for (int i = 0; i < wfsfs.size(); i++) {
+            String[] fna = (String[]) wfsfs.get(i);
             if (fna != null && fna[1] != null && fna[1].equals(ftn)) {
                 return true;
             }
@@ -275,13 +270,11 @@ public class GisPrincipal implements Principal {
         String gpCode = null;
         String gpUsername = HibernateUtil.ANONYMOUS_USER;
         String gpPassword = null;
-//        boolean isAdmin = false;
         GisPrincipal gp = (GisPrincipal) user;
         if (gp != null) {
             gpCode = gp.getCode();
             gpUsername = gp.getName();
             gpPassword = gp.getPassword();
-//            isAdmin = gp.isInRole(Roles.ADMIN);
         }
 
         String code = request.getParameter(BaseGisAction.URL_AUTH);
@@ -290,18 +283,22 @@ public class GisPrincipal implements Principal {
                 // user is using different code, so invalidate session and login again
                 HttpSession session = request.getSession();
                 session.invalidate();
+                log.info("Session invalidated bacause of code change. Old code: "
+                        + gpCode + ", new code:" + code);
                 gp = null;
                 gpCode = code;
+                gpUsername = HibernateUtil.ANONYMOUS_USER;
+                gpPassword = null;
             }
         }
 
 
-         if (gp == null || (flushCache)) { //(flushCache && isAdmin)
+        if (gp == null || (flushCache)) { //(flushCache && isAdmin)
             // log in new principal
             SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
+            log.info("Refresh login for user: " + gpUsername + ", code: " + gpCode);
             gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
             srw.setUserPrincipal(gp);
-            log.debug("Refresh login for user: " + gpUsername);
         }
 
         return gp;
@@ -325,6 +322,16 @@ public class GisPrincipal implements Principal {
      * @return the kbWfsFeatures
      */
     public List getKbWfsFeatures() {
+        if (kbWfsFeatures == null) {
+            try {
+                kbWfsFeatures = ConfigListsUtil.getPossibleFeatures(kbWfsConnectie);
+            } catch (Exception ex) {
+                log.info("Cannot collect Kaartenbalie WFS features, cause: " + ex.getLocalizedMessage());
+                log.debug("Cannot collect Kaartenbalie WFS features, stacktrace: ", ex);
+                kbWfsFeatures = new ArrayList<String[]>();
+            }
+        }
+
         return kbWfsFeatures;
     }
 

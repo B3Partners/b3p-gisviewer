@@ -61,7 +61,7 @@ public class ViewerCrudAction extends CrudAction {
                 return null;
             }
         } else {
-            log.error("Er is geen GisPrincipal aanwezig.");
+            log.debug("Er is geen GisPrincipal aanwezig.");
             return null;
         }
     }

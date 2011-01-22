@@ -900,7 +900,7 @@ public class CollectAdmindata {
                 return null;
             }
         } else {
-            logger.error("Er is geen GisPrincipal aanwezig.");
+            logger.debug("Er is geen GisPrincipal aanwezig.");
             return null;
         }
     }
