@@ -113,6 +113,7 @@ public class GetViewerDataAction extends BaseGisAction {
      * regels
      */
     public ActionForward admindata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        logger.debug("Entering admindata");
         List themas = getThemas(mapping, dynaForm, request);
         List ggbBeans = new ArrayList();
         if (themas != null) {

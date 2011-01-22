@@ -133,23 +133,28 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      */
     private Themas getThema(String themaid, HttpServletRequest request) {
         Themas t = SpatialUtil.getThema(themaid);
+        logger.debug("getting thema: " + t==null?"<null>":t.getNaam());
 
         if (!HibernateUtil.isCheckLoginKaartenbalie()) {
+            logger.debug("No kb login required, thema: " + t==null?"<null>":t.getNaam());
             return t;
         }
 
         // Zoek layers die via principal binnen komen
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         if (user == null) {
+            logger.debug("No user found, thema: " + t==null?"<null>":t.getNaam());
             return null;
         }
         List layersFromRoles = user.getLayerNames(false);
         if (layersFromRoles == null) {
+            logger.debug("No layers found, thema: " + t==null?"<null>":t.getNaam());
             return null;
         }
 
         // Check de rechten op alle layers uit het thema
         if (!checkThemaLayers(t, layersFromRoles)) {
+            logger.debug("No rights for layers found, thema: " + t==null?"<null>":t.getNaam());
             return null;
         }
 

@@ -136,7 +136,9 @@ public class IndexAction extends BaseGisAction {
 
             SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
             String savedURL = SecurityFilter.getContinueToURL(request);
+            logger.debug("savedURL: " + savedURL);
             String code = findCodeinUrl(savedURL);
+            logger.debug("code: " + code);
 
             Principal user = null;
             // Eventueel fake Principal aanmaken
@@ -144,8 +146,9 @@ public class IndexAction extends BaseGisAction {
                 user = GisSecurityRealm.authenticateFake(HibernateUtil.ANONYMOUS_USER);
             } else {
                 String url = GisSecurityRealm.createCapabilitiesURL(code);
+                logger.debug("url: " + url);
                 user = GisSecurityRealm.authenticateHttp(url, HibernateUtil.ANONYMOUS_USER, null, code);
-            }
+             }
 
             if (user != null) {
                 // invalidate old session if the user was already authenticated, and they logged in as a different user
@@ -157,6 +160,8 @@ public class IndexAction extends BaseGisAction {
                 // This is the url that the user was initially accessing before being prompted for login.
                 response.sendRedirect(response.encodeRedirectURL(savedURL));
                 return null;
+            } else {
+                logger.debug("Automatic login not possible, ask for credentials.");
             }
         }
 
