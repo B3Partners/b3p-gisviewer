@@ -1,0 +1,1 @@
+ALTER TABLE gegevensbron ADD COLUMN volgordenr integer;
