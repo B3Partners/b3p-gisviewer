@@ -570,7 +570,12 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("id", "c" + cluster.getId().intValue());
             }
             jsonCluster.put("type", "child");
-            jsonCluster.put("title", cluster.getNaam());
+
+            String titel = cluster.getNaam();
+            if (titel == null || titel.equals(""))
+                titel = "(geen naam opgegeven)";
+
+            jsonCluster.put("title", titel);
             jsonCluster.put("cluster", true);
 
             if (cluster.isExclusive_childs()) {
@@ -630,12 +635,19 @@ public class ViewerAction extends BaseGisAction {
 
             Integer themaId = th.getId();
             String ttitel = th.getNaam();
+
+            if (ttitel == null || ttitel.equals(""))
+                ttitel = "(geen naam opgegeven)";
+
             JSONObject jsonCluster = new JSONObject().put("id", themaId).put("type", "child").put("title", ttitel).put("cluster", false);
 
             order++;
             jsonCluster.put("order", order);
             if (log.isDebugEnabled()) {
                 String title = jsonCluster.getString("title");
+                if (title == null || title.equals(""))
+                    title = "(geen naam opgegeven)";
+
                 jsonCluster.put("title", title + "(" + order + ")");
             }
 
