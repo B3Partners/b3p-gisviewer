@@ -116,6 +116,7 @@ public class GisPrincipal implements Principal {
         return roles;
     }
 
+    @Override
     public String toString() {
         return "GisPrincipal[name=" + name + "]";
     }

@@ -246,26 +246,33 @@ public class IndexAction extends BaseGisAction {
     }
 
     public ActionForward resetCache(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-
         GisPrincipal user = GisPrincipal.getGisPrincipal(request, true);
+
         if (user == null) {
             addAlternateMessage(mapping, request, null, "no user found!");
             return getAlternateForward(mapping, request);
         }
+
+        /* alleen admin mag cache legen */
         if (user.isInRole(Roles.ADMIN)) {
             String rlc = FormUtils.nullIfEmpty(request.getParameter(ZoekConfiguratie.FLUSH_CACHE_PARAM));
+
+            /* opzoeklijst cache leeghalen */
             if (rlc != null && rlc.equalsIgnoreCase("true")) {
                 ZoekConfiguratie.flushCachedResultListCache();
             }
 
             String lcvs = FormUtils.nullIfEmpty(request.getParameter(Bron.LIFECYCLE_CACHE_PARAM));
+            
+            /* wfs en wms cache legen */
             try {
                 long lcl = Long.parseLong(lcvs);
+
                 Bron.setDataStoreLifecycle(lcl);
                 Bron.flushWfsCache();
+                GisSecurityRealm.flushSPCache();
             } catch (NumberFormatException nfe) {
             }
-
         }
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);

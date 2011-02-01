@@ -24,7 +24,9 @@ package nl.b3p.gis.viewer.services;
 
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import nl.b3p.commons.security.XmlSecurityDatabase;
 import nl.b3p.commons.services.FormUtils;
@@ -48,9 +50,9 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     private static final String FORM_CODE = "j_code";
     private static final String CAPABILITIES_QUERYSTRING = "REQUEST=GetCapabilities&VERSION=1.1.1&SERVICE=WMS";
 
+    static protected Map<String, ServiceProvider> perUserNameSPCache = new HashMap();
+
     public Principal authenticate(SecurityRequestWrapper request) {
-
-
         String username = FormUtils.nullIfEmpty(request.getParameter(FORM_USERNAME));
         String password = FormUtils.nullIfEmpty(request.getParameter(FORM_PASSWORD));
         String code = FormUtils.nullIfEmpty(request.getParameter(FORM_CODE));
@@ -101,7 +103,15 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         WMSCapabilitiesReader wmscr = new WMSCapabilitiesReader();
         ServiceProvider sp = null;
         try {
-            sp = wmscr.getProvider(location, username, password);
+
+            /* WMS getCapabilities (serviceprovider) cachen */
+            if (isInSPCache(username)) {
+                sp = getFromSPCache(username);
+            } else {
+                sp = wmscr.getProvider(location, username, password);
+                putInSPCache(username, sp);
+            }
+
         } catch (Exception ex) {
             log.error("Error reading GetCapabilities: " + ex.getLocalizedMessage());
             return null;
@@ -173,5 +183,26 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
 
     public Principal getAuthenticatedPrincipal(String username) {
         return null;
+    }
+
+    public static synchronized boolean isInSPCache(String userName) {
+        if (perUserNameSPCache.containsKey(userName))
+            return true;
+
+        return false;
+    }
+
+    public static synchronized void putInSPCache(String userName, ServiceProvider sp) {
+        perUserNameSPCache.put(userName, sp);
+    }
+
+    public static synchronized ServiceProvider getFromSPCache(String userName) {
+        return (ServiceProvider)perUserNameSPCache.get(userName);
+    }
+
+    public static synchronized void flushSPCache() {
+        perUserNameSPCache = new HashMap();
+
+        log.info("Cache WMS leeggemaakt");
     }
 }
