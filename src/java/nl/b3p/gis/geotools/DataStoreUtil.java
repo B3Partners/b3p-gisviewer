@@ -379,15 +379,7 @@ public class DataStoreUtil {
             }
             return ds.getSchema(ftName.getLocalPart());
         } catch (Exception e) {
-            if (log.isDebugEnabled()) {
-                String schemas = "Er is een fout opgetreden bij het ophalen van het schema (" + featureName + "). Waarschijnlijk is het schema/featureType niet gevonden. Mogelijke schemas: ";
-                String[] typenames = ds.getTypeNames();
-                for (int i = 0; i < typenames.length; i++) {
-                    schemas += "\n";
-                    schemas += typenames[i];
-                }
-                log.debug(schemas);
-            }
+            
             // NPE indien schema niet opgehaald kan worden,
             // wij maken er een leeg schema van
             FeatureTypeBuilder ftb = FeatureTypeBuilder.newInstance(ftName.getLocalPart());
