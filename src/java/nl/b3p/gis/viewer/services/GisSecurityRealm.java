@@ -34,6 +34,7 @@ import nl.b3p.ogc.utils.OGCConstants;
 import nl.b3p.wms.capabilities.ServiceDomainResource;
 import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.wms.capabilities.WMSCapabilitiesReader;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.logging.Log;
@@ -195,8 +196,15 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     }
 
     public static synchronized boolean isInSPCache(String userName) {
-        if (perUserNameSPCache.containsKey(userName))
+        if (Bron.isCacheExpired()) {
+            flushSPCache();
+
+            return false;
+        }
+
+        if (perUserNameSPCache.containsKey(userName)) {
             return true;
+        }
 
         return false;
     }
@@ -206,6 +214,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     }
 
     public static synchronized ServiceProvider getFromSPCache(String userName) {
+
         return (ServiceProvider)perUserNameSPCache.get(userName);
     }
 
