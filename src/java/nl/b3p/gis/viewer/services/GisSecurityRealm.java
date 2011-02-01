@@ -102,14 +102,23 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     public static GisPrincipal authenticateHttp(String location, String username, String password, String code) {
         WMSCapabilitiesReader wmscr = new WMSCapabilitiesReader();
         ServiceProvider sp = null;
-        try {
 
+        /* Indien via code ingelogd cachen met code */
+        String key = "";
+
+        if (username.equals("anoniem") && code != null) {
+            key = code;
+        } else {
+            key = username;
+        }
+
+        try {
             /* WMS getCapabilities (serviceprovider) cachen */
-            if (isInSPCache(username)) {
-                sp = getFromSPCache(username);
+            if (isInSPCache(key)) {
+                sp = getFromSPCache(key);
             } else {
                 sp = wmscr.getProvider(location, username, password);
-                putInSPCache(username, sp);
+                putInSPCache(key, sp);
             }
 
         } catch (Exception ex) {
