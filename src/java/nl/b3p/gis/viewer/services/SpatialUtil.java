@@ -8,6 +8,7 @@ import com.vividsolutions.jts.io.WKTReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import nl.b3p.gis.viewer.db.Clusters;
@@ -95,6 +96,10 @@ public class SpatialUtil {
     }
 
     static public List<ThemaData> getThemaData(Gegevensbron gb, boolean basisregel) {
+        if (gb == null) {
+            return new ArrayList<ThemaData>();
+        }
+
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         String query = "from ThemaData td where gegevensbron = :gb ";

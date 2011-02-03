@@ -90,57 +90,80 @@ public class EditUtil {
         try {
             Geometry geom = DataStoreUtil.createGeomFromWKTString(wktPoint);
 
-            if (geom == null)
-                throw new Exception("Kan niet highlighten. Geometrie is incorrect.");
+            if (geom == null) {
+                log.debug("Meegegeven wkt is incorrect.");
+                return "-1";
+            }
 
             Themas thema = SpatialUtil.getThema(themaIds);
 
-            if (thema == null)
-                throw new Exception("Kan niet highlighten. Layer niet gevonden.");
+            if (thema == null) {
+                log.debug("Kaartlaag niet gevonden.");
+                return "-1";
+            }
 
             List thema_items = SpatialUtil.getThemaData(thema.getGegevensbron(), true);
 
-            if (thema_items.size() < 1)
-                throw new Exception("Kan niet highlighten. Geen themadata gevonden.");
+            if (thema_items.size() < 1) {
+
+                if (thema.getNaam() != null)
+                    log.info("Er is geen objectdata gevonden voor " + thema.getNaam());
+                else
+                    log.info("Er is geen objectdata gevonden.");
+
+                return "-1";
+            }
 
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
             Bron b = (Bron) thema.getConnectie(request);
             if (b == null) {
-               throw new Exception("Kan niet highlighten. Geen connectie gevonden.");
+                log.error("Geen bron gevonden.");
+                return "-1";
             }
 
             GisPrincipal user  = GisPrincipal.getGisPrincipal(request);
-            if (!thema.hasValidAdmindataSource(user))
-                throw new Exception("Kan niet highlighten. Geen geldige datasource gevonden.");
+            if (!thema.hasValidAdmindataSource(user)) {
+                log.error("Geen geldige objectdata gevonden.");
+                return "-1";
+            }
 
             Gegevensbron gb = thema.getGegevensbron();
             ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
 
-            if ( (features == null) || (features.size() < 1) )
-                throw new Exception("Kan niet highlighten. Geen features gevonden.");
-
-            if (features.size() > 1)
-                throw new Exception("Kan niet highlighten. Meerdere features gevonden.");
-
+            if ( (features == null) || (features.size() < 1) ) {
+                log.error("Geen features gevonden.");
+                return "-1";
+            }
             
             Feature f = features.get(0);
 
             if (f == null || f.getDefaultGeometryProperty() == null) {
-                return null;
+                log.error("Gevonden feature ongeldig.");
+                return "-1";
             }
 
-            return DataStoreUtil.convertFeature2WKT(f, true);
+            String wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
+
+            if (features.size() > 1) {
+                log.debug("Service geeft meerdere features terug. Eerste feature gebruikt. Wkt string = " + wkt);
+            }
+
+            if (wkt == null) {
+                log.error("Highlight wkt null.");
+                return "-1";
+            }
+
+            return wkt;
 
         } catch (Exception ex) {
-
-            if (tx.isActive())
+            if (tx.isActive()) {
                 tx.rollback();
+            }
 
             log.debug(ex);
+            return "-1";
         }
-        
-        return wktPoint;
     }
 
     private Geometry getLargestPolygonFromMultiPolygon(Geometry multipolygon) {

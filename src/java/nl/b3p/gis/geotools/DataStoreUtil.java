@@ -723,6 +723,7 @@ public class DataStoreUtil {
     }
 
     public static final int MAX_COORDS_WKT = 250;
+
     public static String convertFeature2WKT(Feature f, boolean fallback) {
         if (f == null || f.getDefaultGeometryProperty() == null) {
             return null;
@@ -735,6 +736,20 @@ public class DataStoreUtil {
             WKTWriter wktw = new WKTWriter();
             return wktw.write(geom);
         }
+        return null;
+    }
+
+    public static String selecteerKaartObjectWkt(Feature f) {
+        if (f == null || f.getDefaultGeometryProperty() == null) {
+            return null;
+        }
+
+        Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
+        if (geom != null) {
+            WKTWriter wktw = new WKTWriter();
+            return wktw.write(geom);
+        }
+
         return null;
     }
 
