@@ -83,7 +83,7 @@ public class GetLocationData {
                 ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
                 if (list.size() >= 1) {
                     Feature f = list.get(0);
-                    wkt = DataStoreUtil.convertFeature2WKT(f, true);
+                    wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
                 }
             } finally {
                 ds.dispose();
