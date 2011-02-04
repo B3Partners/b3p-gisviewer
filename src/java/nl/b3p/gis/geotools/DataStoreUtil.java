@@ -39,6 +39,8 @@ import org.geotools.data.DefaultQuery;
 import org.geotools.data.FeatureSource;
 import org.geotools.data.ows.FeatureSetDescription;
 import org.geotools.data.ows.WFSCapabilities;
+import org.geotools.data.store.DataFeatureCollection;
+import org.geotools.data.wfs.WFSDataStore;
 import org.geotools.data.wfs.WFSDataStoreFactory;
 import org.geotools.data.wfs.v1_0_0.WFS_1_0_0_DataStore;
 import org.geotools.data.wfs.v1_1_0.WFS_1_1_0_DataStore;
@@ -764,8 +766,6 @@ public class DataStoreUtil {
     }
 
     static public void main(String[] args) throws URISyntaxException, IOException, Exception {
-
-
         HashMap params = new HashMap();
         String url = "http://localhost:8084/kaartenbalie/services/?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetCapabilities";
 //        String url = "http://x5.b3p.nl/cgi-bin/mapserv_fwtools?map=/srv/maps/kaartenbalie.map&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetCapabilities";
@@ -868,6 +868,55 @@ public class DataStoreUtil {
                 throw new IOException("Error parsing WFS 1.0.0 capabilities", e);
             }
         }
-
     }
+
+    public static void main2(String[] args) throws Exception {
+         GeometryFactory gf = new GeometryFactory(new PrecisionModel(), 28992);
+         Polygon poly = (Polygon)new WKTReader(gf).read("    POLYGON((202557 384630, 202523 384611, 202581 384507, 202637 384503, 202707 384674, 202698 384709, 202557 384630))");
+
+         WFSDataStore wfsDatastore = null;
+         try {
+             Map params = new HashMap();
+             String url =
+"http://acceptatie.prvlimburg.nl/geoservices/wion";
+             if(!url.endsWith("&") && !url.endsWith("?")){
+                 url += url.indexOf("?") >= 0 ? "&" : "?";
+             }
+
+             params.put(WFSDataStoreFactory.TIMEOUT.key, 30000);
+             params.put(WFSDataStoreFactory.URL.key, url +
+"Request=GetCapabilities&Service=WFS&Version=1.0.0");
+             wfsDatastore =
+(WFSDataStore)DataStoreFinder.getDataStore(params);
+             FilterFactory2 ff =
+CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
+
+             String typeName = "BUIS_DUIKERS";
+             String property = "msGeometry";
+
+             Filter filter = ff.intersects(ff.property(property),
+ff.literal(poly));
+             System.out.println("supports:" +
+((WFS_1_0_0_DataStore)wfsDatastore).getCapabilities().getFilterCapabilities().fullySupports(filter));
+             DefaultQuery query = new DefaultQuery(typeName, filter);
+             query.setMaxFeatures(10);
+             FeatureSource fs = wfsDatastore.getFeatureSource(typeName);
+
+             FeatureCollection fc = fs.getFeatures(query);
+
+             int count;
+             if(fc instanceof DataFeatureCollection) {
+                 count = ((DataFeatureCollection)fc).getCount();
+             } else {
+                 /* DataFeatureCollection.size() swallowt exception */
+                 count = fc.size();
+             }
+
+             System.out.println("Aantal features: " + count);
+         } finally {
+             if(wfsDatastore != null){
+                 wfsDatastore.dispose();
+             }
+         }
+     }
 }

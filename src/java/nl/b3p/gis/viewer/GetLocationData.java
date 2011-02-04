@@ -33,6 +33,7 @@ import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import org.geotools.data.DataStore;
 import org.opengis.feature.Feature;
+import org.opengis.feature.type.GeometryDescriptor;
 import org.opengis.feature.type.GeometryType;
 import org.opengis.filter.Filter;
 
@@ -75,9 +76,20 @@ public class GetLocationData {
                 return wkt;
             }
             DataStore ds = b.toDatastore();
+
+            if (ds == null) {
+                return wkt;
+            }
+
             try {
                 //haal alleen de geometry op.
-                String geometryName = DataStoreUtil.getSchema(ds, gb).getGeometryDescriptor().getLocalName();
+                GeometryDescriptor gDescr = DataStoreUtil.getSchema(ds, gb).getGeometryDescriptor();
+
+                if (gDescr == null) {
+                    return wkt;
+                }
+
+                String geometryName = gDescr.getLocalName();
                 ArrayList<String> propertyNames = new ArrayList();
                 propertyNames.add(geometryName);
                 ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);

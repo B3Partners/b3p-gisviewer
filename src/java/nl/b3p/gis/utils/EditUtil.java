@@ -36,6 +36,8 @@ public class EditUtil {
     private static final Log log = LogFactory.getLog(EditUtil.class);
     private static final int QUAD_SEGS = 16;
 
+    protected static final double DEFAULTTOLERANCE = 5.0;
+
     /**
      * Constructor
      **/
@@ -82,7 +84,7 @@ public class EditUtil {
         return buffer;
     }
 
-    public String getHighlightWktForThema(String themaIds, String wktPoint) {
+    public String getHighlightWktForThema(String themaIds, String wktPoint, String schaal, String tol) {
         
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Transaction tx = sess.beginTransaction();
@@ -127,6 +129,12 @@ public class EditUtil {
                 log.error("Geen geldige objectdata gevonden.");
                 return "-1";
             }
+
+            /* geom bufferen met tolerance distance */
+            double distance = getDistance(schaal, tol);
+
+            if (distance > 0)
+                geom = geom.buffer(distance);
 
             Gegevensbron gb = thema.getGegevensbron();
             ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
@@ -224,5 +232,36 @@ public class EditUtil {
         }
 
         return single.getNumInteriorRing();
+    }
+
+    private double getDistance(String schaal, String tol) {
+        String s = schaal;
+        double scale = 0.0;
+        try {
+            if (s != null) {
+                scale = Double.parseDouble(s);
+                //af ronden op 6 decimalen
+                scale = Math.round((scale * 1000000));
+                scale = scale / 1000000;
+            }
+        } catch (NumberFormatException nfe) {
+            scale = 0.0;
+            log.debug("Scale is geen double dus wordt genegeerd");
+        }
+        String tolerance = tol;
+        double clickTolerance = DEFAULTTOLERANCE;
+        try {
+            if (tolerance != null) {
+                clickTolerance = Double.parseDouble(tolerance);
+            }
+        } catch (NumberFormatException nfe) {
+            clickTolerance = DEFAULTTOLERANCE;
+            log.debug("Tolerance is geen double dus de default wordt gebruikt: " + DEFAULTTOLERANCE + " pixels");
+        }
+        double distance = clickTolerance;
+        if (scale > 0.0) {
+            distance = scale * (clickTolerance);
+        }
+        return distance;
     }
 }
