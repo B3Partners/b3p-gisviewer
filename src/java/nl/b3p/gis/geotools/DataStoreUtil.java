@@ -69,6 +69,7 @@ import org.opengis.feature.type.GeometryType;
 import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
+import org.opengis.filter.expression.Expression;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
@@ -297,30 +298,43 @@ public class DataStoreUtil {
         }
         return fc;
     }
-
-
-    
-
+    @Deprecated
     public static Filter createIntersectFilter(Themas t, DataStore ds, Geometry geom) throws Exception {
-        if (geom == null) {
-            return null;
-        }
         String geomAttributeName = getGeometryAttributeName(ds, t);
         if (geomAttributeName == null) {
             log.error("Thema heeft geen geometry");
             throw new Exception("Thema heeft geen geometry");
+        }
+        CoordinateReferenceSystem crs = getSchema(ds, t).getGeometryDescriptor().getCoordinateReferenceSystem();
+        return createIntersectFilter(geomAttributeName, crs, ds, geom);
+    }
+    public static Filter createIntersectFilter(Gegevensbron gb, DataStore ds, Geometry geom) throws Exception {
+        String geomAttributeName = getGeometryAttributeName(ds, gb);
+        if (geomAttributeName == null) {
+            log.warn("De datastore voor deze gegevensbron heeft geen geometry.");
+            return null;
+        }
+        CoordinateReferenceSystem crs = getSchema(ds, gb).getGeometryDescriptor().getCoordinateReferenceSystem();
+        return createIntersectFilter(geomAttributeName, crs, ds, geom);
+    }
+    public static Filter createIntersectFilter(String geomAttributeName, CoordinateReferenceSystem crs, DataStore ds, Geometry geom) throws Exception {
+        if (geom == null) {
+            return null;
         }
         Filter filter = ff.intersects(ff.property(geomAttributeName), ff.literal(geom));
         if (ds instanceof WFS_1_0_0_DataStore) {
             WFS_1_0_0_DataStore wfsDs = (WFS_1_0_0_DataStore) ds;
             //als filter intersect niet wordt ondersteund, probeer het dan met een disjoint.
             if (!wfsDs.getCapabilities().getFilterCapabilities().fullySupports(filter)) {
-                filter = ff.not(ff.disjoint(ff.property(geomAttributeName), ff.literal(geom)));
+                Filter notFilter=ff.not(ff.disjoint(ff.property(geomAttributeName), ff.literal(geom)));
+                Envelope env = geom.getEnvelopeInternal();
+                ReferencedEnvelope bbox = new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
+                Filter bboxFilter= ff.bbox(ff.property(geomAttributeName),bbox);
+                filter=ff.and(bboxFilter, notFilter);
             }
             if (!wfsDs.getCapabilities().getFilterCapabilities().fullySupports(filter)) {
                 if (!(geom instanceof Point)) {
                     Envelope env = geom.getEnvelopeInternal();
-                    CoordinateReferenceSystem crs = getSchema(ds, t).getGeometryDescriptor().getCoordinateReferenceSystem();
                     ReferencedEnvelope bbox = new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
                     filter = ff.bbox(ff.property(geomAttributeName), bbox);
                 }
@@ -389,43 +403,7 @@ public class DataStoreUtil {
             return ftb.getFeatureType();
             //  throw e;
         }
-    }
-
-    public static Filter createIntersectFilter(Gegevensbron gb, DataStore ds, Geometry geom) throws Exception {
-        if (geom == null) {
-            return null;
-        }
-        String geomAttributeName = getGeometryAttributeName(ds, gb);
-        if (geomAttributeName == null) {
-            log.warn("De datastore voor deze gegevensbron heeft geen geometry.");
-            return null;
-
-            //throw new Exception("Thema heeft geen geometry");
-        }
-        Filter filter = ff.intersects(ff.property(geomAttributeName), ff.literal(geom));
-        if (ds instanceof WFS_1_0_0_DataStore) {
-            WFS_1_0_0_DataStore wfsDs = (WFS_1_0_0_DataStore) ds;
-            //als filter intersect niet wordt ondersteund, probeer het dan met een disjoint.
-            if (!wfsDs.getCapabilities().getFilterCapabilities().fullySupports(filter)) {
-                filter = ff.not(ff.disjoint(ff.property(geomAttributeName), ff.literal(geom)));
-            }
-            if (!wfsDs.getCapabilities().getFilterCapabilities().fullySupports(filter)) {
-                if (!(geom instanceof Point)) {
-                    Envelope env = geom.getEnvelopeInternal();
-                    CoordinateReferenceSystem crs = getSchema(ds, gb).getGeometryDescriptor().getCoordinateReferenceSystem();
-                    ReferencedEnvelope bbox = new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
-                    filter = ff.bbox(ff.property(geomAttributeName), bbox);
-                }
-            }
-            if (!wfsDs.getCapabilities().getFilterCapabilities().supports(filter)) {
-                log.info("Intersect,disjoint and bbox filters niet ondersteund. We geven het op: Filter wordt toegepast aan de client kant (java code).");
-            }
-        }
-        if (ds instanceof WFS_1_1_0_DataStore) {
-            // TODO
-        }
-        return filter;
-    }
+    }    
 
     public static boolean isFilterSupported(WFS_1_0_0_DataStore ds, Filter filter) throws IOException {
         return ds.getCapabilities().getFilterCapabilities().fullySupports(filter);
