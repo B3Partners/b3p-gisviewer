@@ -753,7 +753,10 @@ public class CollectAdmindata {
 
     static public Geometry getGeometry(HttpServletRequest request) {
         String geom = request.getParameter("geom");
+        String withinObject = request.getParameter("withinObject");
+
         double distance = getDistance(request);
+
         Geometry geometry = null;
         if (geom != null) {
             geometry = SpatialUtil.geometrieFromText(geom, 28992);
@@ -770,9 +773,26 @@ public class CollectAdmindata {
                 geometry = gf.createPolygon(gf.createLinearRing(coordinates), null);
             }
         }
-        if (geometry != null) {
-            geometry = geometry.buffer(distance);
+
+        boolean selectWithinobject = false;
+
+        if (withinObject != null && withinObject.equals("1")) {
+            selectWithinobject = true;
         }
+
+        /* Indien selecteren binnen kaartobject dan Line en Point
+         * niet bufferen. Polygons een kleine negatieve buffer zodat
+         * de objectdata voor omliggende objecten niet wordt opgehaald */
+        if (geometry != null) {
+            if (selectWithinobject) {
+                if (geom.indexOf("POLY") != -1) {
+                    geometry = geometry.buffer(-0.0001);
+                }
+            } else {
+                geometry = geometry.buffer(distance);
+            }
+        }
+
         return geometry;
     }
 

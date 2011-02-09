@@ -66,10 +66,11 @@ public class EditUtil {
 
         Geometry result = null;
 
-        if (geom.toString().indexOf("POINT") != -1)
+        if (geom.toString().indexOf("POINT") != -1) {
             result = geom.buffer(bufferafstand);
-        else
-            result = geom.buffer(bufferafstand, QUAD_SEGS, BufferOp.CAP_BUTT);
+        } else {
+            result = geom.buffer(bufferafstand, QUAD_SEGS, BufferOp.CAP_ROUND);
+        }
 
         if (result == null || result.isEmpty())
             throw new Exception("Resultaat buffer geeft incorrecte geometrie.");
