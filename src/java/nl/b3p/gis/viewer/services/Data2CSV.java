@@ -168,6 +168,7 @@ public class Data2CSV extends HttpServlet {
         pw.println("<html>");
         pw.println("<head>");
         pw.println("<title>" + HTMLTITLE + "</title>");
+        pw.println("<script type=\"text/javascript\"> if(window.parent && (typeof window.parent.showCsvError == 'function')) { window.parent.showCsvError(); } </script>");
         pw.println("</head>");
         pw.println("<body>");
         pw.println("<h1>Fout</h1>");
