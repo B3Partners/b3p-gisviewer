@@ -52,8 +52,8 @@ public class Data2CSV extends HttpServlet {
             seperator = ",";
         }
         char sep = seperator.charAt(0);
-        OutputStream out = response.getOutputStream();
-        CsvOutputStream cos = new CsvOutputStream(new OutputStreamWriter(out), sep, false);
+        CsvOutputStream cos=null;
+        OutputStream out=null;
         Transaction tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
         try {
             Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
@@ -65,7 +65,7 @@ public class Data2CSV extends HttpServlet {
 
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
             if (user == null) {
-                writeErrorMessage(response, out, "Kan de data niet ophalen omdat u niet bent ingelogd.");
+                writeErrorMessage(response, "Kan de data niet ophalen omdat u niet bent ingelogd.");
                 return;
             }
             /*
@@ -87,14 +87,15 @@ public class Data2CSV extends HttpServlet {
             try {
                 data = getData(b, gb, ids, propertyNames);
             } catch (Exception ex) {
-                writeErrorMessage(response, out, ex.getMessage());
+                writeErrorMessage(response, ex.getMessage());
                 log.error("Fout bij laden csv data.",ex);
                 return;
             }
 
             response.setContentType("text/csv");
             response.setHeader(FileUploadBase.CONTENT_DISPOSITION, "attachment; filename=\"" + gb.getNaam() + ".csv\";");
-            
+            out = response.getOutputStream();
+            cos = new CsvOutputStream(new OutputStreamWriter(out), sep, false);
             cos.writeRecord(propertyNames);
             for (int i = 0; i < data.size(); i++) {
                 String[] row = (String[]) data.get(i);
@@ -161,9 +162,9 @@ public class Data2CSV extends HttpServlet {
     /**
      * Writes a error message to the response
      */
-    private void writeErrorMessage(HttpServletResponse response, OutputStream out, String message) {
+    private void writeErrorMessage(HttpServletResponse response, String message) throws IOException {
         response.setContentType("text/html;charset=UTF-8");
-        PrintWriter pw = new PrintWriter(out);
+        PrintWriter pw = response.getWriter();
         pw.println("<html>");
         pw.println("<head>");
         pw.println("<title>" + HTMLTITLE + "</title>");
@@ -173,7 +174,6 @@ public class Data2CSV extends HttpServlet {
         pw.println("<h3>" + message + "</h3>");
         pw.println("</body>");
         pw.println("</html>");
-
     }
 
     /**
