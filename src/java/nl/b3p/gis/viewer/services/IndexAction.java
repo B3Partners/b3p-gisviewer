@@ -259,6 +259,8 @@ public class IndexAction extends BaseGisAction {
 
             /* opzoeklijst cache leeghalen */
             if (rlc != null && rlc.equalsIgnoreCase("true")) {
+                logger.info("Opzoeklijst cache leegmaken.");
+
                 ZoekConfiguratie.flushCachedResultListCache();
             }
 
@@ -267,6 +269,8 @@ public class IndexAction extends BaseGisAction {
             /* wfs en wms cache legen */
             try {
                 long lcl = Long.parseLong(lcvs);
+
+                logger.info("WMS en WFS caches leegmaken.");
 
                 Bron.setDataStoreLifecycle(lcl);
                 Bron.flushWfsCache();
@@ -277,6 +281,7 @@ public class IndexAction extends BaseGisAction {
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
+
         return getDefaultForward(mapping, request);
     }
 
