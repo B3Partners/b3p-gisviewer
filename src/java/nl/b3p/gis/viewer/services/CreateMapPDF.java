@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package nl.b3p.gis.viewer.services;
 
 import com.lowagie.text.DocWriter;
@@ -15,28 +11,21 @@ import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.html.HtmlWriter;
-import com.lowagie.text.pdf.PdfCopy;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.rtf.RtfWriter2;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import nl.b3p.combineimages.CombineImagesServlet;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.imagetool.CombineImageSettings;
-import nl.b3p.ogc.utils.OGCRequest;
 import org.apache.commons.httpclient.Credentials;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
@@ -99,7 +88,7 @@ public class CreateMapPDF extends HttpServlet {
 //        String mapUrl = FormUtils.nullIfEmpty(request.getParameter("mapUrl"));
 
         String pageSize = FormUtils.nullIfEmpty(request.getParameter("pageSize"));
-        boolean landscape = new Boolean(request.getParameter("landscape")).booleanValue();
+        boolean landscape = Boolean.valueOf(request.getParameter("landscape")).booleanValue();
         String outputType = OUTPUT_PDF_PRINT;
         if (FormUtils.nullIfEmpty(request.getParameter("outputType")) != null) {
             outputType = FormUtils.nullIfEmpty(request.getParameter("outputType"));
@@ -375,6 +364,7 @@ public class CreateMapPDF extends HttpServlet {
      * @param request servlet request
      * @param response servlet response
      */
+    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
@@ -385,6 +375,7 @@ public class CreateMapPDF extends HttpServlet {
      * @param request servlet request
      * @param response servlet response
      */
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
@@ -393,6 +384,7 @@ public class CreateMapPDF extends HttpServlet {
     /**
      * Returns a short description of the servlet.
      */
+    @Override
     public String getServletInfo() {
         return "Short description";
     }// </editor-fold>
