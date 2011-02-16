@@ -162,7 +162,8 @@ public class ViewerAction extends BaseGisAction {
         if (user == null) {
             log.info("Geen user beschikbaar, ook geen anoniem. Forward naar login om te proberen een user te maken met login gegevens.");
             return mapping.findForward(LOGIN);
-        }
+        }        
+
         createLists(dynaForm, request);
 
         Map configMap = (Map) request.getAttribute("configMap");
@@ -193,7 +194,7 @@ public class ViewerAction extends BaseGisAction {
                     log.error("Id geen integer. ", nfe);
                 }
             }
-            if (actieveThemas.size() == 0) {
+            if (actieveThemas.isEmpty()) {
                 actieveThemas = null;
             }
         }
@@ -215,7 +216,7 @@ public class ViewerAction extends BaseGisAction {
                     log.error("ClusterId geen integer. ", nfe);
                 }
             }
-            if (actieveClusters.size() == 0) {
+            if (actieveClusters.isEmpty()) {
                 actieveClusters = null;
             }
         }

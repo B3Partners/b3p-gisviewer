@@ -10,14 +10,10 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.viewer.BaseGisAction;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Themas;
-import nl.b3p.wms.capabilities.Roles;
-import nl.b3p.zoeker.configuratie.Bron;
-import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.*;
@@ -148,7 +144,7 @@ public class IndexAction extends BaseGisAction {
                 String url = GisSecurityRealm.createCapabilitiesURL(code);
                 logger.debug("url: " + url);
                 user = GisSecurityRealm.authenticateHttp(url, HibernateUtil.ANONYMOUS_USER, null, code);
-             }
+            }
 
             if (user != null) {
                 // invalidate old session if the user was already authenticated, and they logged in as a different user
@@ -243,46 +239,6 @@ public class IndexAction extends BaseGisAction {
             parents.add(c);
         }
         return findParentClusters(c.getParent(), parents);
-    }
-
-    public ActionForward resetCache(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request, true);
-
-        if (user == null) {
-            addAlternateMessage(mapping, request, null, "no user found!");
-            return getAlternateForward(mapping, request);
-        }
-
-        /* alleen admin mag cache legen */
-        if (user.isInRole(Roles.ADMIN)) {
-            String rlc = FormUtils.nullIfEmpty(request.getParameter(ZoekConfiguratie.FLUSH_CACHE_PARAM));
-
-            /* opzoeklijst cache leeghalen */
-            if (rlc != null && rlc.equalsIgnoreCase("true")) {
-                logger.info("Opzoeklijst cache leegmaken.");
-
-                ZoekConfiguratie.flushCachedResultListCache();
-            }
-
-            String lcvs = FormUtils.nullIfEmpty(request.getParameter(Bron.LIFECYCLE_CACHE_PARAM));
-            
-            /* wfs en wms cache legen */
-            try {
-                long lcl = Long.parseLong(lcvs);
-
-                logger.info("WMS en WFS caches leegmaken.");
-
-                Bron.setDataStoreLifecycle(lcl);
-                Bron.flushWfsCache();
-                GisSecurityRealm.flushSPCache();
-            } catch (NumberFormatException nfe) {
-            }
-        }
-
-        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
-        createLists(dynaForm, request);
-
-        return getDefaultForward(mapping, request);
     }
 
     public ActionForward help(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
