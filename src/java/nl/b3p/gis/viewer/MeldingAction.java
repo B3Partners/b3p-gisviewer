@@ -167,6 +167,7 @@ public class MeldingAction extends ViewerCrudAction {
         try {
             SimpleFeature newFeature = (SimpleFeature) writer.next();
             newFeature.setAttributes(feature.getAttributes());
+            newFeature.setDefaultGeometry(feature.getDefaultGeometry());
             writer.write();
         } finally {
             if (writer != null) {
