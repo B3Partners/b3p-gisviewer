@@ -1,6 +1,7 @@
 package nl.b3p.gis.viewer.print;
 
 import java.io.File;
+import java.util.Date;
 
 public class TestPrint2PDF {
 
@@ -12,16 +13,24 @@ public class TestPrint2PDF {
             outDir.mkdirs();
 
             // Setup input and output
-            File xsltfile = new File(baseDir, "input/xslt/persoon2fo.xsl");
+            File xsltfile = new File(baseDir, "input/limburg_a4_liggend.xsl");
             File pdffile = new File(outDir, "Kaart.pdf");
 
-            PrintInfo p = new PrintInfo();
-            p.setNaam("Boy");
-            p.setLeeftijd(28);
-            p.setDatum("1 sep 2009");
+            PrintInfo info = new PrintInfo();
+            info.setTitel("Test titel");
+            info.setOpmerking("Test opmerking");
+
+            Date datum = new Date();
+            info.setDatum(datum.toString());
+
+            info.setKwaliteit(100);
+
+            info.setOrientatie("liggend");
+            info.setOutputFormaat("pdf");
+            info.setPaginaFormaat("A4");
 
             PrintExample2PDF example = new PrintExample2PDF();
-            example.convertPersoonToPDF(p, xsltfile, pdffile);
+            example.convertPersoonToPDF(info, xsltfile, pdffile);
 
             System.out.println("PDF staat in "+ pdffile);
 

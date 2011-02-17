@@ -25,6 +25,7 @@ import org.apache.fop.apps.FOPException;
 import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.apps.Fop;
 import org.apache.fop.apps.FopFactory;
+import org.apache.fop.apps.MimeConstants;
 import org.geotools.data.wms.WebMapServer;
 import org.geotools.data.wms.request.GetLegendGraphicRequest;
 
@@ -44,7 +45,7 @@ public class PrintExample2PDF {
      * @throws FOPException In case of a FOP problem
      * @throws TransformerException In case of a XSL transformation problem
      */
-    public void convertPersoonToPDF(PrintInfo p, File xslt, File pdf) throws FileNotFoundException, FOPException, TransformerConfigurationException, JAXBException, IOException, TransformerException {
+    public void convertPersoonToPDF(PrintInfo info, File xslt, File pdf) throws FileNotFoundException, FOPException, TransformerConfigurationException, JAXBException, IOException, TransformerException {
 
         FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
         // configure foUserAgent as desired
@@ -54,15 +55,15 @@ public class PrintExample2PDF {
 
         try {
             // Construct fop with desired output format
-            Fop fop = fopFactory.newFop("pdf", foUserAgent, out);
+            Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, foUserAgent, out);
             SAXResult res = new SAXResult(fop.getDefaultHandler());
 
             // Setup XSLT
             TransformerFactory factory = TransformerFactory.newInstance();
             javax.xml.transform.Transformer transformer = factory.newTransformer(new StreamSource(xslt));
 
-            JAXBContext jc = JAXBContext.newInstance(p.getClass());
-            JAXBSource src =  new JAXBSource(jc, p);
+            JAXBContext jc = JAXBContext.newInstance(info.getClass());
+            JAXBSource src =  new JAXBSource(jc, info);
 
             //printSourceXml(src);
             //transformer.setParameter("imageUrl", "http://www.spellenenzo.nl/res/logo.jpg");
