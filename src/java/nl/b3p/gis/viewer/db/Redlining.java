@@ -86,7 +86,7 @@ public class Redlining {
 
         List<AttributeDescriptor> attributeDescriptors = new ArrayList<AttributeDescriptor>(ft.getAttributeDescriptors());
         for (AttributeDescriptor ad : attributeDescriptors) {
-            String ln = ad.getLocalName();
+            String ln = ad.getLocalName().toLowerCase();
             Object lnv = this.getAttributesMap().get(ln);
             featureBuilder.add(lnv);
         }

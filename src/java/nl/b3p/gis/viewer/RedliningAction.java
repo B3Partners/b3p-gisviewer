@@ -172,6 +172,7 @@ public class RedliningAction extends ViewerCrudAction {
         try {
             SimpleFeature newFeature = (SimpleFeature) writer.next();
             newFeature.setAttributes(feature.getAttributes());
+            newFeature.setDefaultGeometry(feature.getDefaultGeometry());
             writer.write();
         } finally {
             if (writer != null) {
@@ -393,17 +394,23 @@ public class RedliningAction extends ViewerCrudAction {
 
             try {
                 conn = DriverManager.getConnection(url,user,passw);
-                PreparedStatement doSQL = conn.prepareStatement(sql);
 
-                ResultSet rs = doSQL.executeQuery();
-                while (rs.next()) {
-                    String projectnaam = rs.getString(1);
-                    projecten.add(projectnaam);
+                if (conn != null) {
+                    PreparedStatement doSQL = conn.prepareStatement(sql);
+
+                    ResultSet rs = doSQL.executeQuery();
+                    while (rs.next()) {
+                        String projectnaam = rs.getString(1);
+                        projecten.add(projectnaam);
+                    }
                 }
+                
             } catch (SQLException ex) {
-                logger.error("Ophalen projectenlijst uit redlining database mislukt: ", ex);
+                logger.error("Ophalen redliningprojecten mislukt: " + ex);
             } finally {
-                conn.close();
+                if (conn != null) {
+                    conn.close();
+                }
             }
         }
 
