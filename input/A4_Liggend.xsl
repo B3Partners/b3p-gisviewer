@@ -1,18 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <xsl:stylesheet version="1.1" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:fo="http://www.w3.org/1999/XSL/Format" exclude-result-prefixes="fo">
-  <xsl:output method="xml" version="1.0" omit-xml-declaration="no" indent="yes"/>
-  <xsl:param name="versionParam" select="'1.0'"/> 
-  <xsl:param name="imageUrl"/>
-  <xsl:param name="legenduri"/>
+    <xsl:output method="xml" version="1.0" omit-xml-declaration="no" indent="yes"/>
 
-  <xsl:variable name="noordpijl" select="'images/pzh_noordpijl.jpg'"/>
+    <xsl:param name="versionParam" select="'1.0'"/>
+    <xsl:param name="imageUrl"/>
+    <xsl:param name="legenduri"/>
+
+    <xsl:variable name="noordpijl" select="'images/pzh_noordpijl.jpg'"/>
+
+    <!-- master set -->
+    <xsl:template name="layout-master-set">
+        <fo:layout-master-set>
+            <fo:simple-page-master master-name="a4-liggend" page-height="210mm" page-width="297mm" margin-top="0.4cm" margin-bottom="0.4cm" margin-left="0.4cm" margin-right="0.5cm">
+                <fo:region-body region-name="body"/>
+            </fo:simple-page-master>
+        </fo:layout-master-set>
+    </xsl:template>
 
     <!-- styles -->
-    <xsl:attribute-set name="default-font">
-        <xsl:attribute name="font-family">Arial</xsl:attribute>
-        <xsl:attribute name="margin-left">0.5cm</xsl:attribute>
+    <xsl:attribute-set name="title-font">
+        <xsl:attribute name="font-size">15pt</xsl:attribute>
+        <xsl:attribute name="color">#ffffff</xsl:attribute>
     </xsl:attribute-set>
+
+    <xsl:attribute-set name="default-font">
+        <xsl:attribute name="font-size">12pt</xsl:attribute>
+        <xsl:attribute name="color">#000000</xsl:attribute>
+    </xsl:attribute-set>
+    
     <xsl:attribute-set name="simple-border">
         <xsl:attribute name="border-top-color">#000000</xsl:attribute>
         <xsl:attribute name="border-top-style">solid</xsl:attribute>
@@ -27,121 +43,91 @@
         <xsl:attribute name="border-right-style">solid</xsl:attribute>
         <xsl:attribute name="border-right-width">medium</xsl:attribute>
     </xsl:attribute-set>
-    <xsl:attribute-set name="column-block" use-attribute-sets="simple-border">
-        <xsl:attribute name="position">relative</xsl:attribute>
+
+    <xsl:attribute-set name="column-block">
+        <xsl:attribute name="position">absolute</xsl:attribute>
         <xsl:attribute name="top">0cm</xsl:attribute>
         <xsl:attribute name="left">0cm</xsl:attribute>
         <xsl:attribute name="width">100%</xsl:attribute>
     </xsl:attribute-set>
 
-<!-- root -->
-<xsl:template match="info">
-    <fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format" xmlns:xlink="http://www.w3.org/1999/xlink" font-family="Arial">
+    <xsl:attribute-set name="column-block-border" use-attribute-sets="simple-border">
+        <xsl:attribute name="position">absolute</xsl:attribute>
+        <xsl:attribute name="top">0cm</xsl:attribute>
+        <xsl:attribute name="left">0cm</xsl:attribute>
+        <xsl:attribute name="width">100%</xsl:attribute>
+    </xsl:attribute-set>
 
-    <xsl:call-template name="layout-master-set"/>
-
-    <fo:page-sequence master-reference="a4-liggend">
-        <fo:flow flow-name="body">
-            <fo:block-container width="4cm" height="20cm" top="0cm" position="absolute" left="0cm">
-                <xsl:call-template name="left-column"/>
-            </fo:block-container>
-            <fo:block-container width="14.0cm" height="20cm" top="0cm" position="absolute" left="4.5cm">
-                <xsl:call-template name="body-column"/>
-            </fo:block-container>
-        </fo:flow>
-    </fo:page-sequence>
-    </fo:root>
-</xsl:template>
-
-<!-- columns -->
-<xsl:template name="left-column">
-    <fo:block>
-        <xsl:call-template name="logo-block"/>
-        <xsl:call-template name="legend-block"/>
-        <xsl:call-template name="extra-block"/>
-    </fo:block>
-</xsl:template>
-
-<xsl:template name="body-column">
-    <fo:block>
-        <xsl:call-template name="title-block"/>
-        <xsl:call-template name="map-block"/>
-    </fo:block>
-</xsl:template>
-
-<!-- blocks -->
-<xsl:template name="logo-block">
-<fo:block-container height="4.0cm" xsl:use-attribute-sets="column-block">
-    <fo:block margin-top="0.2cm" margin-left="0.2cm">
-        <fo:external-graphic src="http://www.bibl-rijswijk.nl/jaarverslag/Images/logo%20provincie%20zuid-holland.jpg" content-width="3.5cm"/>
-    </fo:block>
-</fo:block-container>
-</xsl:template>
-
-<xsl:template name="legend-block">
-<xsl:variable name="legend">
-    <xsl:value-of select="$legenduri"/>
-</xsl:variable>
-
-<fo:block-container margin-top="0.5cm" height="4.0cm" xsl:use-attribute-sets="column-block">
-    <fo:block margin-top="0.2cm" margin-left="0.2cm">
-        Legenda
-        <fo:block margin-top="0.1cm" margin-left="0.1cm">
-            <fo:external-graphic src="{$legenduri}"/>
+    <!-- root -->
+    <xsl:template match="info">
+        <fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <xsl:call-template name="layout-master-set"/>
+            
+            <fo:page-sequence master-reference="a4-liggend">
+                <fo:flow flow-name="body">
+                    <fo:block-container width="26.9cm" height="1.5cm" top="0cm" left="0cm" background-color="#4C0033" xsl:use-attribute-sets="column-block">
+                        <xsl:call-template name="title-block"/>
+                    </fo:block-container>
+                    <fo:block-container width="1.5cm" height="1.5cm" top="0cm" left="26.9cm" background-color="#72F2D9" xsl:use-attribute-sets="column-block">
+                        <fo:block />
+                    </fo:block-container>
+                    <fo:block-container width="6.7cm" height="16.2cm" top="1.6cm" left="0cm" xsl:use-attribute-sets="column-block">
+                        <xsl:call-template name="info-block"/>
+                    </fo:block-container>
+                    <fo:block-container width="21.7cm" height="16.2cm" top="1.6cm" left="6.7cm" xsl:use-attribute-sets="column-block-border">
+                        <xsl:call-template name="map-block"/>
+                    </fo:block-container>
+                    <fo:block-container width="20.8cm" height="2.3cm" top="17.9cm" left="0cm" xsl:use-attribute-sets="column-block">
+                        <xsl:call-template name="disclaimer-block"/>
+                    </fo:block-container>
+                    <fo:block-container width="7.6cm" height="2.3cm" top="17.9cm" left="20.8cm" xsl:use-attribute-sets="column-block">
+                        <xsl:call-template name="logo-block"/>
+                    </fo:block-container>
+                </fo:flow>
+            </fo:page-sequence>
+        </fo:root>
+    </xsl:template>    
+    
+    <!-- blocks -->
+    <xsl:template name="title-block">        
+        <fo:block margin-left="0.2cm" margin-top="0.5cm" xsl:use-attribute-sets="title-font">
+            Titel
         </fo:block>
+    </xsl:template>    
 
-    </fo:block>
-</fo:block-container>
-</xsl:template>
-
-<xsl:template name="extra-block">
-<fo:block-container margin-top="0.5cm" height="6.0cm" xsl:use-attribute-sets="column-block">
-    <fo:block margin-top="0.2cm" margin-left="0.2cm">
-        <fo:block margin-left="0.1cm" margin-top="0.2cm">
-            <fo:external-graphic src="{$noordpijl}"/>
+    <xsl:template name="info-block">
+        <fo:block margin-left="0.2cm" margin-top="0.5cm" xsl:use-attribute-sets="default-font">
+            <fo:block>
+                Noordpijl
+            </fo:block>
+            <fo:block>
+                Titel
+            </fo:block>
+            <fo:block>
+                Datum
+            </fo:block>
         </fo:block>
-        <fo:block margin-left="0.1cm" margin-top="0.1cm" font-size="10pt" xsl:use-attribute-sets="default-font">
-            <xsl:text>Titel: </xsl:text>
-            <xsl:value-of select="titel"/>
-        </fo:block>
-        <fo:block margin-left="0.1cm" margin-top="0.1cm" font-size="10pt" xsl:use-attribute-sets="default-font">
-            <xsl:text>Opmerking: </xsl:text>
-            <xsl:value-of select="opmerking"/>
-        </fo:block>
-    </fo:block>
-</fo:block-container>
-</xsl:template>
+    </xsl:template>
 
-<xsl:template name="title-block">
-<fo:block-container height="1.5cm" xsl:use-attribute-sets="column-block">
-    <fo:block margin-left="0.2cm" margin-top="0.2cm" font-size="17pt" xsl:use-attribute-sets="default-font">
-        Kaart van Nederland
-    </fo:block>
-</fo:block-container>
-</xsl:template>
-
-<xsl:template name="map-block">
-    <xsl:variable name="map">
-        <xsl:value-of select="$imageUrl"/>
-
-        <!-- floats min x, min y, max x, max y -->
-        <xsl:text>&amp;bbox=135000,490000,155000,510000</xsl:text>
+    <xsl:template name="map-block">
+        <xsl:variable name="map">
+            <xsl:value-of select="$imageUrl"/>
+            <xsl:text>&amp;bbox=135000,490000,155000,510000</xsl:text>
         </xsl:variable>
-    <fo:block-container margin-right="0.5cm" margin-top="0.5cm" height="17cm" xsl:use-attribute-sets="column-block">
-        <fo:block margin-left="0.2cm" margin-top="0.2cm">
-                <fo:external-graphic src="{$map}"/>
+        <fo:block>
+            <fo:external-graphic src="{$map}"/>
         </fo:block>
-    </fo:block-container>
-</xsl:template>
+    </xsl:template>
+    
+    <xsl:template name="disclaimer-block">
+        <fo:block margin-left="0.2cm" margin-top="0.5cm" color="#000000" xsl:use-attribute-sets="default-font">
+            Aan deze kaart kunnen geen rechten worden ontleend.
+        </fo:block>
+    </xsl:template>
 
-<!-- master set -->
-<xsl:template name="layout-master-set">
-<fo:layout-master-set>
-        <!-- liggende pagina -->
-        <fo:simple-page-master master-name="a4-liggend" page-height="210mm" page-width="297mm" margin-top="1cm" margin-bottom="1cm" margin-left="2cm" margin-right="1cm">
-                <fo:region-body region-name="body"/>
-        </fo:simple-page-master>
-</fo:layout-master-set>
-</xsl:template>
-
+    <xsl:template name="logo-block">
+        <fo:block>
+            <fo:external-graphic src="url('limburg_logo.jpg')" width="283px" height="57px"/>
+        </fo:block>
+    </xsl:template>    
 </xsl:stylesheet>
