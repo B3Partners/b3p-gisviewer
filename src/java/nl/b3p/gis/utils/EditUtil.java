@@ -86,93 +86,72 @@ public class EditUtil {
     }
 
     public String getHighlightWktForThema(String themaIds, String wktPoint, String schaal, String tol) {
-        
+        String wkt = null;
+
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Transaction tx = sess.beginTransaction();
+        Transaction tx = null;
 
         try {
+            tx = sess.beginTransaction();
+
             Geometry geom = DataStoreUtil.createGeomFromWKTString(wktPoint);
 
-            if (geom == null) {
-                log.debug("Meegegeven wkt is incorrect.");
-                return "-1";
-            }
+            if (geom != null) {
+                Themas thema = SpatialUtil.getThema(themaIds);
 
-            Themas thema = SpatialUtil.getThema(themaIds);
+                if (thema != null) {
+                    List thema_items = SpatialUtil.getThemaData(thema.getGegevensbron(), true);
 
-            if (thema == null) {
-                log.debug("Kaartlaag niet gevonden.");
-                return "-1";
-            }
+                    if (thema_items.size() > 0) {
+                        WebContext ctx = WebContextFactory.get();
+                        HttpServletRequest request = ctx.getHttpServletRequest();
+                        Bron b = (Bron) thema.getConnectie(request);
 
-            List thema_items = SpatialUtil.getThemaData(thema.getGegevensbron(), true);
+                        if (b != null) {
+                            GisPrincipal user  = GisPrincipal.getGisPrincipal(request);
 
-            if (thema_items.size() < 1) {
+                            if (thema.hasValidAdmindataSource(user)) {
+                                /* geom bufferen met tolerance distance */
+                                double distance = getDistance(schaal, tol);
 
-                if (thema.getNaam() != null)
-                    log.info("Er is geen objectdata gevonden voor " + thema.getNaam());
-                else
-                    log.info("Er is geen objectdata gevonden.");
+                                if (distance > 0)
+                                    geom = geom.buffer(distance);
 
-                return "-1";
-            }
+                                Gegevensbron gb = thema.getGegevensbron();
+                                ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
 
-            WebContext ctx = WebContextFactory.get();
-            HttpServletRequest request = ctx.getHttpServletRequest();
-            Bron b = (Bron) thema.getConnectie(request);
-            if (b == null) {
-                log.error("Geen bron gevonden.");
-                return "-1";
-            }
+                                if ( (features != null) && (features.size() > 0) ) {
+                                    Feature f = features.get(0);
 
-            GisPrincipal user  = GisPrincipal.getGisPrincipal(request);
-            if (!thema.hasValidAdmindataSource(user)) {
-                log.error("Geen geldige objectdata gevonden.");
-                return "-1";
-            }
+                                    if (features.size() > 1)
+                                        log.debug("Service geeft meerdere features terug. Eerste feature gebruikt. Wkt string = " + wkt);
 
-            /* geom bufferen met tolerance distance */
-            double distance = getDistance(schaal, tol);
+                                    if (f != null || f.getDefaultGeometryProperty() != null)
+                                        wkt = DataStoreUtil.selecteerKaartObjectWkt(f); 
+                                }
 
-            if (distance > 0)
-                geom = geom.buffer(distance);
+                            }
+                        }
+                    }
+                }
+            }            
 
-            Gegevensbron gb = thema.getGegevensbron();
-            ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
-
-            if ( (features == null) || (features.size() < 1) ) {
-                log.error("Geen features gevonden.");
-                return "-1";
-            }
-            
-            Feature f = features.get(0);
-
-            if (f == null || f.getDefaultGeometryProperty() == null) {
-                log.error("Gevonden feature ongeldig.");
-                return "-1";
-            }
-
-            String wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
-
-            if (features.size() > 1) {
-                log.debug("Service geeft meerdere features terug. Eerste feature gebruikt. Wkt string = " + wkt);
-            }
-
-            if (wkt == null) {
-                log.error("Highlight wkt null.");
-                return "-1";
-            }
-
-            return wkt;
+            tx.commit();
 
         } catch (Exception ex) {
-            if (tx.isActive()) {
+            log.error("Fout tijdens ophalen wkt: " + ex);
+
+            if (tx != null && tx.isActive()) {
                 tx.rollback();
             }
-
-            log.debug(ex);
+        }
+        
+        if (wkt == null) {
+            log.debug("Wkt string is leeg bij selecteren kaartobject.");            
             return "-1";
         }
+
+        return wkt;
     }
 
     private Geometry getLargestPolygonFromMultiPolygon(Geometry multipolygon) {

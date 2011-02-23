@@ -46,67 +46,71 @@ public class GetLocationData {
     }
 
     public String getWkt(String ggbId, String attributeName, String compareValue) throws SQLException {
-        Session sess = null;
         String wkt = "";
 
-        try {
-            sess = HibernateUtil.getSessionFactory().getCurrentSession();
-            sess.beginTransaction();
+        Transaction tx = null;
+        DataStore ds = null;
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        try {            
+            tx = sess.beginTransaction();
             
             Integer id = -1;
+            
+            id = new Integer(ggbId);
+            
+            if (id != null) {
+                WebContext ctx = WebContextFactory.get();
+                HttpServletRequest request = ctx.getHttpServletRequest();
 
-            try {
-                id = new Integer(ggbId);
-            } catch (NumberFormatException ex) {
-                log.error("Themaid is leeg. NumberFormatException bij maken Integer");
-            }
+                Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, id);
 
-            WebContext ctx = WebContextFactory.get();
-            HttpServletRequest request = ctx.getHttpServletRequest();
+                if (gb != null) {
+                    Bron b = gb.getBron(request);
 
-            Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, id);
+                    if (b != null) {
+                        ds = b.toDatastore();
 
-            if (gb == null) {
-                return wkt;
-            }
+                        if (ds != null) {
+                            GeometryDescriptor gDescr = DataStoreUtil.getSchema(ds, gb).getGeometryDescriptor();
 
-            Bron b = gb.getBron(request);
+                            if (gDescr != null) {
+                                String geometryName = gDescr.getLocalName();
+                                ArrayList<String> propertyNames = new ArrayList();
+                                propertyNames.add(geometryName);
+                                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
 
-            if (b == null) {
-                return wkt;
-            }
-            DataStore ds = b.toDatastore();
-
-            if (ds == null) {
-                return wkt;
-            }
-
-            try {
-                //haal alleen de geometry op.
-                GeometryDescriptor gDescr = DataStoreUtil.getSchema(ds, gb).getGeometryDescriptor();
-
-                if (gDescr == null) {
-                    return wkt;
+                                if (list.size() >= 1) {
+                                    Feature f = list.get(0);
+                                    wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
+                                }
+                            }                            
+                        }                        
+                    }                    
                 }
+            }
+            
+            tx.commit();
 
-                String geometryName = gDescr.getLocalName();
-                ArrayList<String> propertyNames = new ArrayList();
-                propertyNames.add(geometryName);
-                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
-                if (list.size() >= 1) {
-                    Feature f = list.get(0);
-                    wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
-                }
-            } finally {
+        } catch (NumberFormatException ex) {
+            log.error("Fout tijdens omzetten gegevensbronid: " + ex);
+
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
+        } catch (Exception ex) {
+            log.error("Fout tijdens ophalen wkt: " + ex);
+            
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
+        } finally {
+            if (ds != null) {
                 ds.dispose();
             }
-
-        } catch (Exception ex) {
-            log.error("", ex);
-            return wkt;
-        } finally {
-            sess.close();
         }
+
         return wkt;
     }
 
@@ -222,32 +226,45 @@ public class GetLocationData {
         HttpServletRequest request = ctx.getHttpServletRequest();
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Transaction transaction = sess.beginTransaction();
+        Transaction tx = null;
 
-        for (int i = 0; i < themaIds.length; i++) {
-            Integer id = FormUtils.StringToInteger(themaIds[i].trim());
-            if (id == null) {
-                continue;
-            }
-            Themas t = (Themas) sess.get(Themas.class, id);
-            if (t == null) {
-                continue;
-            }
+        try {
+            tx = sess.beginTransaction();
 
-            Bron b = (Bron) t.getConnectie(request);
-            if (b == null) {
-                continue;
-            }
-            try {
+            for (int i = 0; i < themaIds.length; i++) {
+                Integer id = FormUtils.StringToInteger(themaIds[i].trim());
+                if (id == null) {
+                    continue;
+                }
+
+                Themas t = (Themas) sess.get(Themas.class, id);
+                if (t == null) {
+                    continue;
+                }
+
+                Bron b = (Bron) t.getConnectie(request);
+                if (b == null) {
+                    continue;
+                }
+
                 Map themaAnalyseData = calcThemaAnalyseData(b, t, extraCriterium, geom);
+
                 if (themaAnalyseData != null) {
                     themaAnalyseData = formatResults(themaAnalyseData);
                     results.put(t.getNaam(), themaAnalyseData);
                 }
-            } catch (Exception e) {
-                log.debug("analyse data error:", e);
+            }
+
+            tx.commit();
+
+        } catch (Exception e) {
+            log.error("Fout tijdens analyse:" + e);
+
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
             }
         }
+        
         return results;
     }
 

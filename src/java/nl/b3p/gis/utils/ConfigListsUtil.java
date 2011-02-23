@@ -20,6 +20,7 @@ import org.hibernate.Session;
 import org.directwebremoting.WebContext;
 import org.directwebremoting.WebContextFactory;
 import org.geotools.data.DataStore;
+import org.hibernate.Transaction;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.feature.type.Name;
@@ -52,34 +53,54 @@ public class ConfigListsUtil {
     }
 
     public static List getPossibleFeaturesById(Integer connId) {
+        List l = null;
+
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Transaction tx = null;
+
         try {
-            sess.beginTransaction();
+            tx = sess.beginTransaction();
+
             Bron b = getBron(sess, connId);
-            return getPossibleFeatures(b);
+            l = getPossibleFeatures(b);
+
+            tx.commit();
         } catch (Exception e) {
-            log.error("getPossibleFeaturesById error: ", e);
-        } finally {
-            sess.close();
+            log.error("Fout tijdens ophalen attributen o.b.v. id: ", e);
+
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
         }
-        return null;
+
+        return l;
     }
 
     public static List getPossibleAttributesById(Integer connId, String feature) {
+        List l = null;
+        
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Transaction tx = null;
+
         try {
-            sess.beginTransaction();
+            tx = sess.beginTransaction();
+
             Bron b = getBron(sess, connId);
-            if (b == null) {
-                return null;
-            }            
-            return getPossibleAttributes(b, feature);
+
+            if (b != null) {
+                l = getPossibleAttributes(b, feature);
+            }
+
+            tx.commit();
         } catch (Exception e) {
-            log.error("getPossibleAttributesById error: ", e);
-        } finally {
-            sess.close();
+            log.error("Fout tijdens ophalen attributen: ", e);
+
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
         }
-        return null;
+
+        return l;
     }
 
     /**
