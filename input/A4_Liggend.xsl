@@ -40,7 +40,7 @@
 
     <xsl:call-template name="layout-master-set"/>
 
-    <fo:page-sequence master-reference="a4-staand">
+    <fo:page-sequence master-reference="a4-liggend">
         <fo:flow flow-name="body">
             <fo:block-container width="4cm" height="20cm" top="0cm" position="absolute" left="0cm">
                 <xsl:call-template name="left-column"/>
@@ -137,16 +137,6 @@
 <!-- master set -->
 <xsl:template name="layout-master-set">
 <fo:layout-master-set>
-        <!-- titel pagina -->
-        <fo:simple-page-master master-name="a4-title" page-width="210mm" page-height="297mm" margin-top="0.0cm" margin-bottom="0.0cm" margin-left="0.0cm" margin-right="0.0cm">
-                <fo:region-body region-name="body"/>
-        </fo:simple-page-master>
-        <!-- staande pagina -->
-        <fo:simple-page-master master-name="a4-staand" page-width="210mm" page-height="297mm" margin-top="0.45cm" margin-bottom="0cm" margin-left="1.97cm" margin-right="1.87cm">
-                <fo:region-body region-name="body" margin-top="2cm" margin-bottom="2cm"/>
-                <fo:region-before region-name="header"/>
-                <fo:region-after region-name="footer" extent="2cm"/>
-        </fo:simple-page-master>
         <!-- liggende pagina -->
         <fo:simple-page-master master-name="a4-liggend" page-height="210mm" page-width="297mm" margin-top="1cm" margin-bottom="1cm" margin-left="2cm" margin-right="1cm">
                 <fo:region-body region-name="body"/>

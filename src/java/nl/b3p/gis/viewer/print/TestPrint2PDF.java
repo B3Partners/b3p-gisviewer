@@ -13,7 +13,7 @@ public class TestPrint2PDF {
             outDir.mkdirs();
 
             // Setup input and output
-            File xsltfile = new File(baseDir, "input/limburg_a4_liggend.xsl");
+            File xsltfile = new File(baseDir, "input/A4_Liggend.xsl");
             File pdffile = new File(outDir, "Kaart.pdf");
 
             PrintInfo info = new PrintInfo();
