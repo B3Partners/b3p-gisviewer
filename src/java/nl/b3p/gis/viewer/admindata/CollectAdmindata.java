@@ -40,6 +40,7 @@ import org.geotools.feature.FeatureCollection;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.filter.text.cql2.CQLException;
 import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
@@ -71,180 +72,194 @@ public class CollectAdmindata {
         GegevensBronBean bean = null;
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        sess.beginTransaction();
-
-        Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensBronId);
-        if (gb == null) {
-            return null;
-        }
-
-        /* addChilds */
-        List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId order by volgordenr, naam").setInteger("parentId", gb.getId()).list();
-
-        bean = new GegevensBronBean();
-
-        bean.setId(gb.getId());
-        bean.setAdminPk(gb.getAdmin_pk());
-        bean.setParentHtmlId(parentHtmlId);
-
-        Themas thema = null;
-        if (themaId > 0) {
-            thema = (Themas) sess.get(Themas.class, themaId);
-        }
-        if (thema == null || thema.getNaam() == null || thema.getNaam().equals("")) {
-            bean.setTitle(gb.getNaam());
-        } else {
-            bean.setTitle(thema.getNaam());
-        }
-
-        WebContext ctx = WebContextFactory.get();
-        HttpServletRequest request = null;
-        if (ctx != null) {
-            request = ctx.getHttpServletRequest();
-        }
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-
-        String layout = null;
-        try {
-            layout = findDataAdminLayout(thema, user);
-        } catch (Exception ex) {
-            logger.error("", ex);
-        }
-        if (layout == null) {
-            layout = DEFAULT_LAYOUT;
-        }
-        bean.setLayout(layout);
-
-        // Per ThemaData een LabelBean toevoegen
-        List objectdata_items = SpatialUtil.getThemaData(gb, true);
-        Iterator iter = objectdata_items.iterator();
-        while (iter.hasNext()) {
-            ThemaData td = (ThemaData) iter.next();
-
-            if (!td.isBasisregel()) {
-                continue;
+        Transaction tx=sess.beginTransaction();
+        try{
+            Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensBronId);
+            if (gb == null) {
+                return null;
             }
 
-            LabelBean lb = new LabelBean();
+            /* addChilds */
+            List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId order by volgordenr, naam").setInteger("parentId", gb.getId()).list();
 
-            if (td.getId() != null) {
-                lb.setId(td.getId());
+            bean = new GegevensBronBean();
+
+            bean.setId(gb.getId());
+            bean.setAdminPk(gb.getAdmin_pk());
+            bean.setParentHtmlId(parentHtmlId);
+
+            Themas thema = null;
+            if (themaId > 0) {
+                thema = (Themas) sess.get(Themas.class, themaId);
+            }
+            if (thema == null || thema.getNaam() == null || thema.getNaam().equals("")) {
+                bean.setTitle(gb.getNaam());
+            } else {
+                bean.setTitle(thema.getNaam());
             }
 
-            lb.setLabel(td.getLabel());
-            lb.setKolomBreedte(td.getKolombreedte());
-            lb.setKolomNaam(td.getKolomnaam());
-            lb.setCommando(td.getCommando());
-
-            int typeId = td.getDataType().getId();
-            lb.setType(RecordValueBean.getStringType(typeId));
-
-            lb.setEenheid(td.getEenheid());
-
-            bean.addLabel(lb);
-        }
-
-        Bron b = gb.getBron(request);
-
-        if (b == null) {
-            return null;
-        }
-
-        Geometry geom = null;
-        try {
-            geom = DataStoreUtil.createGeomFromWKTString(wkt);
-        } catch (Exception ex) {
-            logger.error("", ex);
-        }
-
-        List<String> propnames = bean.getKolomNamenList();
-        Filter cqlFilter = null;
-        try {
-            if (cql!=null && cql.length()>0) {
-                cqlFilter = CQL.toFilter(cql);
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = null;
+            if (ctx != null) {
+                request = ctx.getHttpServletRequest();
             }
-        } catch (CQLException ex) {
-            logger.error("", ex);
-        }
+            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
 
-        List<Feature> features = null;
-        try {
-            features = DataStoreUtil.getFeatures(b, gb, geom, cqlFilter, propnames, null, collectGeom);
-        } catch (Exception ex) {
-            logger.error("", ex);
-        }
-
-        if (features == null || features.isEmpty()) {
-            return null;
-        }
-
-        Iterator featureIter = features.iterator();
-        while (featureIter.hasNext()) {
-            Feature f = (Feature) featureIter.next();
-
-            RecordBean record = null;
+            String layout = null;
             try {
-                record = getRecordBean(f, gb, bean.getLabels());
+                layout = findDataAdminLayout(thema, user);
             } catch (Exception ex) {
                 logger.error("", ex);
             }
-            if (record == null) {
-                continue;
+            if (layout == null) {
+                layout = DEFAULT_LAYOUT;
+            }
+            bean.setLayout(layout);
+
+            // Per ThemaData een LabelBean toevoegen
+            List objectdata_items = SpatialUtil.getThemaData(gb, true);
+            Iterator iter = objectdata_items.iterator();
+            while (iter.hasNext()) {
+                ThemaData td = (ThemaData) iter.next();
+
+                if (!td.isBasisregel()) {
+                    continue;
+                }
+
+                LabelBean lb = new LabelBean();
+
+                if (td.getId() != null) {
+                    lb.setId(td.getId());
+                }
+
+                lb.setLabel(td.getLabel());
+                lb.setKolomBreedte(td.getKolombreedte());
+                lb.setKolomNaam(td.getKolomnaam());
+                lb.setCommando(td.getCommando());
+
+                int typeId = td.getDataType().getId();
+                lb.setType(RecordValueBean.getStringType(typeId));
+
+                lb.setEenheid(td.getEenheid());
+
+                bean.addLabel(lb);
             }
 
-            Iterator iter4 = childBronnen.iterator();
+            Bron b = gb.getBron(request);
 
-            while (iter4.hasNext()) {
-                Gegevensbron child = (Gegevensbron) iter4.next();
+            if (b == null) {
+                return null;
+            }
 
-                String fkField = child.getAdmin_fk();
-                String recordId = record.getId().toString();
+            Geometry geom = null;
+            try {
+                geom = DataStoreUtil.createGeomFromWKTString(wkt);
+            } catch (Exception ex) {
+                logger.error("", ex);
+            }
 
-                Filter childFilter = null;
-                ArrayList<Filter> filters = new ArrayList();
-                if (cqlFilter != null) {
-                    filters.add(cqlFilter);
+            List<String> propnames = bean.getKolomNamenList();
+            Filter cqlFilter = null;
+            try {
+                if (cql!=null && cql.length()>0) {
+                    cqlFilter = CQL.toFilter(cql);
                 }
-                Filter attrFilter = null;
-                if (fkField != null && recordId != null) {
-                    attrFilter = FilterBuilder.createEqualsFilter(fkField, recordId);
-                }
-                if (attrFilter != null) {
-                    filters.add(attrFilter);
-                }
-                if (filters.size() == 1) {
-                    childFilter = filters.get(0);
-                }
-                if (filters.size() > 1) {
-                    childFilter = filterFac.and(filters);
-                }
+            } catch (CQLException ex) {
+                logger.error("", ex);
+            }
 
-                int count = 0;
+            List<Feature> features = null;
+            try {
+                features = DataStoreUtil.getFeatures(b, gb, geom, cqlFilter, propnames, null, collectGeom);
+            } catch (Exception ex) {
+                logger.error("", ex);
+            }
+
+            if (features == null || features.isEmpty()) {
+                return null;
+            }
+
+            Iterator featureIter = features.iterator();
+            while (featureIter.hasNext()) {
+                Feature f = (Feature) featureIter.next();
+
+                RecordBean record = null;
                 try {
-                    count = getAantalChildRecords(child, childFilter, geom);
+                    record = getRecordBean(f, gb, bean.getLabels());
                 } catch (Exception ex) {
                     logger.error("", ex);
                 }
-
-                if (count > 0) {
-                    RecordChildBean childBean = new RecordChildBean();
-                    childBean.setId(child.getId().toString());
-                    childBean.setGegevensBronBeanId(bean.getId());
-                    childBean.setTitle(child.getNaam());
-                    childBean.setAantalRecords(count);
-                    childBean.setThemaId(new Integer(themaId).toString());
-                    childBean.setCql(CQL.toCQL(attrFilter));
-                    childBean.setWkt(wkt);
-
-                    record.addChild(childBean);
+                if (record == null) {
+                    continue;
                 }
+
+                Iterator iter4 = childBronnen.iterator();
+
+                while (iter4.hasNext()) {
+                    Gegevensbron child = (Gegevensbron) iter4.next();
+
+                    String fkField = child.getAdmin_fk();
+                    String recordId = record.getId().toString();
+
+                    Filter childFilter = null;
+                    ArrayList<Filter> filters = new ArrayList();
+                    if (cqlFilter != null) {
+                        filters.add(cqlFilter);
+                    }
+                    Filter attrFilter = null;
+                    if (fkField != null && recordId != null) {
+                        attrFilter = FilterBuilder.createEqualsFilter(fkField, recordId);
+                    }
+                    if (attrFilter != null) {
+                        filters.add(attrFilter);
+                    }
+                    if (filters.size() == 1) {
+                        childFilter = filters.get(0);
+                    }
+                    if (filters.size() > 1) {
+                        childFilter = filterFac.and(filters);
+                    }
+
+                    int count = 0;
+                    try {
+                        count = getAantalChildRecords(child, childFilter, geom);
+                    } catch (Exception ex) {
+                        logger.error("", ex);
+                    }
+
+                    if (count > 0) {
+                        RecordChildBean childBean = new RecordChildBean();
+                        childBean.setId(child.getId().toString());
+                        childBean.setGegevensBronBeanId(bean.getId());
+                        childBean.setTitle(child.getNaam());
+                        childBean.setAantalRecords(count);
+                        childBean.setThemaId(new Integer(themaId).toString());
+                        childBean.setCql(CQL.toCQL(attrFilter));
+                        childBean.setWkt(wkt);
+
+                        record.addChild(childBean);
+                    }
+                }
+                bean.addRecord(record);
             }
-
-            bean.addRecord(record);
+        }catch(Exception e){
+            logger.error("Error while getting Data",e);
+            if(tx!=null && tx.isActive()) {
+                tx.rollback();
+            }
+        }finally{
+            try{
+                if (tx!=null){
+                    tx.commit();
+                }
+            }catch(Exception e){
+                logger.error("Error while committing transaction",e);
+            }
         }
-
-        bean.setCsvPksFromRecordBeans();
+        if (bean!=null)
+            bean.setCsvPksFromRecordBeans();
         return bean;
+
     }
 
     protected RecordBean getRecordBean(Feature f, Gegevensbron gb, List<LabelBean> label_bean_items) throws SQLException, UnsupportedEncodingException, Exception {
