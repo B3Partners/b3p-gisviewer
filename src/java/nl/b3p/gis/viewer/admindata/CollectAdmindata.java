@@ -236,13 +236,13 @@ public class CollectAdmindata {
             tx.commit();
 
         } catch (CQLException cqlEx) {
-            logger.error("Fout tijdens filter: ", cqlEx);
+            logger.error("Fout tijdens filter: " + cqlEx);
 
             if (tx != null && tx.isActive()) {
                 tx.rollback();
             }
         } catch (Exception e) {
-            logger.error("Fout tijdens ophalen objectdata: ", e);
+            logger.error("Fout tijdens ophalen objectdata: " + e);
 
             if (tx != null && tx.isActive()) {
                 tx.rollback();

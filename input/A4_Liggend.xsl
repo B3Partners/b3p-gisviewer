@@ -4,10 +4,11 @@
     <xsl:output method="xml" version="1.0" omit-xml-declaration="no" indent="yes"/>
 
     <xsl:param name="versionParam" select="'1.0'"/>
-    <xsl:param name="imageUrl"/>
-    <xsl:param name="legenduri"/>
 
-    <xsl:variable name="noordpijl" select="'images/pzh_noordpijl.jpg'"/>
+    <xsl:variable name="map-width-px" select="'800'"/>
+    <xsl:variable name="map-height-px" select="'600'"/>
+
+    <xsl:include href="calc.xsl"/>
 
     <!-- master set -->
     <xsl:template name="layout-master-set">
@@ -71,7 +72,7 @@
                     <fo:block-container width="1.5cm" height="1.5cm" top="0cm" left="26.9cm" background-color="#72F2D9" xsl:use-attribute-sets="column-block">
                         <fo:block />
                     </fo:block-container>
-                    <fo:block-container width="6.7cm" height="16.2cm" top="1.6cm" left="0cm" xsl:use-attribute-sets="column-block">
+                    <fo:block-container width="6.5cm" height="16.2cm" top="1.6cm" left="0cm" xsl:use-attribute-sets="column-block-border">
                         <xsl:call-template name="info-block"/>
                     </fo:block-container>
                     <fo:block-container width="21.7cm" height="16.2cm" top="1.6cm" left="6.7cm" xsl:use-attribute-sets="column-block-border">
@@ -91,31 +92,60 @@
     <!-- blocks -->
     <xsl:template name="title-block">        
         <fo:block margin-left="0.2cm" margin-top="0.5cm" xsl:use-attribute-sets="title-font">
-            Titel
+            <xsl:value-of select="titel"/>
         </fo:block>
-    </xsl:template>    
+    </xsl:template>
 
     <xsl:template name="info-block">
         <fo:block margin-left="0.2cm" margin-top="0.5cm" xsl:use-attribute-sets="default-font">
             <fo:block>
-                Noordpijl
-            </fo:block>
+                <fo:external-graphic src="url('input/limburg_noordpijl.jpg')" width="45px" height="46px"/>
+            </fo:block>            
             <fo:block>
-                Titel
+                <xsl:value-of select="datum"/>
             </fo:block>
-            <fo:block>
-                Datum
+
+            <!-- create scalebar -->
+            <fo:block margin-left="0.05cm" margin-right="0.05cm">
+                <xsl:call-template name="calc-scale">
+                    <xsl:with-param name="m-width">
+                        <xsl:call-template name="calc-bbox-width-m-corrected">
+                            <xsl:with-param name="bbox" select="bbox"/>
+                        </xsl:call-template>
+                    </xsl:with-param>
+                    <xsl:with-param name="px-width" select="$map-width-px"/>
+                </xsl:call-template>
             </fo:block>
+
         </fo:block>
     </xsl:template>
 
+    <!-- create map -->
     <xsl:template name="map-block">
-        <xsl:variable name="map">
-            <xsl:value-of select="$imageUrl"/>
-            <xsl:text>&amp;bbox=135000,490000,155000,510000</xsl:text>
+        <xsl:variable name="bbox-corrected">
+            <xsl:call-template name="correct-bbox">
+                <xsl:with-param name="bbox" select="bbox"/>
+            </xsl:call-template>
         </xsl:variable>
-        <fo:block>
-            <fo:external-graphic src="{$map}"/>
+
+        <xsl:variable name="px-ratio" select="$map-height-px div $map-width-px"/>
+        <xsl:variable name="map-width-px-corrected" select="kwaliteit"/>
+        <xsl:variable name="map-height-px-corrected" select="format-number(kwaliteit * $px-ratio,'0','MyFormat')"/>
+        <xsl:variable name="map">
+            <xsl:value-of select="imageUrl"/>
+
+            <xsl:value-of select="id"/>
+            <xsl:text>&amp;width=</xsl:text>
+            <xsl:value-of select="$map-width-px-corrected"/>
+            <xsl:text>&amp;height=</xsl:text>
+            <xsl:value-of select="$map-height-px-corrected"/>
+            <xsl:text>&amp;bbox=</xsl:text>
+            <xsl:value-of select="$bbox-corrected"/>
+            
+        </xsl:variable>
+
+        <fo:block margin-left="0.05cm" margin-right="0.05cm">
+            <fo:external-graphic src="{$map}" content-height="scale-to-fit" content-width="scale-to-fit" scaling="uniform" width="{$map-width-px}" height="{$map-height-px}"/>
         </fo:block>
     </xsl:template>
     
@@ -127,7 +157,7 @@
 
     <xsl:template name="logo-block">
         <fo:block>
-            <fo:external-graphic src="url('limburg_logo.jpg')" width="283px" height="57px"/>
+            <fo:external-graphic src="url('input/limburg_logo.jpg')" width="283px" height="57px"/>
         </fo:block>
     </xsl:template>    
 </xsl:stylesheet>

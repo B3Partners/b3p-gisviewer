@@ -6,7 +6,7 @@ import javax.xml.bind.annotation.XmlType;
 
 @XmlRootElement(name="info")
 @XmlType(propOrder = {"titel","opmerking","datum","kwaliteit","orientatie",
-    "paginaFormaat","outputFormaat"})
+    "paginaFormaat","outputFormaat","imageUrl","bbox"})
 
 public class PrintInfo {
     private String titel;
@@ -16,6 +16,8 @@ public class PrintInfo {
     private String orientatie;
     private String paginaFormaat;
     private String outputFormaat;
+    private String imageUrl;
+    private String bbox;
 
     public PrintInfo() {
     }
@@ -81,5 +83,23 @@ public class PrintInfo {
 
     public void setTitel(String titel) {
         this.titel = titel;
+    }
+
+    @XmlElement(name="imageUrl")
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    @XmlElement(name="bbox")
+    public String getBbox() {
+        return bbox;
+    }
+
+    public void setBbox(String bbox) {
+        this.bbox = bbox;
     }
 }
