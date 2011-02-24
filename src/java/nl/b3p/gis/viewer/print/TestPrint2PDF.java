@@ -1,11 +1,13 @@
 package nl.b3p.gis.viewer.print;
 
 import java.io.File;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 public class TestPrint2PDF {
+
+    private static final int MAX_QUALITY = 2048;
 
     public static void main(String[] args) {
         try {
@@ -18,28 +20,23 @@ public class TestPrint2PDF {
             File xsltfile = new File(baseDir, "input/A4_Liggend.xsl");
             File pdffile = new File(outDir, "Kaart.pdf");
 
+            Date now = new Date();
+            SimpleDateFormat df = new SimpleDateFormat("dd-M-yyyy", new Locale("NL"));
+
             PrintInfo info = new PrintInfo();
+
             info.setTitel("Test titel");
-            info.setOpmerking("Test opmerking");
+            info.setDatum(df.format(now));
 
-            Date datum = new Date();
-            DateFormat df = new SimpleDateFormat("dd-M-yyyy");
-
-            info.setDatum(df.format(datum));
-
-            info.setKwaliteit(100);
-
-            info.setOrientatie("liggend");
-            info.setOutputFormaat("pdf");
-            info.setPaginaFormaat("A4");
-
-            info.setKwaliteit(1500);
-            info.setBbox("89129.1428571428,296000,284324.857142857,435000");
-            
-            info.setImageUrl("http://192.168.1.14:8084/kaartenbalie/services/fc050d16f589d1f82ffd43beba38f933?&SERVICE=WMS&REQUEST=GetMap&TIMEOUT=30&RATIO=1&STYLES=&TRANSPARENT=TRUE&SRS=EPSG:28992&VERSION=1.1.1&EXCEPTIONS=application/vnd.ogc.se_inimage&LAYERS=demo_gemeenten_2006&FORMAT=image/png&HEIGHT=700&WIDTH=983");
+            /* kwaliteit is eigenlijk de width in een nieuwe getMap request */
+            info.setKwaliteit(640);
+            info.setImageUrl("http://192.168.1.14:8084/kaartenbalie/services/fc050d16f589d1f82ffd43beba38f933?&SERVICE=WMS&REQUEST=GetMap&TIMEOUT=30&RATIO=1&STYLES=&TRANSPARENT=TRUE&SRS=EPSG:28992&VERSION=1.1.1&EXCEPTIONS=application/vnd.ogc.se_inimage&LAYERS=osmsc_OpenStreetMap2&FORMAT=image/png&HEIGHT=700&WIDTH=983&BBOX=194148.607142857,353313.865353873,201743.964285714,358722.563217556");
+            info.setBbox("194148.607142857,353313.865353873,201743.964285714,358722.563217556");
+            info.setMapWidth(983);
+            info.setMapHeight(700);
 
             PrintExample2PDF example = new PrintExample2PDF();
-            example.convertPersoonToPDF(info, xsltfile, pdffile);
+            example.convert2PDF(info, xsltfile, pdffile);
 
             System.out.println("PDF staat in "+ pdffile);
 
@@ -47,6 +44,5 @@ public class TestPrint2PDF {
             ex.printStackTrace(System.err);
             System.exit(-1);
         }
-    }
-    
+    }   
 }

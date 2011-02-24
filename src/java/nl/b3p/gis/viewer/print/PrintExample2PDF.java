@@ -45,7 +45,7 @@ public class PrintExample2PDF {
      * @throws FOPException In case of a FOP problem
      * @throws TransformerException In case of a XSL transformation problem
      */
-    public void convertPersoonToPDF(PrintInfo info, File xslt, File pdf) throws FileNotFoundException, FOPException, TransformerConfigurationException, JAXBException, IOException, TransformerException {
+    public void convert2PDF(PrintInfo info, File xslt, File pdf) throws FileNotFoundException, FOPException, TransformerConfigurationException, JAXBException, IOException, TransformerException {
 
         FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
         // configure foUserAgent as desired
@@ -65,17 +65,6 @@ public class PrintExample2PDF {
             JAXBContext jc = JAXBContext.newInstance(info.getClass());
             JAXBSource src =  new JAXBSource(jc, info);
 
-            //printSourceXml(src);
-            //transformer.setParameter("imageUrl", "http://www.spellenenzo.nl/res/logo.jpg");
-
-            try {
-                transformer.setParameter("imageUrl", getImageUrl());
-            } catch (Exception ex) {
-                log.error("Fout bij maken PDF:" + ex);
-            }
-
-            transformer.setParameter("legenduri", legenduri);
-
             transformer.transform(src, res);
 
         } finally {
@@ -90,43 +79,5 @@ public class PrintExample2PDF {
         StreamResult res = new StreamResult(w);
         transformer.transform(src, res);
         System.out.println(w.toString());
-    }
-
-    private String getImageUrl() throws IOException, org.geotools.ows.ServiceException {
-        String s = "";
-
-        // http://public-wms.kaartenbalie.nl/wms/nederland?service=wms&request=getmap&Layers=wegen,basis_nl,water,gemeenten_2006&transparent=true&VERSION=1.1.1&WIDTH=742&HEIGHT=1000
-        try {
-
-            URL uri = new URL("http://public-wms.kaartenbalie.nl/wms/nederland?service=WMS&request=getCapabilities");
-            WebMapServer wms = new WebMapServer(uri);
-            String version = wms.getCapabilities().getVersion();
-            List layers = wms.getCapabilities().getLayerList();
-
-            GetLegendGraphicRequest glg = wms.createGetLegendGraphicRequest();
-
-            String laag = "rivieren_nl";
-
-            for (int i1=0; i1 < layers.size(); i1++) {
-                Layer l = (Layer) layers.get(i1);
-
-                //System.out.println(l.getName());
-
-                if (l.getName().equals(laag))
-                    glg.setLayer(l.getName());
-            }
-
-            glg.setFormat("image/png");
-
-            legenduri = glg.getFinalURL().toString();
-
-            s = "http://public-wms.kaartenbalie.nl/wms/nederland?service=wms&request=getmap&Layers=basis,basis_nl,"+laag+"&VERSION=1.1.1&WIDTH=385&HEIGHT=468";
-
-        } catch (MalformedURLException ex) {
-            log.error("Fout bij maken PDF:" + ex);
-        }
-
-        return s;
-    }
-    
+    }   
 }

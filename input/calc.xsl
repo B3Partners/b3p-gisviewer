@@ -3,10 +3,10 @@
 <xsl:stylesheet version="1.1" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:fo="http://www.w3.org/1999/XSL/Format" exclude-result-prefixes="fo">
     <xsl:output method="xml" version="1.0" omit-xml-declaration="no" indent="yes"/>
 
-<!-- formatter -->
+    <!-- formatter -->
     <xsl:decimal-format decimal-separator="," grouping-separator="." name="MyFormat" NaN="&#160;" infinity="&#160;"/>
 
-<!-- berekent de breedte van de kaart in meters na correctie vanwege verschil
+    <!-- berekent de breedte van de kaart in meters na correctie vanwege verschil
 	in verhouding hoogte/breedte kaart op scherm en van kaart in template -->
     <xsl:template name="calc-bbox-width-m-corrected">
         <xsl:param name="bbox"/>
@@ -19,7 +19,7 @@
         <xsl:variable name="ymax" select="substring-after($bbox2, ',')"/>
         <xsl:variable name="bbox-width-m" select="$xmax - $xmin"/>
         <xsl:variable name="bbox-height-m" select="$ymax - $ymin"/>
-        <xsl:variable name="bbox-ratio" select="($map-width-px * $bbox-height-m) div ($map-height-px * $bbox-width-m)"/>
+        <xsl:variable name="bbox-ratio" select="(mapWidth * $bbox-height-m) div (mapHeight * $bbox-width-m)"/>
         <xsl:choose>
             <xsl:when test="$bbox-ratio &gt; 1">
                 <xsl:value-of select="$bbox-width-m * $bbox-ratio"/>
@@ -29,12 +29,13 @@
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
-	<!-- berekent nieuwe bbox indien verhouding hoogte/breedte van kaart op scherm
-	anders is dan verhouding van kaart in template, kaart in template bevat minimaal
-	dekking van kaart op scherm, maar mogelijk meer -->
+
+    <!-- berekent nieuwe bbox indien verhouding hoogte/breedte van kaart op scherm
+    anders is dan verhouding van kaart in template, kaart in template bevat minimaal
+    dekking van kaart op scherm, maar mogelijk meer -->
     <xsl:template name="correct-bbox">
         <xsl:param name="bbox"/>
-		<!-- 33485.3363636364,406692,148826.663636364,483123 -->
+
         <xsl:variable name="xmin" select="substring-before($bbox, ',')"/>
         <xsl:variable name="bbox1" select="substring-after($bbox, ',')"/>
         <xsl:variable name="ymin" select="substring-before($bbox1, ',')"/>
@@ -45,7 +46,7 @@
         <xsl:variable name="ymid" select="($ymin + $ymax) div 2"/>
         <xsl:variable name="bbox-width-m" select="$xmax - $xmin"/>
         <xsl:variable name="bbox-height-m" select="$ymax - $ymin"/>
-        <xsl:variable name="bbox-ratio" select="($map-width-px * $bbox-height-m) div ($map-height-px * $bbox-width-m)"/>
+        <xsl:variable name="bbox-ratio" select="(mapWidth * $bbox-height-m) div (mapHeight * $bbox-width-m)"/>
         <xsl:choose>
             <xsl:when test="$bbox-ratio = 1">
                 <xsl:value-of select="$bbox"/>
@@ -73,8 +74,7 @@
         </xsl:choose>
     </xsl:template>
 
-<!-- berekent en tekent de schaalstok, houdt rekening met echte schaal
-	op kaart -->
+<!-- berekent en tekent de schaalstok, houdt rekening met echte schaal op kaart -->
 <xsl:template name="calc-scale">
     <xsl:param name="m-width"/>
     <xsl:param name="px-width"/>
@@ -116,7 +116,8 @@
         <xsl:with-param name="unit" select="$scale-unit"/>
     </xsl:call-template>
 </xsl:template>
-	<!-- verkleint iteratief waarde door delen met 10 naar waarde tussen 0 en 1 -->
+
+<!-- verkleint iteratief waarde door delen met 10 naar waarde tussen 0 en 1 -->
 <xsl:template name="strip-zeros">
     <xsl:param name="value"/>
     <xsl:choose>
@@ -130,7 +131,8 @@
         </xsl:otherwise>
     </xsl:choose>
 </xsl:template>
-	<!-- berekent de lengte van een segment van de schaalbalk in meters -->
+
+<!-- berekent de lengte van een segment van de schaalbalk in meters -->
 <xsl:template name="calc-scale-m">
     <xsl:param name="width-m" select="'100000'"/>
     <xsl:param name="width-px" select="'700'"/>
@@ -153,7 +155,8 @@
         </xsl:otherwise>
     </xsl:choose>
 </xsl:template>
-	<!-- berekent de lengte van een segment van de schaalbalk in pixels -->
+
+<!-- berekent de lengte van een segment van de schaalbalk in pixels -->
 <xsl:template name="calc-scale-px">
     <xsl:param name="width-m"/>
     <xsl:param name="width-px"/>
@@ -164,7 +167,8 @@
             <xsl:with-param name="width-px" select="$width-px"/>
         </xsl:call-template>
     </xsl:variable>
-		<!-- lengte in pixels van schaalbalk -->
+
+    <!-- lengte in pixels van schaalbalk -->
     <xsl:value-of select="$scale-length*$screen-scale"/>
 </xsl:template>
 
