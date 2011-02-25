@@ -61,7 +61,8 @@ import org.apache.struts.validator.DynaValidatorForm;
 
 public class PrintAction extends BaseHibernateAction {
 
-    private static final Log log = LogFactory.getLog(PrintAction.class);
+    private static final Log logFile = LogFactory.getLog(PrintAction.class);
+
     protected static final String PRINT = "print";
     protected static final String IMAGE = "image";
     private static final String METADATA_TITLE = "Kaartexport B3P Gisviewer";
@@ -133,7 +134,7 @@ public class PrintAction extends BaseHibernateAction {
             }
         }
         if (settings == null) {
-            log.error("No settings for image found");
+            logFile.error("No settings for image found");
             this.addAlternateMessage(mapping, request, null, "No settings for image found");
             return this.getAlternateForward(mapping, request);
         }
@@ -155,7 +156,7 @@ public class PrintAction extends BaseHibernateAction {
         String title = FormUtils.nullIfEmpty(dynaForm.getString("title"));
         String remark = FormUtils.nullIfEmpty(dynaForm.getString("remark"));
         String pageSize = FormUtils.nullIfEmpty(dynaForm.getString("pageSize"));
-        boolean landscape = new Boolean(dynaForm.getString("landscape")).booleanValue();
+        boolean landscape = Boolean.valueOf(dynaForm.getString("landscape")).booleanValue();
         String outputType = FormUtils.nullIfEmpty(dynaForm.getString("outputType"));
         if (outputType == null) {
             outputType = OUTPUT_PDF_PRINT;
@@ -211,7 +212,7 @@ public class PrintAction extends BaseHibernateAction {
                 imageWidth = map.getScaledWidth();
                 imageHeight = map.getScaledHeight();
             } catch (Exception ex) {
-                log.error("Kan kaart image niet toevoegen.", ex);
+                logFile.error("Kan kaart image niet toevoegen.", ex);
             }
             if (map != null) {
                 doc.add(map);
@@ -246,7 +247,7 @@ public class PrintAction extends BaseHibernateAction {
             doc.close();
         }
         return null;
-    }
+    }    
 
     public Document createDocument(String pageSize, boolean landscape) {
         Rectangle ps = PageSize.A4;
@@ -269,14 +270,14 @@ public class PrintAction extends BaseHibernateAction {
             try {
                 logo = Image.getInstance(logoPath);
             } catch (Exception e) {
-                log.error("Fout bij ophalen export logo: ", e);
+                logFile.error("Fout bij ophalen export logo: ", e);
             }
         }
         if (extraImagePath != null) {
             try {
                 extraImage = Image.getInstance(extraImagePath);
             } catch (Exception e) {
-                log.error("Fout bij ophalen van de noord pijl: ", e);
+                logFile.error("Fout bij ophalen van de noord pijl: ", e);
             }
         }
         if (outputType.equalsIgnoreCase(OUTPUT_PDF) ||
@@ -394,13 +395,13 @@ public class PrintAction extends BaseHibernateAction {
 
         String[] urls = null;
         if (url != null) {
-            log.debug("Urls: " + url);
+            logFile.debug("Urls: " + url);
             urls = url.split(";");
             settings.setUrls(urls);
         }
         String[] wkts = null;
         if (wkt != null) {
-            log.debug("WKT: " + wkt);
+            logFile.debug("WKT: " + wkt);
             wkts = wkt.split(";");
             settings.setWktGeoms(wkts);
         }
