@@ -83,10 +83,11 @@ public class CollectAdmindata {
                 List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId order by volgordenr, naam").setInteger("parentId", gb.getId()).list();
 
                 bean = new GegevensBronBean();
-
+            
                 bean.setId(gb.getId());
                 bean.setAdminPk(gb.getAdmin_pk());
                 bean.setParentHtmlId(parentHtmlId);
+            bean.setOrder(thema.getBelangnr());
 
                 Themas thema = null;
                 if (themaId > 0) {

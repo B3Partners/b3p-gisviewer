@@ -20,6 +20,7 @@ public class GegevensBronBean {
     private List<RecordBean> records;
     private String parentHtmlId;
     private String layout;
+    private Integer order;
 
     public Integer getId() {
         return id;
@@ -150,5 +151,11 @@ public class GegevensBronBean {
      */
     public void setLayout(String layout) {
         this.layout = layout;
+    }
+    public Integer getOrder(){
+        return this.order;
+    }
+    public void setOrder(int order) {
+        this.order=order;
     }
 }
