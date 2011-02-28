@@ -48,6 +48,8 @@ import javax.servlet.http.HttpServletResponse;
 import nl.b3p.combineimages.CombineImagesServlet;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
+import nl.b3p.gis.viewer.print.PrintInfo;
+import nl.b3p.gis.viewer.print.PrintServlet;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.struts.BaseHibernateAction;
 import nl.b3p.imagetool.CombineImageSettings;
@@ -150,7 +152,7 @@ public class PrintAction extends BaseHibernateAction {
         }
         return null;
     }
-
+    
     public ActionForward print(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         String title = FormUtils.nullIfEmpty(dynaForm.getString("title"));
@@ -247,7 +249,56 @@ public class PrintAction extends BaseHibernateAction {
             doc.close();
         }
         return null;
-    }    
+    }
+
+    public ActionForward print1(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        Date now = new Date();
+        SimpleDateFormat df = new SimpleDateFormat("dd-M-yyyy", new Locale("NL"));
+
+        String title = FormUtils.nullIfEmpty(dynaForm.getString("title"));
+        String imageId = FormUtils.nullIfEmpty(dynaForm.getString("imageId"));
+        String imageSize = FormUtils.nullIfEmpty(dynaForm.getString("imageSize"));
+
+        int width = new Integer(imageSize).intValue();
+
+        /* settings aanpassen zodat image verzoek een nieuw plaatje opleverd */
+        CombineImageSettings settings = (CombineImageSettings) request.getSession().getAttribute(imageId);
+        settings.setWidth(width);
+
+        PrintServlet.settings = settings;
+
+        PrintInfo info = new PrintInfo();
+
+        info.setTitel(title);
+        info.setDatum(df.format(now));
+
+        /* kwaliteit is eigenlijk de width voor een nieuwe getMap request
+         indien de kwaliteit aangepast is door de gebruiker middels de schuifbalk
+         dan een nieuwe image image klaarzetten en imageId meegeven aan xsl */
+        info.setKwaliteit(width);
+
+        String imageUrl = PrintServlet.commando;
+        info.setImageUrl(imageUrl);
+
+        String minx = Double.toString(settings.getBbox().getMinx());
+        String miny = Double.toString(settings.getBbox().getMiny());
+        String maxx = Double.toString(settings.getBbox().getMaxx());
+        String maxy = Double.toString(settings.getBbox().getMaxy());
+
+        String bbox = minx + "," + miny + "," + maxx + "," + maxy;
+
+        info.setBbox(bbox);
+
+        int mapWidth = settings.getWidth().intValue();
+        int mapHeight = settings.getHeight().intValue();
+
+        info.setMapWidth(mapWidth);
+        info.setMapHeight(mapHeight);
+
+        PrintServlet.createPdf(info, response);
+
+        return null;
+    }
 
     public Document createDocument(String pageSize, boolean landscape) {
         Rectangle ps = PageSize.A4;
