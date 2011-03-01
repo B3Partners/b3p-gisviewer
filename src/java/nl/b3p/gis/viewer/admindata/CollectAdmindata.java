@@ -87,7 +87,7 @@ public class CollectAdmindata {
                 bean.setId(gb.getId());
                 bean.setAdminPk(gb.getAdmin_pk());
                 bean.setParentHtmlId(parentHtmlId);
-            bean.setOrder(thema.getBelangnr());
+            
 
                 Themas thema = null;
                 if (themaId > 0) {
@@ -98,6 +98,9 @@ public class CollectAdmindata {
                     bean.setTitle(gb.getNaam());
                 } else {
                     bean.setTitle(thema.getNaam());
+                }
+                if (thema!=null){
+                    bean.setOrder(thema.getBelangnr());
                 }
 
                 WebContext ctx = WebContextFactory.get();
