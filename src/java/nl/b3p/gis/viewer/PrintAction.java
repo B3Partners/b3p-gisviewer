@@ -37,6 +37,9 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.rtf.RtfWriter2;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -57,6 +60,7 @@ import nl.b3p.imagetool.CombineImagesHandler;
 import nl.b3p.ogc.utils.OGCRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.fop.apps.MimeConstants;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
@@ -152,7 +156,7 @@ public class PrintAction extends BaseHibernateAction {
         }
         return null;
     }
-    
+
     public ActionForward print(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         String title = FormUtils.nullIfEmpty(dynaForm.getString("title"));
@@ -252,52 +256,132 @@ public class PrintAction extends BaseHibernateAction {
     }
 
     public ActionForward print1(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        Date now = new Date();
-        SimpleDateFormat df = new SimpleDateFormat("dd-M-yyyy", new Locale("NL"));
 
+        /* ophalen form waardes */
         String title = FormUtils.nullIfEmpty(dynaForm.getString("title"));
         String imageId = FormUtils.nullIfEmpty(dynaForm.getString("imageId"));
         String imageSize = FormUtils.nullIfEmpty(dynaForm.getString("imageSize"));
+        String pageSize = FormUtils.nullIfEmpty(dynaForm.getString("pageSize"));
+        boolean landscape = Boolean.valueOf(dynaForm.getString("landscape")).booleanValue();
+        String outputType = FormUtils.nullIfEmpty(dynaForm.getString("outputType"));
 
-        int width = new Integer(imageSize).intValue();
+        /* kwaliteit is nieuwe width voor getMap verzoek */
+        int kwaliteit = new Integer(imageSize).intValue();
 
-        /* settings aanpassen zodat image verzoek een nieuw plaatje opleverd */
+        /* huidige CombineImageSettings ophalen */
         CombineImageSettings settings = (CombineImageSettings) request.getSession().getAttribute(imageId);
-        settings.setWidth(width);
 
-        PrintServlet.settings = settings;
-
-        PrintInfo info = new PrintInfo();
-
-        info.setTitel(title);
-        info.setDatum(df.format(now));
-
-        /* kwaliteit is eigenlijk de width voor een nieuwe getMap request
-         indien de kwaliteit aangepast is door de gebruiker middels de schuifbalk
-         dan een nieuwe image image klaarzetten en imageId meegeven aan xsl */
-        info.setKwaliteit(width);
-
-        String imageUrl = PrintServlet.commando;
-        info.setImageUrl(imageUrl);
-
+        /* bbox klaarzetten voor xsl */
         String minx = Double.toString(settings.getBbox().getMinx());
         String miny = Double.toString(settings.getBbox().getMiny());
         String maxx = Double.toString(settings.getBbox().getMaxx());
         String maxy = Double.toString(settings.getBbox().getMaxy());
-
         String bbox = minx + "," + miny + "," + maxx + "," + maxy;
 
+        /* ratio bepalen voor berekenen nieuwe height */
+        float ratio = calcPixelRatio(settings.getWidth(), settings.getHeight());        
+        int newHeight = calcNewHeight(ratio, kwaliteit, settings.getHeight());
+
+        /* nieuwe width en height opgeven voor nieuw verzoek */
+        settings.setWidth(kwaliteit);
+        settings.setHeight(newHeight);
+
+        /* tijdelijk plaatje maken, pad wordt gebruikt in xsl */
+        String imageUrl = createTempImage(settings);
+
+        /* nu */
+        Date now = new Date();
+        SimpleDateFormat df = new SimpleDateFormat("dd-M-yyyy", new Locale("NL"));
+
+        /* nieuw (xml) Object voor gebruik met fop */
+        PrintInfo info = new PrintInfo();
+        info.setTitel(title);
+        info.setDatum(df.format(now));
+        info.setImageUrl(imageUrl);
         info.setBbox(bbox);
+        info.setMapWidth(kwaliteit);
+        info.setMapHeight(newHeight);
 
-        int mapWidth = settings.getWidth().intValue();
-        int mapHeight = settings.getHeight().intValue();
+        /* doorgeven mimetype en template */
+        String mimeType = null;
 
-        info.setMapWidth(mapWidth);
-        info.setMapHeight(mapHeight);
+        if (outputType != null && outputType.equals(OUTPUT_PDF) || outputType.equals(OUTPUT_PDF_PRINT)) {
+            mimeType = MimeConstants.MIME_PDF;
+        } else if (outputType != null && outputType.equals(OUTPUT_RTF)) {
+            mimeType = MimeConstants.MIME_RTF;
+        } else {
+            mimeType = MimeConstants.MIME_PDF;
+        }
 
-        PrintServlet.createPdf(info, response);
+        String template = null;
+
+        if (landscape && pageSize.equals("A4")) {
+            template = PrintServlet.xsl_A4_Liggend;
+        } else if (landscape && pageSize.equals("A3")) {
+            template = PrintServlet.xsl_A4_Liggend;
+        } else if (!landscape && pageSize.equals("A4")) {
+            template = PrintServlet.xsl_A4_Liggend;
+        } else if (!landscape && pageSize.equals("A3")) {
+            template = PrintServlet.xsl_A4_Liggend;
+        } else {
+            template = PrintServlet.xsl_A4_Liggend;
+        }
+
+        /* add javascript print dialog to pdf ? */
+        boolean addJavascript = false;
+        if (outputType != null && outputType.equals(OUTPUT_PDF_PRINT)) {
+            addJavascript = true;
+        }
+
+        /* Maak de output */
+        PrintServlet.createOutput(info, mimeType, template, addJavascript, response);
 
         return null;
+    }
+
+    private String createTempImage(CombineImageSettings settings) throws IOException {
+
+        File temp = File.createTempFile("kaart_", ".png");
+        temp.deleteOnExit();
+
+        FileOutputStream out = new FileOutputStream(temp);
+
+        try {
+            CombineImagesHandler.combineImage(out,settings,settings.getMimeType(),30000);
+
+        } catch (Exception e) {
+            logFile.error("Fout bij maken tijdelijk plaatje: " + e);
+        } finally {
+            out.close();
+        }
+
+        return temp.toURI().toString();
+    }
+
+    /* berekend nieuwe hoogte voor plaatje zodat deze overeenkomt
+     * met ingestelde kwaliteit (width) */
+    private int calcNewHeight(float ratio, int kwaliteit, int height) {
+        int hoogte = height;
+
+        if (kwaliteit >= height) {
+            hoogte = new Float(kwaliteit * ratio).intValue();
+        } else {
+            hoogte = new Float(kwaliteit / ratio).intValue();
+        }
+
+        return hoogte;
+    }
+
+    private float calcPixelRatio(int width, int height) {
+        float factor = 0;
+
+        if (width >= height) {
+            factor = new Float(height).floatValue() / width;
+        } else {
+            factor = new Float(width).floatValue() / height;
+        }
+
+        return factor;
     }
 
     public Document createDocument(String pageSize, boolean landscape) {

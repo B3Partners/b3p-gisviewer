@@ -5,11 +5,10 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
 @XmlRootElement(name="info")
-@XmlType(propOrder = {"titel","datum","kwaliteit","imageUrl","bbox","mapWidth","mapHeight"})
+@XmlType(propOrder = {"titel","datum","imageUrl","bbox","mapWidth","mapHeight"})
 public class PrintInfo {
     private String titel;
     private String datum;
-    private int kwaliteit;
     private String imageUrl;
     private String bbox;
     private int mapWidth;
@@ -34,15 +33,6 @@ public class PrintInfo {
 
     public void setDatum(String datum) {
         this.datum = datum;
-    }
-
-    @XmlElement(name="kwaliteit")
-    public int getKwaliteit() {
-        return kwaliteit;
-    }
-
-    public void setKwaliteit(int kwaliteit) {
-        this.kwaliteit = kwaliteit;
     }
 
     @XmlElement(name="imageUrl")
