@@ -1,6 +1,9 @@
 package nl.b3p.gis.viewer.print;
 
 import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.pdf.PdfContentByte;
+import com.lowagie.text.pdf.PdfImportedPage;
 import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.PdfWriter;
 import java.io.File;
@@ -71,20 +74,17 @@ public class PrintServlet extends HttpServlet {
 
             transformer.transform(src, res);
 
-            /* Use Postprocessing with itext to add Javascript to output */
-            if (addJavascript) {
-                PdfReader reader = new PdfReader(out.toByteArray());
-                Document document = new Document(reader.getPageSizeWithRotation(1));
-
-                PdfWriter writer = PdfWriter.getInstance(document, out);
-                writer.addJavaScript("this.print({bSilent:true,bShrinkToFit:true});");
-            }
-
             /* Setup response */
             response.setContentType(mimeType);
             response.setContentLength(out.size());
 
-            response.getOutputStream().write(out.toByteArray());
+            /* use postprocessing with itext to add Javascript to output */
+            if (addJavascript) {
+                addJsToPdfOutput(out, response);
+            } else {
+                response.getOutputStream().write(out.toByteArray());
+            }
+            
             response.getOutputStream().flush();
 
         } catch (Exception ex) {
@@ -92,6 +92,41 @@ public class PrintServlet extends HttpServlet {
         } finally {
             out.close();
         }
+    }
+
+    private static void addJsToPdfOutput(ByteArrayOutputStream out, HttpServletResponse response) throws IOException, DocumentException {
+        PdfReader reader = new PdfReader(out.toByteArray());
+        int n = reader.getNumberOfPages();
+
+        Document document = new Document(reader.getPageSizeWithRotation(1));
+
+        PdfWriter writer = PdfWriter.getInstance(document, response.getOutputStream());
+        document.open();
+
+        PdfContentByte cb = writer.getDirectContent();
+        PdfImportedPage page;
+
+        int rotation;
+        int i = 0;
+
+        while (i < n) {
+            i++;
+            document.setPageSize(reader.getPageSizeWithRotation(i));
+            document.newPage();
+            page = writer.getImportedPage(reader, i);
+            rotation = reader.getPageRotation(i);
+
+            if (rotation == 90 || rotation == 270) {
+                cb.addTemplate(page, 0, -1f, 1f, 0, 0,
+                reader.getPageSizeWithRotation(i).getHeight());
+            } else {
+                cb.addTemplate(page, 1f, 0, 0, 1f, 0, 0);
+            }
+        }
+
+        writer.addJavaScript("this.print({bSilent:true,bShrinkToFit:true});");
+
+        document.close();
     }
     
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
