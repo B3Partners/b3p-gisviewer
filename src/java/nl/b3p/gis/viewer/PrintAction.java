@@ -189,7 +189,7 @@ public class PrintAction extends BaseHibernateAction {
 
         /* nu */
         Date now = new Date();
-        SimpleDateFormat df = new SimpleDateFormat("dd-M-yyyy", new Locale("NL"));
+        SimpleDateFormat df = new SimpleDateFormat("d-M-yyyy", new Locale("NL"));
 
         /* nieuw (xml) Object voor gebruik met fop */
         PrintInfo info = new PrintInfo();
