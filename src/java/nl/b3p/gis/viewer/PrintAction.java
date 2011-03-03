@@ -22,20 +22,15 @@
  */
 package nl.b3p.gis.viewer;
 
-import com.lowagie.text.DocWriter;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.Image;
 import com.lowagie.text.PageSize;
-import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
-import com.lowagie.text.html.HtmlWriter;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
-import com.lowagie.text.pdf.PdfWriter;
-import com.lowagie.text.rtf.RtfWriter2;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -166,6 +161,7 @@ public class PrintAction extends BaseHibernateAction {
         String pageSize = FormUtils.nullIfEmpty(dynaForm.getString("pageSize"));
         boolean landscape = Boolean.valueOf(dynaForm.getString("landscape")).booleanValue();
         String outputType = FormUtils.nullIfEmpty(dynaForm.getString("outputType"));
+        String remark = FormUtils.nullIfEmpty(dynaForm.getString("remark"));
 
         /* kwaliteit is nieuwe width voor getMap verzoek */
         int kwaliteit = new Integer(imageSize).intValue();
@@ -203,6 +199,7 @@ public class PrintAction extends BaseHibernateAction {
         info.setBbox(bbox);
         info.setMapWidth(kwaliteit);
         info.setMapHeight(newHeight);
+        info.setOpmerking(remark);
 
         /* doorgeven mimetype en template */
         String mimeType = null;
@@ -219,12 +216,12 @@ public class PrintAction extends BaseHibernateAction {
 
         if (landscape && pageSize.equals("A4")) {
             template = PrintServlet.xsl_A4_Liggend;
-        } else if (landscape && pageSize.equals("A3")) {
-            template = PrintServlet.xsl_A4_Liggend;
         } else if (!landscape && pageSize.equals("A4")) {
-            template = PrintServlet.xsl_A4_Liggend;
+            template = PrintServlet.xsl_A4_Staand;
+        } else if (landscape && pageSize.equals("A3")) {
+            template = PrintServlet.xsl_A3_Liggend;
         } else if (!landscape && pageSize.equals("A3")) {
-            template = PrintServlet.xsl_A4_Liggend;
+            template = PrintServlet.xsl_A3_Staand;
         } else {
             template = PrintServlet.xsl_A4_Liggend;
         }

@@ -7,9 +7,9 @@ import com.lowagie.text.pdf.PdfImportedPage;
 import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.PdfWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.Date;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -39,6 +39,9 @@ public class PrintServlet extends HttpServlet {
     private static final Log logFile = LogFactory.getLog(PrintServlet.class);
 
     public static String xsl_A4_Liggend = null;
+    public static String xsl_A4_Staand = null;
+    public static String xsl_A3_Liggend = null;
+    public static String xsl_A3_Staand = null;
 
     public static void createOutput(PrintInfo info, String mimeType, String template,
             boolean addJavascript, HttpServletResponse response) throws MalformedURLException, IOException {
@@ -58,6 +61,13 @@ public class PrintServlet extends HttpServlet {
         try {
             /* Construct fop */
             FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
+            foUserAgent.setCreator("Gisviewer webapplicatie");
+            foUserAgent.setProducer("B3Partners");
+
+            Date now = new Date();
+            foUserAgent.setCreationDate(now);
+            foUserAgent.setTitle("Kaart");
+
             Fop fop = fopFactory.newFop(mimeType, foUserAgent, out);
 
             /* Setup Jaxb */
@@ -138,8 +148,17 @@ public class PrintServlet extends HttpServlet {
         super.init(config);
 
         try {
+            if (config.getInitParameter("xsl_A4_Staand") != null) {
+                xsl_A4_Staand = getServletContext().getRealPath(config.getInitParameter("xsl_A4_Staand"));
+            }
             if (config.getInitParameter("xsl_A4_Liggend") != null) {
                 xsl_A4_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A4_Liggend"));
+            }
+            if (config.getInitParameter("xsl_A3_Staand") != null) {
+                xsl_A3_Staand = getServletContext().getRealPath(config.getInitParameter("xsl_A3_Staand"));
+            }
+            if (config.getInitParameter("xsl_A3_Liggend") != null) {
+                xsl_A3_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A3_Liggend"));
             }
         } catch (Exception e) {
             throw new ServletException(e);

@@ -5,7 +5,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
 @XmlRootElement(name="info")
-@XmlType(propOrder = {"titel","datum","imageUrl","bbox","mapWidth","mapHeight"})
+@XmlType(propOrder = {"titel","datum","imageUrl","bbox","mapWidth","mapHeight","opmerking"})
 public class PrintInfo {
     private String titel;
     private String datum;
@@ -13,6 +13,7 @@ public class PrintInfo {
     private String bbox;
     private int mapWidth;
     private int mapHeight;
+    private String opmerking;
 
     public PrintInfo() {
     }
@@ -69,5 +70,14 @@ public class PrintInfo {
 
     public void setMapHeight(int mapHeight) {
         this.mapHeight = mapHeight;
+    }
+
+    @XmlElement(name="opmerking")
+    public String getOpmerking() {
+        return opmerking;
+    }
+
+    public void setOpmerking(String opmerking) {
+        this.opmerking = opmerking;
     }
 }
