@@ -383,11 +383,18 @@ public class RedliningAction extends ViewerCrudAction {
 
         String tabel = gb.getAdmin_tabel();
 
+        /* TODO: Kijken waarom een url met SID.SCHEMANAAM momenteel niet werkt.
+         * ORA-12505, TNS:listener does not currently know of SID given in connect descriptor
+         *
+         * jdbc:oracle:thin:@b3p-demoserver:1521:ORCL       werkt wel
+         * jdbc:oracle:thin:@b3p-demoserver:1521:ORCL.GFO   werkt niet
+         */
         String url = bron.getUrl();
-        String user = bron.getGebruikersnaam();
-        String passw = bron.getWachtwoord();
 
-        String sql = "SELECT DISTINCT(projectnaam) FROM " + tabel + " ORDER BY projectnaam";
+        String user = bron.getGebruikersnaam();
+        String passw = bron.getWachtwoord();        
+
+        String sql = "SELECT DISTINCT(PROJECTNAAM) FROM " + tabel + " ORDER BY PROJECTNAAM";
 
         if (bron != null) {
             Connection conn = null;
@@ -422,11 +429,13 @@ public class RedliningAction extends ViewerCrudAction {
         List projecten = new ArrayList();
 
         DataStore ds = gb.getBron().toDatastore();
+        FeatureCollection fc = null;
+        FeatureIterator it = null;
 
         try {
             FeatureSource fs = ds.getFeatureSource(gb.getAdmin_tabel());
-            FeatureCollection fc = fs.getFeatures(CQL.toFilter("projectnaam = '"+projectnaam+"'"));
-            FeatureIterator it = fc.features();
+            fc = fs.getFeatures(CQL.toFilter("projectnaam = '"+projectnaam+"'"));
+            it = fc.features();
 
             while (it.hasNext()) {
                 Feature f = (Feature) it.next();
@@ -437,6 +446,9 @@ public class RedliningAction extends ViewerCrudAction {
             }
         } finally {
             ds.dispose();
+
+            if (fc != null)
+                fc.close(it);
         }
 
         return projecten;

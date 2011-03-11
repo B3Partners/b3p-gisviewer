@@ -23,9 +23,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.directwebremoting.WebContext;
 import org.directwebremoting.WebContextFactory;
+import org.geotools.data.DataStore;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.opengis.feature.Feature;
+import org.opengis.filter.Filter;
 
 /**
  *
@@ -152,6 +154,90 @@ public class EditUtil {
         }
 
         return wkt;
+    }
+
+    public String getIdAndWktForRedliningObject(String wkt, Integer redLineGegevensbronId,
+            String schaal, String tol) throws Exception {
+        /* Als er geen redlining gegevensbron bekend is dan HP */
+        if (redLineGegevensbronId == null || redLineGegevensbronId < 0) {
+            return "-1";
+        }
+
+        String jsonObject = null;
+
+        /* Redlineobject zoeken en jsonObject teruggeven record zodat
+         formulier met deze waardes ingevuld kan worden */
+        Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);
+        double distance = getDistance(schaal, tol);
+
+        if (distance > 0) {
+            geom = geom.buffer(distance);
+        }
+
+        List objecten = doQueryRedliningObject(geom, redLineGegevensbronId);
+
+        /* Als er geen redline object gevonden wordt dan HP */
+        if (objecten == null || objecten.size() < 1 || jsonObject == null) {
+            return "-1";
+        }
+
+        return jsonObject;
+    }
+
+    protected List doQueryRedliningObject(Geometry geom, Integer gbId) throws Exception {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        Transaction tx = null;
+        DataStore ds = null;
+        ArrayList<Feature> features = null;
+
+        try {
+            tx = sess.beginTransaction();
+
+            Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gbId);
+            WebContext ctx = WebContextFactory.get();
+            HttpServletRequest request = ctx.getHttpServletRequest();
+
+            Bron b = gb.getBron(request);
+            ds = b.toDatastore();
+
+            /* Ophalen count van een RO Online WFS duurt best lang */
+            if (b.getType().equals(Bron.TYPE_WFS)) {
+                return new ArrayList();
+            }
+
+            Filter geomFilter = null;
+
+            if (geom != null) {
+                geomFilter = DataStoreUtil.createIntersectFilter(gb, ds, geom);
+            }
+
+            List<String> propnames = new ArrayList<String>();
+            propnames.add("ID");
+            propnames.add("GROEPNAAM");
+            propnames.add("PROJECTNAAM");
+            propnames.add("FILLCOLOR");
+            propnames.add("OPMERKING");
+            propnames.add("THE_GEOM");
+
+            features = DataStoreUtil.getFeatures(b, gb, geom, geomFilter, propnames, null, false);
+
+            tx.commit();
+
+        } catch (Exception ex) {
+            log.error("Fout tijdens ophalen redlining: ", ex);
+
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
+
+        } finally {
+            if (ds != null) {
+                ds.dispose();
+            }
+        }
+
+        return features;
     }
 
     private Geometry getLargestPolygonFromMultiPolygon(Geometry multipolygon) {

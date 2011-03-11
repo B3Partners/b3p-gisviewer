@@ -143,7 +143,8 @@ public class DataStoreUtil {
                 features.add(fi.next());
             }
         } finally {
-            fc.close(fi);
+            if (fc != null)
+                fc.close(fi);
         }
         return features;
      }
