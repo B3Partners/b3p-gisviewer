@@ -26,8 +26,9 @@ import org.directwebremoting.WebContextFactory;
 import org.geotools.data.DataStore;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.opengis.feature.Feature;
-import org.opengis.filter.Filter;
 
 /**
  *
@@ -158,6 +159,7 @@ public class EditUtil {
 
     public String getIdAndWktForRedliningObject(String wkt, Integer redLineGegevensbronId,
             String schaal, String tol) throws Exception {
+
         /* Als er geen redlining gegevensbron bekend is dan HP */
         if (redLineGegevensbronId == null || redLineGegevensbronId < 0) {
             return "-1";
@@ -174,17 +176,45 @@ public class EditUtil {
             geom = geom.buffer(distance);
         }
 
-        List objecten = doQueryRedliningObject(geom, redLineGegevensbronId);
+        ArrayList<Feature> features = doQueryRedliningObject(geom, redLineGegevensbronId);
+
+        if ( (features != null) && (features.size() > 0) ) {
+            Feature f = features.get(0);
+
+            if (features.size() > 1) {
+                log.debug("Meerdere redline objecten gevonden. Eerste feature gebruikt. Wkt string = " + wkt);
+            }
+
+            jsonObject = featureToJson(f).toString();
+        }
 
         /* Als er geen redline object gevonden wordt dan HP */
-        if (objecten == null || objecten.size() < 1 || jsonObject == null) {
+        if (features == null || features.size() < 1 || jsonObject == null) {
             return "-1";
         }
 
         return jsonObject;
     }
 
-    protected List doQueryRedliningObject(Geometry geom, Integer gbId) throws Exception {
+    private JSONObject featureToJson(Feature f) throws JSONException {
+        String wkt = "";        
+
+        if (f != null || f.getDefaultGeometryProperty() != null) {
+            wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
+        }
+
+        String id = f.getProperty("ID").getValue().toString();
+        String projectnaam = f.getProperty("PROJECTNAAM").getValue().toString();
+
+        JSONObject json = new JSONObject()
+                .put("id", id)
+                .put("projectnaam", projectnaam)
+                .put("wkt", wkt);
+
+        return json;
+    }
+
+    protected ArrayList<Feature> doQueryRedliningObject(Geometry geom, Integer gbId) throws Exception {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         Transaction tx = null;
@@ -206,21 +236,8 @@ public class EditUtil {
                 return new ArrayList();
             }
 
-            Filter geomFilter = null;
-
-            if (geom != null) {
-                geomFilter = DataStoreUtil.createIntersectFilter(gb, ds, geom);
-            }
-
-            List<String> propnames = new ArrayList<String>();
-            propnames.add("ID");
-            propnames.add("GROEPNAAM");
-            propnames.add("PROJECTNAAM");
-            propnames.add("FILLCOLOR");
-            propnames.add("OPMERKING");
-            propnames.add("THE_GEOM");
-
-            features = DataStoreUtil.getFeatures(b, gb, geom, geomFilter, propnames, null, false);
+            List thema_items = SpatialUtil.getThemaData(gb, true);
+            features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
 
             tx.commit();
 
