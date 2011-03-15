@@ -22,3 +22,5 @@ MDSYS.SDO_DIM_ELEMENT('X', 0, 100, 0.05),
 MDSYS.SDO_DIM_ELEMENT('Y', 0, 100, 0.05)), 28992);
 
 create sequence meldingen_id_seq;
+
+create index meldingen_spatial_idx on meldingen(the_geom) INDEXTYPE is MDSYS.SPATIAL_INDEX;

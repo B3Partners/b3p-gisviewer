@@ -8,7 +8,7 @@ create table redlining_object (
 	primary key (id)
 );      
 
-INSERT INTO user_sdo_geom_metadata VALUES (
+insert into user_sdo_geom_metadata values (
     'redlining_object',
     'the_geom',
     MDSYS.SDO_DIM_ARRAY(
@@ -17,4 +17,4 @@ MDSYS.SDO_DIM_ELEMENT('Y', 0, 100, 0.05)), 28992);
 	
 create sequence redlining_object_id_seq;
 
-CREATE INDEX redlining_spatial_idx ON REDLINING_OBJECT(THE_GEOM) INDEXTYPE IS MDSYS.SPATIAL_INDEX;
+create index redlining_spatial_idx on redlining_object(the_geom) INDEXTYPE is MDSYS.SPATIAL_INDEX;
