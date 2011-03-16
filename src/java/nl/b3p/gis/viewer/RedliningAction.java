@@ -31,7 +31,8 @@ import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Redlining;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.geotools.data.DataStore;
-import org.geotools.data.FeatureSource;
+import org.geotools.data.DefaultTransaction;
+import org.geotools.data.FeatureStore;
 import org.geotools.data.FeatureWriter;
 import org.geotools.data.Transaction;
 import org.geotools.feature.FeatureCollection;
@@ -40,6 +41,7 @@ import org.geotools.filter.text.cql2.CQL;
 import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.filter.Filter;
 
 /**
  * @author Boy de Wit
@@ -47,11 +49,10 @@ import org.opengis.feature.simple.SimpleFeatureType;
 public class RedliningAction extends ViewerCrudAction {
 
     private static final Log logger = LogFactory.getLog(RedliningAction.class);
-
     protected static final String PREPARE_REDLINING = "prepareRedlining";
     protected static final String SEND_REDLINING = "sendRedlining";
     protected static final String REDLINING_FORWARD = "redlining";
-    
+
     /*
      * Return een hashmap die een property koppelt aan een Action.
      * @return Map hashmap met action properties.
@@ -111,13 +112,13 @@ public class RedliningAction extends ViewerCrudAction {
 
             /*
             if (instellingen.get("meldingType") != null) {
-                String[] mts = ((String) instellingen.get("meldingType")).split(",");
-                request.setAttribute("meldingTypes", mts);
+            String[] mts = ((String) instellingen.get("meldingType")).split(",");
+            request.setAttribute("meldingTypes", mts);
             }
 
             if (instellingen.get("meldingStatus") != null) {
-                String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
-                request.setAttribute("meldingStatus", mss);
+            String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
+            request.setAttribute("meldingStatus", mss);
             }*/
         }
 
@@ -149,6 +150,7 @@ public class RedliningAction extends ViewerCrudAction {
         Integer ggbId = (Integer) dynaForm.get("gegevensbron");
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Gegevensbron ggb = (Gegevensbron) sess.get(Gegevensbron.class, ggbId);
+        ggb.getBron().getUrl();
         DataStore ds = ggb.getBron().toDatastore();
         try {
             String typename = ggb.getAdmin_tabel();
@@ -169,6 +171,7 @@ public class RedliningAction extends ViewerCrudAction {
     private void writeRedlining(DataStore dataStore2Write, SimpleFeature feature) throws IOException {
         String typename = feature.getFeatureType().getTypeName();
         FeatureWriter writer = dataStore2Write.getFeatureWriterAppend(typename, Transaction.AUTO_COMMIT);
+
         try {
             SimpleFeature newFeature = (SimpleFeature) writer.next();
             newFeature.setAttributes(feature.getAttributes());
@@ -289,9 +292,10 @@ public class RedliningAction extends ViewerCrudAction {
         }
 
         String orgCode = getOrganizationCode(request);
-        
-        if (orgCode != null)
+
+        if (orgCode != null) {
             dynaForm.set("groepnaam", orgCode);
+        }
 
         /* klaarzetten huidige projecten */
         Integer ggbId = (Integer) dynaForm.get("gegevensbron");
@@ -307,10 +311,10 @@ public class RedliningAction extends ViewerCrudAction {
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         Set roles = null;
 
-        if (user != null){
+        if (user != null) {
             roles = user.getRoles();
         }
-        
+
 
         ConfigKeeper configKeeper = new ConfigKeeper();
         Configuratie rollenPrio = null;
@@ -358,10 +362,11 @@ public class RedliningAction extends ViewerCrudAction {
 
         String orgCode = getOrganizationCode(request);
 
-        if (orgCode != null)
+        if (orgCode != null) {
             dynaForm.set("groepnaam", orgCode);
+        }
 
-        Integer gbId = (Integer)instellingen.get("redliningGegevensbron");
+        Integer gbId = (Integer) instellingen.get("redliningGegevensbron");
         dynaForm.set("gegevensbron", gbId);
 
         /* klaarzetten huidige projecten */
@@ -392,7 +397,7 @@ public class RedliningAction extends ViewerCrudAction {
         String url = bron.getUrl();
 
         String user = bron.getGebruikersnaam();
-        String passw = bron.getWachtwoord();        
+        String passw = bron.getWachtwoord();
 
         String sql = "SELECT DISTINCT(PROJECTNAAM) FROM " + tabel + " ORDER BY PROJECTNAAM";
 
@@ -400,7 +405,7 @@ public class RedliningAction extends ViewerCrudAction {
             Connection conn = null;
 
             try {
-                conn = DriverManager.getConnection(url,user,passw);
+                conn = DriverManager.getConnection(url, user, passw);
 
                 if (conn != null) {
                     PreparedStatement doSQL = conn.prepareStatement(sql);
@@ -411,7 +416,7 @@ public class RedliningAction extends ViewerCrudAction {
                         projecten.add(projectnaam);
                     }
                 }
-                
+
             } catch (SQLException ex) {
                 logger.error("Ophalen redliningprojecten mislukt: " + ex);
             } finally {
@@ -433,8 +438,8 @@ public class RedliningAction extends ViewerCrudAction {
         FeatureIterator it = null;
 
         try {
-            FeatureSource fs = ds.getFeatureSource(gb.getAdmin_tabel());
-            fc = fs.getFeatures(CQL.toFilter("projectnaam = '"+projectnaam+"'"));
+            FeatureStore fs = (FeatureStore) ds.getFeatureSource(gb.getAdmin_tabel());
+            fc = fs.getFeatures(CQL.toFilter("projectnaam = '" + projectnaam + "'"));
             it = fc.features();
 
             while (it.hasNext()) {
@@ -447,11 +452,42 @@ public class RedliningAction extends ViewerCrudAction {
         } finally {
             ds.dispose();
 
-            if (fc != null)
+            if (fc != null) {
                 fc.close(it);
+            }
         }
 
         return projecten;
+    }
+
+    private boolean doUpdate(Gegevensbron gb, Integer id) throws IOException, Exception {
+        Transaction t = new DefaultTransaction();
+        DataStore ds = gb.getBron().toDatastore();
+
+        FeatureStore fs = (FeatureStore)ds.getFeatureSource(gb.getAdmin_tabel());
+        fs.setTransaction(t);
+
+        try {
+            String projectnaam = "b3p";
+            Filter f = (Filter) CQL.toFilter("id = '" + id + "'");
+
+            FeatureIterator fr = fs.getFeatures(f).features();
+
+            // while loop
+
+            fr.close();
+
+            return true;
+
+        } catch (Exception ex) {
+            logger.error("Fout tijdens update redlining: " + ex);
+
+            return false;
+
+        } finally {
+            t.commit();
+            ds.dispose();
+        }
     }
 
     private void populateRedliningObject(DynaValidatorForm dynaForm, Redlining rl, HttpServletRequest request) {
