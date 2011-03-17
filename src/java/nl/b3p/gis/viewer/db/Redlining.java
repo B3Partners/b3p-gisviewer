@@ -17,16 +17,16 @@ public class Redlining {
     private Integer id;
     private String groepnaam;
     private String projectnaam;
-    private String fillcolor;
+    private String ontwerp;
     private String opmerking;
     private Geometry the_geom;
 
-    public String getFillcolor() {
-        return fillcolor;
+    public String getOntwerp() {
+        return ontwerp;
     }
 
-    public void setFillcolor(String fillcolor) {
-        this.fillcolor = fillcolor;
+    public void setOntwerp(String ontwerp) {
+        this.ontwerp = ontwerp;
     }
 
     public String getGroepnaam() {
@@ -74,7 +74,7 @@ public class Redlining {
 
         hm.put("groepnaam", groepnaam);
         hm.put("projectnaam", projectnaam);
-        hm.put("fillcolor", fillcolor);
+        hm.put("ontwerp", ontwerp);
         hm.put("opmerking", opmerking);
         hm.put("the_geom", the_geom);
 

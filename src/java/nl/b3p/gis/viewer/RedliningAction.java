@@ -1,5 +1,6 @@
 package nl.b3p.gis.viewer;
 
+import com.vividsolutions.jts.geom.Geometry;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -26,12 +27,12 @@ import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
+import org.geotools.filter.text.cql2.CQLException;
 import org.hibernate.Session;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Redlining;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.geotools.data.DataStore;
-import org.geotools.data.DefaultTransaction;
 import org.geotools.data.FeatureStore;
 import org.geotools.data.FeatureWriter;
 import org.geotools.data.Transaction;
@@ -51,6 +52,7 @@ public class RedliningAction extends ViewerCrudAction {
     private static final Log logger = LogFactory.getLog(RedliningAction.class);
     protected static final String PREPARE_REDLINING = "prepareRedlining";
     protected static final String SEND_REDLINING = "sendRedlining";
+    protected static final String REMOVE_REDLINING = "removeRedlining";
     protected static final String REDLINING_FORWARD = "redlining";
 
     /*
@@ -75,6 +77,13 @@ public class RedliningAction extends ViewerCrudAction {
         hibProp.setAlternateForwardName(REDLINING_FORWARD);
         hibProp.setAlternateMessageKey("error.sendredlining.failed");
         map.put(SEND_REDLINING, hibProp);
+
+        hibProp = new ExtendedMethodProperties(REMOVE_REDLINING);
+        hibProp.setDefaultForwardName(REDLINING_FORWARD);
+        hibProp.setDefaultMessageKey("message.sendredlining.success");
+        hibProp.setAlternateForwardName(REDLINING_FORWARD);
+        hibProp.setAlternateMessageKey("error.sendredlining.failed");
+        map.put(REMOVE_REDLINING, hibProp);
 
         return map;
     }
@@ -156,7 +165,56 @@ public class RedliningAction extends ViewerCrudAction {
             String typename = ggb.getAdmin_tabel();
             SimpleFeatureType ft = ds.getSchema(typename);
             SimpleFeature f = rl.getFeature(ft);
-            writeRedlining(ds, f);
+
+            // rlId = rl.getId();
+            Integer rlId = FormUtils.StringToInteger(dynaForm.getString("redliningID"));
+
+            if (rlId != null && rlId > 0) {
+                updateRedlining(ds, f, rlId);
+            } else {
+                writeRedlining(ds, f);
+            }            
+        } finally {
+            ds.dispose();
+        }
+
+        populateRedliningForm(rl, dynaForm, request);
+
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
+
+        return getDefaultForward(mapping, request);
+    }
+
+    public ActionForward removeRedlining(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+        useInstellingen(dynaForm, request);
+
+        ActionErrors errors = dynaForm.validate(mapping, request);
+        if (!errors.isEmpty()) {
+            addMessages(request, errors);
+            //addAlternateMessage(mapping, request, VALIDATION_ERROR_KEY);
+            return getAlternateForward(mapping, request);
+        }
+
+        Redlining rl = new Redlining();
+        populateRedliningObject(dynaForm, rl, request);
+
+        Integer ggbId = (Integer) dynaForm.get("gegevensbron");
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Gegevensbron ggb = (Gegevensbron) sess.get(Gegevensbron.class, ggbId);
+        ggb.getBron().getUrl();
+        DataStore ds = ggb.getBron().toDatastore();
+        try {
+            String typename = ggb.getAdmin_tabel();
+            SimpleFeatureType ft = ds.getSchema(typename);
+            SimpleFeature f = rl.getFeature(ft);
+
+            Integer rlId = FormUtils.StringToInteger(dynaForm.getString("redliningID"));
+
+            if (rlId != null && rlId > 0) {
+                removeRedlining(ds, f, rlId);
+            }
+
         } finally {
             ds.dispose();
         }
@@ -177,6 +235,57 @@ public class RedliningAction extends ViewerCrudAction {
             newFeature.setAttributes(feature.getAttributes());
             newFeature.setDefaultGeometry(feature.getDefaultGeometry());
             writer.write();
+        } finally {
+            if (writer != null) {
+                writer.close();
+            }
+        }
+    }
+
+    private void updateRedlining(DataStore ds, SimpleFeature feature, Integer id) throws IOException, CQLException {
+        String typename = feature.getFeatureType().getTypeName();
+        Filter f = CQL.toFilter("ID = '"+ id + "'");
+
+        FeatureWriter writer = ds.getFeatureWriter(typename, f, Transaction.AUTO_COMMIT);
+
+        try {
+            while (writer.hasNext()) {
+                SimpleFeature newFeature = (SimpleFeature) writer.next();
+
+                //List<Object> attributes = feature.getAttributes();
+
+                /* TODO: attributes niet hardcoded setten */
+                String projectnaam = (String) feature.getAttribute("PROJECTNAAM");
+                String ontwerp = (String) feature.getAttribute("ONTWERP");
+                Object opmerking = (String) feature.getAttribute("OPMERKING");
+
+                newFeature.setAttribute("PROJECTNAAM", projectnaam);
+                newFeature.setAttribute("ONTWERP", ontwerp);
+                newFeature.setAttribute("OPMERKING", opmerking);
+
+                Object defaultGeom = feature.getDefaultGeometry();
+                newFeature.setDefaultGeometry(defaultGeom);
+
+                writer.write();
+            }
+        } finally {
+            if (writer != null) {
+                writer.close();
+            }
+        }
+    }
+
+    private void removeRedlining(DataStore ds, SimpleFeature feature, Integer id) throws IOException, CQLException {
+        String typename = feature.getFeatureType().getTypeName();
+        Filter f = CQL.toFilter("ID = '"+ id + "'");
+
+        FeatureWriter writer = ds.getFeatureWriter(typename, f, Transaction.AUTO_COMMIT);
+
+        try {
+            while (writer.hasNext()) {
+                SimpleFeature newFeature = (SimpleFeature) writer.next();
+                writer.remove();
+            }
         } finally {
             if (writer != null) {
                 writer.close();
@@ -460,42 +569,18 @@ public class RedliningAction extends ViewerCrudAction {
         return projecten;
     }
 
-    private boolean doUpdate(Gegevensbron gb, Integer id) throws IOException, Exception {
-        Transaction t = new DefaultTransaction();
-        DataStore ds = gb.getBron().toDatastore();
-
-        FeatureStore fs = (FeatureStore)ds.getFeatureSource(gb.getAdmin_tabel());
-        fs.setTransaction(t);
-
-        try {
-            String projectnaam = "b3p";
-            Filter f = (Filter) CQL.toFilter("id = '" + id + "'");
-
-            FeatureIterator fr = fs.getFeatures(f).features();
-
-            // while loop
-
-            fr.close();
-
-            return true;
-
-        } catch (Exception ex) {
-            logger.error("Fout tijdens update redlining: " + ex);
-
-            return false;
-
-        } finally {
-            t.commit();
-            ds.dispose();
-        }
-    }
-
     private void populateRedliningObject(DynaValidatorForm dynaForm, Redlining rl, HttpServletRequest request) {
 
+        Integer id = FormUtils.StringToInteger(dynaForm.getString("redliningID"));
         String groepnaam = dynaForm.getString("groepnaam");
         String projectnaam = dynaForm.getString("projectnaam");
-
         String new_projectnaam = dynaForm.getString("new_projectnaam");
+        String ontwerp = dynaForm.getString("ontwerp");
+        String opmerking = dynaForm.getString("opmerking");
+
+        if (id != null) {
+            //rl.setId(new Integer(id));
+        }
 
         if (new_projectnaam != null && !new_projectnaam.equals("") && new_projectnaam.length() > 0) {
             rl.setProjectnaam(new_projectnaam);
@@ -504,11 +589,12 @@ public class RedliningAction extends ViewerCrudAction {
         }
 
         rl.setGroepnaam(groepnaam);
-        rl.setFillcolor(dynaForm.getString("fillcolor"));
-        rl.setOpmerking(dynaForm.getString("opmerking"));
+        rl.setOntwerp(ontwerp);
+        rl.setOpmerking(opmerking);
 
         try {
-            rl.setThe_geom(DataStoreUtil.createGeomFromWKTString(dynaForm.getString("wkt")));
+            Geometry geom = DataStoreUtil.createGeomFromWKTString(dynaForm.getString("wkt"));
+            rl.setThe_geom(geom);
         } catch (Exception ex) {
             logger.error("Fout tijdens omzetten wkt voor redlining: ", ex);
         }

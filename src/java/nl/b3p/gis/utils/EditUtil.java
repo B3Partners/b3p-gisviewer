@@ -205,11 +205,15 @@ public class EditUtil {
 
         String id = f.getProperty("ID").getValue().toString();
         String projectnaam = f.getProperty("PROJECTNAAM").getValue().toString();
+        String ontwerp = f.getProperty("ONTWERP").getValue().toString();
+        String opmerking = f.getProperty("OPMERKING").getValue().toString();
 
         JSONObject json = new JSONObject()
                 .put("id", id)
                 .put("projectnaam", projectnaam)
-                .put("wkt", wkt);
+                .put("wkt", wkt)
+                .put("ontwerp", ontwerp)
+                .put("opmerking", opmerking);
 
         return json;
     }
@@ -236,8 +240,10 @@ public class EditUtil {
                 return new ArrayList();
             }
 
-            List thema_items = SpatialUtil.getThemaData(gb, true);
-            features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
+            List thema_items = SpatialUtil.getThemaData(gb, false);
+            List<String> propnames = DataStoreUtil.themaData2PropertyNames(thema_items);
+
+            features = DataStoreUtil.getFeatures(b, gb, geom, null, propnames, null, true);
 
             tx.commit();
 
