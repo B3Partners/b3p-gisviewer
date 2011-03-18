@@ -50,6 +50,7 @@ import org.opengis.filter.Filter;
 public class RedliningAction extends ViewerCrudAction {
 
     private static final Log logger = LogFactory.getLog(RedliningAction.class);
+
     protected static final String PREPARE_REDLINING = "prepareRedlining";
     protected static final String SEND_REDLINING = "sendRedlining";
     protected static final String REMOVE_REDLINING = "removeRedlining";
@@ -80,56 +81,16 @@ public class RedliningAction extends ViewerCrudAction {
 
         hibProp = new ExtendedMethodProperties(REMOVE_REDLINING);
         hibProp.setDefaultForwardName(REDLINING_FORWARD);
-        hibProp.setDefaultMessageKey("message.sendredlining.success");
+        hibProp.setDefaultMessageKey("message.removeredlining.success");
         hibProp.setAlternateForwardName(REDLINING_FORWARD);
-        hibProp.setAlternateMessageKey("error.sendredlining.failed");
+        hibProp.setAlternateMessageKey("error.removeredlining.failed");
         map.put(REMOVE_REDLINING, hibProp);
 
         return map;
     }
 
-    protected Redlining getRedlining(DynaValidatorForm form, boolean createNew) {
-        Integer id = FormUtils.StringToInteger(form.getString("redliningID"));
-        Redlining rl = null;
-        if (id == null && createNew) {
-            rl = new Redlining();
-        } else if (id != null) {
-            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-            rl = (Redlining) sess.get(Redlining.class, id);
-        }
-        return rl;
-    }
-
-    protected Redlining getFirstRedlining() {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        List cs = sess.createQuery("from Redlining order by id").setMaxResults(1).list();
-        if (cs != null && cs.size() > 0) {
-            return (Redlining) cs.get(0);
-        }
-        return null;
-    }
-
-    @Override
-    protected void createLists(DynaValidatorForm form, HttpServletRequest request) throws Exception {
-        super.createLists(form, request);
-    }
-
     private void useInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
-        Map instellingen = getInstellingenMap(request);
-
-        if (instellingen != null) {
-
-            /*
-            if (instellingen.get("meldingType") != null) {
-            String[] mts = ((String) instellingen.get("meldingType")).split(",");
-            request.setAttribute("meldingTypes", mts);
-            }
-
-            if (instellingen.get("meldingStatus") != null) {
-            String[] mss = ((String) instellingen.get("meldingStatus")).split(",");
-            request.setAttribute("meldingStatus", mss);
-            }*/
-        }
+        Map instellingen = getInstellingenMap(request);        
 
         populateFromInstellingen(instellingen, dynaForm, request);
     }
@@ -160,19 +121,21 @@ public class RedliningAction extends ViewerCrudAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Gegevensbron ggb = (Gegevensbron) sess.get(Gegevensbron.class, ggbId);
         ggb.getBron().getUrl();
+
+        String adminPk = ggb.getAdmin_pk();
+
         DataStore ds = ggb.getBron().toDatastore();
         try {
             String typename = ggb.getAdmin_tabel();
             SimpleFeatureType ft = ds.getSchema(typename);
             SimpleFeature f = rl.getFeature(ft);
 
-            // rlId = rl.getId();
             Integer rlId = FormUtils.StringToInteger(dynaForm.getString("redliningID"));
 
             if (rlId != null && rlId > 0) {
-                updateRedlining(ds, f, rlId);
+                duUpdate(adminPk, ds, f, rlId);
             } else {
-                writeRedlining(ds, f);
+                doInsert(ds, f);
             }            
         } finally {
             ds.dispose();
@@ -187,46 +150,45 @@ public class RedliningAction extends ViewerCrudAction {
 
     public ActionForward removeRedlining(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        useInstellingen(dynaForm, request);
-
-        ActionErrors errors = dynaForm.validate(mapping, request);
-        if (!errors.isEmpty()) {
-            addMessages(request, errors);
-            //addAlternateMessage(mapping, request, VALIDATION_ERROR_KEY);
-            return getAlternateForward(mapping, request);
-        }
-
-        Redlining rl = new Redlining();
-        populateRedliningObject(dynaForm, rl, request);
-
         Integer ggbId = (Integer) dynaForm.get("gegevensbron");
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Gegevensbron ggb = (Gegevensbron) sess.get(Gegevensbron.class, ggbId);
         ggb.getBron().getUrl();
         DataStore ds = ggb.getBron().toDatastore();
+
         try {
             String typename = ggb.getAdmin_tabel();
-            SimpleFeatureType ft = ds.getSchema(typename);
-            SimpleFeature f = rl.getFeature(ft);
-
             Integer rlId = FormUtils.StringToInteger(dynaForm.getString("redliningID"));
 
             if (rlId != null && rlId > 0) {
-                removeRedlining(ds, f, rlId);
+                doDelete(ds, typename, rlId);
             }
-
         } finally {
             ds.dispose();
         }
-
-        populateRedliningForm(rl, dynaForm, request);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
 
         return getDefaultForward(mapping, request);
     }
 
-    private void writeRedlining(DataStore dataStore2Write, SimpleFeature feature) throws IOException {
+    private void doDelete(DataStore ds, String typename, Integer id) throws IOException, CQLException {
+        Filter f = CQL.toFilter("ID = '" + id + "'");
+        FeatureWriter writer = ds.getFeatureWriter(typename, f, Transaction.AUTO_COMMIT);
+
+        try {
+            while (writer.hasNext()) {
+                SimpleFeature newFeature = (SimpleFeature) writer.next();
+                writer.remove();
+            }
+        } finally {
+            if (writer != null) {
+                writer.close();
+            }
+        }
+    }
+
+    private void doInsert(DataStore dataStore2Write, SimpleFeature feature) throws IOException {
         String typename = feature.getFeatureType().getTypeName();
         FeatureWriter writer = dataStore2Write.getFeatureWriterAppend(typename, Transaction.AUTO_COMMIT);
 
@@ -242,9 +204,10 @@ public class RedliningAction extends ViewerCrudAction {
         }
     }
 
-    private void updateRedlining(DataStore ds, SimpleFeature feature, Integer id) throws IOException, CQLException {
+    private void duUpdate(String adminPk, DataStore ds, SimpleFeature feature, Integer id) throws IOException, CQLException {
+        /* typename en filter voor de writer */
         String typename = feature.getFeatureType().getTypeName();
-        Filter f = CQL.toFilter("ID = '"+ id + "'");
+        Filter f = CQL.toFilter(adminPk + " = '"+ id + "'");
 
         FeatureWriter writer = ds.getFeatureWriter(typename, f, Transaction.AUTO_COMMIT);
 
@@ -252,9 +215,10 @@ public class RedliningAction extends ViewerCrudAction {
             while (writer.hasNext()) {
                 SimpleFeature newFeature = (SimpleFeature) writer.next();
 
-                //List<Object> attributes = feature.getAttributes();
-
-                /* TODO: attributes niet hardcoded setten */
+                /* TODO: attributes niet hardcoded setten in ieder geval moet
+                 het voor de postgres en oracle werken */
+                List<Object> attributes = feature.getAttributes();
+                
                 String projectnaam = (String) feature.getAttribute("PROJECTNAAM");
                 String ontwerp = (String) feature.getAttribute("ONTWERP");
                 Object opmerking = (String) feature.getAttribute("OPMERKING");
@@ -273,124 +237,7 @@ public class RedliningAction extends ViewerCrudAction {
                 writer.close();
             }
         }
-    }
-
-    private void removeRedlining(DataStore ds, SimpleFeature feature, Integer id) throws IOException, CQLException {
-        String typename = feature.getFeatureType().getTypeName();
-        Filter f = CQL.toFilter("ID = '"+ id + "'");
-
-        FeatureWriter writer = ds.getFeatureWriter(typename, f, Transaction.AUTO_COMMIT);
-
-        try {
-            while (writer.hasNext()) {
-                SimpleFeature newFeature = (SimpleFeature) writer.next();
-                writer.remove();
-            }
-        } finally {
-            if (writer != null) {
-                writer.close();
-            }
-        }
-    }
-
-    @Override
-    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        Redlining rl = getRedlining(dynaForm, false);
-
-        if (rl == null) {
-            rl = getFirstRedlining();
-        }
-
-        populateRedliningForm(rl, dynaForm, request);
-
-        prepareMethod(dynaForm, request, EDIT, LIST);
-        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
-        return mapping.findForward(SUCCESS);
-    }
-
-    @Override
-    public ActionForward edit(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        Redlining rl = getRedlining(dynaForm, false);
-        if (rl == null) {
-            rl = getFirstRedlining();
-        }
-
-        populateRedliningForm(rl, dynaForm, request);
-        prepareMethod(dynaForm, request, EDIT, LIST);
-        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
-        return getDefaultForward(mapping, request);
-    }
-
-    @Override
-    public ActionForward save(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-
-        if (!isTokenValid(request)) {
-            prepareMethod(dynaForm, request, EDIT, LIST);
-            addAlternateMessage(mapping, request, TOKEN_ERROR_KEY);
-            return getAlternateForward(mapping, request);
-        }
-
-        // nieuwe default actie op delete zetten
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-        ActionErrors errors = dynaForm.validate(mapping, request);
-        if (!errors.isEmpty()) {
-            addMessages(request, errors);
-            prepareMethod(dynaForm, request, EDIT, LIST);
-            addAlternateMessage(mapping, request, VALIDATION_ERROR_KEY);
-            return getAlternateForward(mapping, request);
-        }
-
-        Redlining rl = getRedlining(dynaForm, true);
-        if (rl == null) {
-            prepareMethod(dynaForm, request, LIST, EDIT);
-            addAlternateMessage(mapping, request, NOTFOUND_ERROR_KEY);
-            return getAlternateForward(mapping, request);
-        }
-
-        populateRedliningObject(dynaForm, rl, request);
-
-        sess.saveOrUpdate(rl);
-        sess.flush();
-
-        /* Indien we input bijvoorbeeld herformatteren oid laad het dynaForm met
-         * de waardes uit de database.
-         */
-        sess.refresh(rl);
-        populateRedliningForm(rl, dynaForm, request);
-
-        prepareMethod(dynaForm, request, LIST, EDIT);
-        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
-        return getDefaultForward(mapping, request);
-    }
-
-    @Override
-    public ActionForward delete(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-
-        if (!isTokenValid(request)) {
-            prepareMethod(dynaForm, request, EDIT, LIST);
-            addAlternateMessage(mapping, request, TOKEN_ERROR_KEY);
-            return getAlternateForward(mapping, request);
-        }
-
-        // nieuwe default actie op delete zetten
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-        Redlining rl = getRedlining(dynaForm, false);
-        if (rl == null) {
-            prepareMethod(dynaForm, request, LIST, EDIT);
-            addAlternateMessage(mapping, request, NOTFOUND_ERROR_KEY);
-            return getAlternateForward(mapping, request);
-        }
-
-        sess.delete(rl);
-        sess.flush();
-
-        dynaForm.initialize(mapping);
-        prepareMethod(dynaForm, request, LIST, EDIT);
-        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
-        return getDefaultForward(mapping, request);
-    }
+    }    
 
     private void populateRedliningForm(Redlining rl, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         if (rl == null) {
@@ -571,16 +418,11 @@ public class RedliningAction extends ViewerCrudAction {
 
     private void populateRedliningObject(DynaValidatorForm dynaForm, Redlining rl, HttpServletRequest request) {
 
-        Integer id = FormUtils.StringToInteger(dynaForm.getString("redliningID"));
         String groepnaam = dynaForm.getString("groepnaam");
         String projectnaam = dynaForm.getString("projectnaam");
         String new_projectnaam = dynaForm.getString("new_projectnaam");
         String ontwerp = dynaForm.getString("ontwerp");
         String opmerking = dynaForm.getString("opmerking");
-
-        if (id != null) {
-            //rl.setId(new Integer(id));
-        }
 
         if (new_projectnaam != null && !new_projectnaam.equals("") && new_projectnaam.length() > 0) {
             rl.setProjectnaam(new_projectnaam);

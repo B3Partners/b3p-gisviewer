@@ -45,6 +45,7 @@ import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Configuratie;
+import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
@@ -625,20 +626,31 @@ public class ViewerAction extends BaseGisAction {
         Iterator it = children.iterator();
         while (it.hasNext()) {
             Themas th = (Themas) it.next();
+            
+            /* TODO: validAdmindataSource ging eerst via th.hasValidAdmindataSource(user)
+             * maar dit duurt soms erg lang, nu wordt er gekeken of er een gegevensbron is */
+            boolean validAdmindataSource = false;
+            Gegevensbron themaGb = th.getGegevensbron();
+            
+            if (themaGb != null && themaGb.getAdmin_pk() != null) {
+                validAdmindataSource = true;
+            }
 
             // Check of er een admin source is met rechten
-            boolean validAdmindataSource = th.hasValidAdmindataSource(user);
-            if (th.isAnalyse_thema() && !validAdmindataSource) {
-                log.error("Thema '" + th.getNaam()
+            if (log.isDebugEnabled()) {
+                if (th.isAnalyse_thema() && !validAdmindataSource) {
+                    log.debug("Thema '" + th.getNaam()
                         + "' is analyse thema, maar heeft geen geldige admindata connectie "
                         + "(mogelijk geen rechten op wfs featuretype).");
+                }
             }
 
             Integer themaId = th.getId();
             String ttitel = th.getNaam();
 
-            if (ttitel == null || ttitel.equals(""))
+            if (ttitel == null || ttitel.equals("")) {
                 ttitel = "(geen naam opgegeven)";
+            }
 
             JSONObject jsonCluster = new JSONObject().put("id", themaId).put("type", "child").put("title", ttitel).put("cluster", false);
 

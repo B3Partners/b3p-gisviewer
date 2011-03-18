@@ -206,7 +206,11 @@ public class EditUtil {
         String id = f.getProperty("ID").getValue().toString();
         String projectnaam = f.getProperty("PROJECTNAAM").getValue().toString();
         String ontwerp = f.getProperty("ONTWERP").getValue().toString();
-        String opmerking = f.getProperty("OPMERKING").getValue().toString();
+
+        String opmerking = null;
+        if (f.getProperty("OPMERKING").getValue() != null) {
+            opmerking = f.getProperty("OPMERKING").getValue().toString();
+        }
 
         JSONObject json = new JSONObject()
                 .put("id", id)

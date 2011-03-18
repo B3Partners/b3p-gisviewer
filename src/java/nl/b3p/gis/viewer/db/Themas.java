@@ -303,7 +303,6 @@ public class Themas implements Comparable {
     }
 
     public boolean hasValidAdmindataSource(GisPrincipal user) {
-
         if (getGegevensbron() == null) {
             return false;
         }
