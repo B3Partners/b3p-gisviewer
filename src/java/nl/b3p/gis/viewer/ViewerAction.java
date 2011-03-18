@@ -637,12 +637,9 @@ public class ViewerAction extends BaseGisAction {
             }
 
             // Check of er een admin source is met rechten
-            if (log.isDebugEnabled()) {
-                if (th.isAnalyse_thema() && !validAdmindataSource) {
-                    log.debug("Thema '" + th.getNaam()
-                        + "' is analyse thema, maar heeft geen geldige admindata connectie "
-                        + "(mogelijk geen rechten op wfs featuretype).");
-                }
+            if (th.isAnalyse_thema() && !validAdmindataSource) {
+                log.debug(th.getNaam() + "' is analyse kaartlaag maar"
+                        + " hier is nog geen gegevensbron voor geconfigureerd.");
             }
 
             Integer themaId = th.getId();
@@ -656,6 +653,9 @@ public class ViewerAction extends BaseGisAction {
 
             order++;
             jsonCluster.put("order", order);
+
+            /* indien log op DEBUG level staat dan volgordenummer achter de naam weergeven
+             * in de boom. */
             if (log.isDebugEnabled()) {
                 String title = jsonCluster.getString("title");
                 if (title == null || title.equals(""))
