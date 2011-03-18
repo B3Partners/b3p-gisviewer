@@ -205,7 +205,7 @@ public class RedliningAction extends ViewerCrudAction {
     }
 
     private void duUpdate(String adminPk, DataStore ds, SimpleFeature feature, Integer id) throws IOException, CQLException {
-        /* typename en filter voor de writer */
+        /* Typename en filter voor de writer */
         String typename = feature.getFeatureType().getTypeName();
         Filter f = CQL.toFilter(adminPk + " = '"+ id + "'");
 
@@ -215,20 +215,17 @@ public class RedliningAction extends ViewerCrudAction {
             while (writer.hasNext()) {
                 SimpleFeature newFeature = (SimpleFeature) writer.next();
 
-                /* TODO: attributes niet hardcoded setten in ieder geval moet
-                 het voor de postgres en oracle werken */
+                /* Waardes ophalen */
                 List<Object> attributes = feature.getAttributes();
-                
-                String projectnaam = (String) feature.getAttribute("PROJECTNAAM");
-                String ontwerp = (String) feature.getAttribute("ONTWERP");
-                Object opmerking = (String) feature.getAttribute("OPMERKING");
 
-                newFeature.setAttribute("PROJECTNAAM", projectnaam);
-                newFeature.setAttribute("ONTWERP", ontwerp);
-                newFeature.setAttribute("OPMERKING", opmerking);
-
-                Object defaultGeom = feature.getDefaultGeometry();
-                newFeature.setDefaultGeometry(defaultGeom);
+                /* Als inhoud niet null is dan wegschrijven op juiste positie */
+                int i = 0;
+                for (Object obj : attributes) {
+                    if (obj != null) {
+                        newFeature.setAttribute(i, obj);
+                    }
+                    i++;
+                }
 
                 writer.write();
             }
