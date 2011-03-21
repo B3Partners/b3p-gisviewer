@@ -29,6 +29,7 @@ import org.hibernate.Transaction;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.opengis.feature.Feature;
+import org.opengis.feature.Property;
 
 /**
  *
@@ -203,13 +204,15 @@ public class EditUtil {
             wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
         }
 
-        String id = f.getProperty("ID").getValue().toString();
-        String projectnaam = f.getProperty("PROJECTNAAM").getValue().toString();
-        String ontwerp = f.getProperty("ONTWERP").getValue().toString();
+        /* TODO: Zorgen dat f.getProperty hoofdlettergevoelig onafhankelijk
+         * werkt, dus zowel voor Postgres als Oracle */
+        String id = f.getProperty("id").getValue().toString();
+        String projectnaam = f.getProperty("projectnaam").getValue().toString();
+        String ontwerp = f.getProperty("ontwerp").getValue().toString();
 
         String opmerking = null;
-        if (f.getProperty("OPMERKING").getValue() != null) {
-            opmerking = f.getProperty("OPMERKING").getValue().toString();
+        if (f.getProperty("opmerking").getValue() != null) {
+            opmerking = f.getProperty("opmerking").getValue().toString();
         }
 
         JSONObject json = new JSONObject()
@@ -246,6 +249,8 @@ public class EditUtil {
 
             List thema_items = SpatialUtil.getThemaData(gb, false);
             List<String> propnames = DataStoreUtil.themaData2PropertyNames(thema_items);
+
+            /* TODO: groepnaam en projectfilter meegegeven */
 
             features = DataStoreUtil.getFeatures(b, gb, geom, null, propnames, null, true);
 

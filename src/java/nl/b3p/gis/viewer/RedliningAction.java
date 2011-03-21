@@ -156,12 +156,14 @@ public class RedliningAction extends ViewerCrudAction {
         ggb.getBron().getUrl();
         DataStore ds = ggb.getBron().toDatastore();
 
+        String adminPK = ggb.getAdmin_pk();
+
         try {
             String typename = ggb.getAdmin_tabel();
             Integer rlId = FormUtils.StringToInteger(dynaForm.getString("redliningID"));
 
             if (rlId != null && rlId > 0) {
-                doDelete(ds, typename, rlId);
+                doDelete(adminPK, ds, typename, rlId);
             }
         } finally {
             ds.dispose();
@@ -172,8 +174,9 @@ public class RedliningAction extends ViewerCrudAction {
         return getDefaultForward(mapping, request);
     }
 
-    private void doDelete(DataStore ds, String typename, Integer id) throws IOException, CQLException {
-        Filter f = CQL.toFilter("ID = '" + id + "'");
+    private void doDelete(String adminPk, DataStore ds, String typename, Integer id) throws IOException, CQLException {
+        Filter f = CQL.toFilter(adminPk + " = '"+ id + "'");
+
         FeatureWriter writer = ds.getFeatureWriter(typename, f, Transaction.AUTO_COMMIT);
 
         try {
@@ -321,6 +324,9 @@ public class RedliningAction extends ViewerCrudAction {
 
         Integer gbId = (Integer) instellingen.get("redliningGegevensbron");
         dynaForm.set("gegevensbron", gbId);
+
+        Integer kaartlaagId = (Integer) instellingen.get("redliningkaartlaagid");
+        dynaForm.set("kaartlaagId", kaartlaagId);
 
         /* klaarzetten huidige projecten */
         if (gbId != null && gbId > 0) {
