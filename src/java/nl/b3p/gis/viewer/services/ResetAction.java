@@ -19,9 +19,10 @@ import org.securityfilter.filter.SecurityFilter;
 
 public class ResetAction extends BaseGisAction {
 
-    private static final Log logger = LogFactory.getLog(IndexAction.class);
+    private static final Log logger = LogFactory.getLog(ResetAction.class);
 
     protected static final String CACHE = "cache";
+    protected static final String CACHE_CONFIG = "configCache";
     protected static final String OPZOEKLIJST = "opzoeklijst";
     protected static final String LOGIN = "login";
 
@@ -35,6 +36,12 @@ public class ResetAction extends BaseGisAction {
         hibProp.setDefaultMessageKey("reset.cache");
         hibProp.setAlternateForwardName(LOGIN);
         map.put(CACHE, hibProp);
+
+        hibProp = new ExtendedMethodProperties(CACHE_CONFIG);
+        hibProp.setDefaultForwardName(SUCCESS);
+        hibProp.setDefaultMessageKey("reset.configcache");
+        hibProp.setAlternateForwardName(LOGIN);
+        map.put(CACHE_CONFIG, hibProp);
 
         hibProp = new ExtendedMethodProperties(OPZOEKLIJST);
         hibProp.setDefaultForwardName(SUCCESS);
@@ -73,6 +80,47 @@ public class ResetAction extends BaseGisAction {
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
 
+        logger.info("Rechten zijn gereset voor de gisviewer.");
+
+        return getDefaultForward(mapping, request);
+    }
+
+    public ActionForward configCache(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request, true);
+
+        String lcvs = FormUtils.nullIfEmpty(request.getParameter(Bron.LIFECYCLE_CACHE_PARAM));
+
+        if (user == null || !user.isInRole(Roles.ADMIN)) {
+            SecurityFilter.saveRequestInformation(request);
+            addAlternateMessage(mapping, request, null, " gebruiker heeft onvoldoende rechten om te resetten.");
+
+            return getAlternateForward(mapping, request);
+        }
+
+        if (lcvs == null) {
+            lcvs = "0";
+        }
+
+        /* wfs en wms cache legen */
+        try {
+            long lcl = Long.parseLong(lcvs);
+
+            Bron.setDataStoreLifecycle(lcl);
+            Bron.flushWfsCache();
+            GisSecurityRealm.flushSPCache();
+        } catch (NumberFormatException nfe) {
+        }
+
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
+        createLists(dynaForm, request);
+
+        logger.info("Rechten zijn gereset voor de gisviewerconfig.");
+
+        /* laat beheerder opnieuw inloggen zodat nieuwe schema wordt
+         * opgehaald */
+        HttpSession session = request.getSession();
+        session.invalidate();
+
         return getDefaultForward(mapping, request);
     }
 
@@ -90,6 +138,8 @@ public class ResetAction extends BaseGisAction {
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
+
+        logger.info("Opzoeklijsten zijn gereset.");
 
         return getDefaultForward(mapping, request);
     }

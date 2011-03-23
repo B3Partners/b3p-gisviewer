@@ -32,7 +32,6 @@ public class IndexAction extends BaseGisAction {
     protected static final String LOGINERROR = "loginError";
     protected static final String LOGOUT = "logout";
     protected static final String LIST = "list";
-    protected static final String RESET_CACHE = "resetCache";
     protected static final String HELP = "help";
 
     private static final String PAGE_GISVIEWER_HOME = "gisviewer_home";
@@ -63,14 +62,7 @@ public class IndexAction extends BaseGisAction {
         hibProp = new ExtendedMethodProperties(LIST);
         hibProp.setDefaultForwardName(SUCCESS);
         hibProp.setAlternateForwardName(FAILURE);
-        map.put(LIST, hibProp);
-
-        hibProp = new ExtendedMethodProperties(RESET_CACHE);
-        hibProp.setDefaultMessageKey("algemeen.resetcache.success");
-        hibProp.setDefaultForwardName(SUCCESS);
-        hibProp.setAlternateMessageKey("algemeen.resetcache.failure");
-        hibProp.setAlternateForwardName(SUCCESS);
-        map.put(RESET_CACHE, hibProp);
+        map.put(LIST, hibProp);        
 
         hibProp = new ExtendedMethodProperties(HELP);
         hibProp.setDefaultMessageKey("algemeen.resetcache.success");

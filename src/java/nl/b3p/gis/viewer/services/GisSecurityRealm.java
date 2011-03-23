@@ -221,6 +221,6 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     public static synchronized void flushSPCache() {
         perUserNameSPCache = new HashMap();
 
-        log.info("Cache WMS leeggemaakt");
+        log.info("Cache WMS leeggemaakt.");
     }
 }
