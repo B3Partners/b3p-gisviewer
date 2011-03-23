@@ -251,7 +251,11 @@ public class CollectAdmindata {
             if (tx != null && tx.isActive()) {
                 tx.rollback();
             }
-        }        
+        }
+
+        if (bean == null || bean.getRecords() == null) {
+            return null;
+        }
 
         return bean;
     }

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -57,11 +58,9 @@ public class Data2CSV extends HttpServlet {
         Transaction tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
         try {
             Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
-            
-            String[] ids = null;
-            if (objectIds != null) {
-                ids = objectIds.split(",");
-            }
+
+            String decoded = URLDecoder.decode(objectIds,"UTF-8");
+            String[] ids = decoded.split(",");
 
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
             if (user == null) {
