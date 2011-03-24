@@ -8,4 +8,3 @@ create table redlining_object (
 );
 
 SELECT AddGeometryColumn ('redlining_object','the_geom',28992,'GEOMETRY',2);
-

@@ -9,7 +9,6 @@ create table redlining_object (
 );      
 
 insert into user_sdo_geom_metadata values (
-    'gfo',
 	'redlining_object',
     'the_geom',
     MDSYS.SDO_DIM_ARRAY(
