@@ -23,7 +23,9 @@
 package nl.b3p.gis.viewer.services;
 
 import java.security.Principal;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +60,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         String password = FormUtils.nullIfEmpty(request.getParameter(FORM_PASSWORD));
         String code = FormUtils.nullIfEmpty(request.getParameter(FORM_CODE));
 
-        return authenticate(username, password, code);
+        return authenticate(username, password, code, request);
      }
 
     public Principal getAuthenticatedPrincipal(String username, String password) {
@@ -100,7 +102,9 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         return new GisPrincipal(username, roles);
     }
 
-    public static GisPrincipal authenticateHttp(String location, String username, String password, String code) {
+    public static GisPrincipal authenticateHttp(String location, String username, String password,
+            String code, SecurityRequestWrapper request) {
+
         WMSCapabilitiesReader wmscr = new WMSCapabilitiesReader();
         ServiceProvider sp = null;
 
@@ -113,13 +117,41 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             key = username;
         }
 
+        String ip = null;
+
+        if (request != null) {
+            ip = request.getRemoteAddr();
+        }
+
+        key = key + "_" + ip;
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        Date expDate = null;
+
         try {
             /* WMS getCapabilities (serviceprovider) cachen */
             if (isInSPCache(key)) {
                 sp = getFromSPCache(key);
+
+                /* Controleren of provider niet over datum is */
+                expDate = sp.getExpireDate();
+                if (isExpired(expDate)) {
+                    log.info("EXPIRED: Login for " + sp.getUserName() + " has expired on " + df.format(expDate));
+                    return null;
+                }
+                
             } else {
                 sp = wmscr.getProvider(location, username, password);
-                putInSPCache(key, sp);
+
+                /* Controleren of provider niet over datum is */
+                expDate = sp.getExpireDate();
+
+                if (isExpired(expDate)) {
+                    log.info("EXPIRED: Login for " + sp.getUserName() + " has expired on " + df.format(expDate));
+                    return null;
+
+                } else {
+                    putInSPCache(key, sp);
+                }
             }
 
         } catch (Exception ex) {
@@ -139,42 +171,27 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             }
         }
 
-        // haal code op uit capabilities, zodat gisviewer deze kan gebruiken
-        // om in te loggen, werkt dan ook zonder cookies
-        if (code == null) {
-            Set<ServiceDomainResource> sdrs = sp.getDomainResource();
-            if (sdrs != null) {
-                for (ServiceDomainResource sdr : sdrs) {
-                    if (OGCConstants.WMS_REQUEST_GetMap.equalsIgnoreCase(sdr.getDomain())) {
-                        String url = sdr.getGetUrl();
-                        if (url != null) {
-                            String[] pcodes = url.split("[\\?/]");
-                            if (pcodes != null && pcodes.length > 0) {
-                                for (int i = 0; i < pcodes.length; i++) {
-                                    String pcode = pcodes[i];
-                                    if (pcode != null && pcode.length() == 32) {
-                                        try {
-                                            Hex.decodeHex(pcode.toCharArray());
-                                            code = pcode;
-                                            break;
-                                        } catch (DecoderException ex) {}
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (code != null) {
-                        break;
-                    }
-                }
-            }
+        /* code uit service provider gebruiken */
+        if (sp.getPersonalCode() != null) {
+            code = sp.getPersonalCode();
         }
         
-        if (username==null || username.length()==0) {
-            username = HibernateUtil.ANONYMOUS_USER;
+        if (username == null || username.length() < 1) {
+            username = sp.getUserName(); //HibernateUtil.ANONYMOUS_USER;
         }
+
         log.debug("login: " + username);
         return new GisPrincipal(username, password, code, sp);
+    }
+
+    private static boolean isExpired(Date expireDate) {
+        Date now = new Date();
+
+        if (expireDate.before(now)) {
+            return true;
+        }
+
+        return false;
     }
 
     public Principal authenticate(String username, String password) {
@@ -188,7 +205,18 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             return authenticateFake(username);
         }
         String url = createCapabilitiesURL(code);
-        return authenticateHttp(url, username, password, code);
+        return authenticateHttp(url, username, password, code, null);
+    }
+
+    public static Principal authenticate(String username, String password, String code,
+            SecurityRequestWrapper request) {
+
+        // Eventueel fake Principal aanmaken
+        if (!HibernateUtil.isCheckLoginKaartenbalie()) {
+            return authenticateFake(username);
+        }
+        String url = createCapabilitiesURL(code);
+        return authenticateHttp(url, username, password, code, request);
     }
 
     public Principal getAuthenticatedPrincipal(String username) {

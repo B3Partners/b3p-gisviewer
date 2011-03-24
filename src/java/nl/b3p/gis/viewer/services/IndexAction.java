@@ -135,7 +135,7 @@ public class IndexAction extends BaseGisAction {
             } else {
                 String url = GisSecurityRealm.createCapabilitiesURL(code);
                 logger.debug("url: " + url);
-                user = GisSecurityRealm.authenticateHttp(url, HibernateUtil.ANONYMOUS_USER, null, code);
+                user = GisSecurityRealm.authenticateHttp(url, HibernateUtil.ANONYMOUS_USER, null, code, srw);
             }
 
             if (user != null) {
