@@ -175,9 +175,13 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         if (sp.getPersonalCode() != null) {
             code = sp.getPersonalCode();
         }
+
+        if (sp.getUserName() != null) {
+            username = sp.getUserName();
+        }
         
         if (username == null || username.length() < 1) {
-            username = sp.getUserName(); //HibernateUtil.ANONYMOUS_USER;
+             username = HibernateUtil.ANONYMOUS_USER;
         }
 
         log.debug("login: " + username);
