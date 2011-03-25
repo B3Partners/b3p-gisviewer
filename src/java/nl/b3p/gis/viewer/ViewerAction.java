@@ -83,6 +83,8 @@ public class ViewerAction extends BaseGisAction {
     public static final String EXTENT = "extent";
     //de zoekConfiguratie id die moet worden gebruikt om te zoeken
     public static final String SEARCHCONFIGID = "searchConfigId";
+    // zoekconfig naam om op te zoeken
+    public static final String SEARCHCONFIGNAME = "searchConfigName";
     //het woord waarop gezocht moet worden in de zoekconfiguratie
     public static final String SEARCH = "search";
     //de actie die gedaan kan worden na het zoeken (filter,zoom,highlight)
@@ -351,6 +353,8 @@ public class ViewerAction extends BaseGisAction {
 
         /* search param klaarzetten voor zoeken via params */
         String temp = request.getParameter(SEARCHCONFIGID);
+        String zoekIngangNaam = request.getParameter(SEARCHCONFIGNAME);
+
         Integer zoekConfigId = null;
         Set<ZoekAttribuut> velden = null;
 
@@ -368,17 +372,19 @@ public class ViewerAction extends BaseGisAction {
                 zoekconfiguratiesJson.add(zc.toJSON());
 
                 Integer zcId = zc.getId();
-                if (zoekConfigId != null && zcId.intValue() == zoekConfigId.intValue()) {
+                if (zoekIngangNaam == null && zoekConfigId != null && zcId.intValue() == zoekConfigId.intValue()) {
                     velden = zc.getZoekVelden();
+                } else if (zoekIngangNaam != null && zc.getNaam().equals(zoekIngangNaam)) {
+                    velden = zc.getZoekVelden();
+                    zoekConfigId = zc.getId();
                 }
-                    
             }
         }
         if (zoekconfiguraties != null) {
             request.setAttribute(ZOEKCONFIGURATIES, zoekconfiguratiesJson);
         }
         
-        if (zoekConfigId != null) {
+        if (zoekConfigId != null || zoekIngangNaam != null) {
             if (velden != null) {
                 String params = "";
 
