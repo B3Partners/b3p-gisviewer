@@ -384,11 +384,24 @@ public class ViewerAction extends BaseGisAction {
 
                 int i = 0;
                 for (ZoekAttribuut za : velden) {
-                    String veldNaam = za.getAttribuutnaam();
-                    String waarde = request.getParameter(veldNaam);
+                    String veldNaam = null;
+                    String waarde = null;
 
-                    if (waarde == null)
+                    if (za.getLabel() != null) {
+                        veldNaam = za.getLabel();
+                        waarde = request.getParameter(veldNaam);
+                    }
+                    if (waarde == null && za.getAttribuutLocalnaam() != null) {
+                        veldNaam = za.getAttribuutLocalnaam();
+                        waarde = request.getParameter(veldNaam);
+                    }           
+                    if (waarde == null && za.getAttribuutnaam() != null) {
+                        veldNaam = za.getAttribuutnaam();
+                        waarde = request.getParameter(veldNaam);
+                    }
+                    if (waarde == null) {
                         waarde = "null";
+                    }                        
 
                     if (i < 1)
                         params += waarde;
