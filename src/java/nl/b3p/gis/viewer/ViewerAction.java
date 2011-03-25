@@ -52,6 +52,7 @@ import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.wms.capabilities.Layer;
 import nl.b3p.wms.capabilities.SrsBoundingBox;
+import nl.b3p.zoeker.configuratie.ZoekAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
 import nl.b3p.zoeker.services.Zoeker;
 import org.apache.commons.logging.Log;
@@ -347,6 +348,16 @@ public class ViewerAction extends BaseGisAction {
                 log.error(SEARCHCONFIGID + " = NAN: " + request.getParameter(SEARCHCONFIGID));
             }
         }
+
+        /* search param klaarzetten voor zoeken via params */
+        String temp = request.getParameter(SEARCHCONFIGID);
+        Integer zoekConfigId = null;
+        Set<ZoekAttribuut> velden = null;
+
+        if (temp != null && !temp.equals("")) {
+            zoekConfigId = new Integer(temp);
+        }
+
         //zoekconfiguraties inlezen.
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List zoekconfiguraties = Zoeker.getZoekConfiguraties();
@@ -355,11 +366,43 @@ public class ViewerAction extends BaseGisAction {
             for (int i = 0; i < zoekconfiguraties.size(); i++) {
                 ZoekConfiguratie zc = (ZoekConfiguratie) zoekconfiguraties.get(i);
                 zoekconfiguratiesJson.add(zc.toJSON());
+
+                Integer zcId = zc.getId();
+                if (zoekConfigId != null && zcId.intValue() == zoekConfigId.intValue()) {
+                    velden = zc.getZoekVelden();
+                }
+                    
             }
         }
         if (zoekconfiguraties != null) {
             request.setAttribute(ZOEKCONFIGURATIES, zoekconfiguratiesJson);
         }
+        
+        if (zoekConfigId != null) {
+            if (velden != null) {
+                String params = "";
+
+                int i = 0;
+                for (ZoekAttribuut za : velden) {
+                    String veldNaam = za.getAttribuutnaam();
+                    String waarde = request.getParameter(veldNaam);
+
+                    if (waarde == null)
+                        waarde = "null";
+
+                    if (i < 1)
+                        params += waarde;
+                    else
+                        params += "," + waarde;
+
+                    i++;
+                }
+
+                request.setAttribute(SEARCHCONFIGID, zoekConfigId);
+                request.setAttribute(SEARCH, params);
+            }
+        }
+
         //set de actieve tabs en enabled tabs
         JSONArray enabledTabs = null;
         String[] enabledTokens = null;
