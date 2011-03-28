@@ -169,6 +169,10 @@ public class RedliningAction extends ViewerCrudAction {
             ds.dispose();
         }
 
+        String orgCode = getOrganizationCode(request);
+        List projecten = getDistinctProjectenForGroep(ggb, orgCode);
+        request.setAttribute("projecten", projecten);
+
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
 
         return getDefaultForward(mapping, request);
