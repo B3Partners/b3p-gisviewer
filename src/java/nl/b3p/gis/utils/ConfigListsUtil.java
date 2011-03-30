@@ -58,10 +58,12 @@ public class ConfigListsUtil {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Transaction tx = null;
 
+        Bron b = null;
+
         try {
             tx = sess.beginTransaction();
 
-            Bron b = getBron(sess, connId);
+            b = getBron(sess, connId);
             l = getPossibleFeatures(b);
 
             tx.commit();
@@ -70,6 +72,16 @@ public class ConfigListsUtil {
 
             if (tx != null && tx.isActive()) {
                 tx.rollback();
+            }
+        }
+
+        if (l == null && b != null) {
+            String serviceUrl = b.getUrl();
+
+            if (serviceUrl != null) {
+                l = new ArrayList<String>();
+                l.add("SERVICE_ERROR");
+                l.add(serviceUrl);
             }
         }
 
