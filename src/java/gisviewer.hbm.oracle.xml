@@ -41,13 +41,13 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="extra_level" not-null="true"/>
     <property name="callable" not-null="true"/>
     <property name="default_visible" not-null="true"/>
-    <property name="exclusive_childs" type="boolean" not-null="true"/>
-        <many-to-one name="parent" column="parent"/>
-        <set name="children" inverse="true" cascade="all-delete-orphan">
+    <property name="exclusive_childs" not-null="true" type="boolean"/>
+    <many-to-one column="parent" name="parent"/>
+    <set cascade="all-delete-orphan" inverse="true" name="children">
       <key column="parent"/>
       <one-to-many class="nl.b3p.gis.viewer.db.Clusters"/>
     </set>
-    <set name="themas" cascade="all-delete-orphan">
+    <set cascade="all-delete-orphan" name="themas">
       <key column="clusters"/>
       <one-to-many class="nl.b3p.gis.viewer.db.Themas"/>
     </set>
@@ -73,13 +73,13 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="omschrijving"/>
     <property name="basisregel" not-null="true"/>
     <property name="voorbeelden"/>
-    <property name="kolombreedte" not-null="true"/>   
-    <many-to-one name="waardeType" lazy="false" />
-    <many-to-one name="dataType" lazy="false" />
+    <property name="kolombreedte" not-null="true"/>
+    <many-to-one lazy="false" name="waardeType"/>
+    <many-to-one lazy="false" name="dataType"/>
     <property name="commando"/>
     <property name="kolomnaam"/>
     <property name="dataorder"/>
-    <many-to-one name="gegevensbron" lazy="false" />
+    <many-to-one lazy="false" name="gegevensbron"/>
   </class>
   <class name="nl.b3p.gis.viewer.db.Themas">
     <id name="id" type="int">
@@ -92,7 +92,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="naam"/>
     <property name="metadata_link"/>
     <property name="belangnr" not-null="true"/>
-    <many-to-one name="cluster" lazy="false" column="clusters" not-null="true"/>
+    <many-to-one column="clusters" lazy="false" name="cluster" not-null="true"/>
     <property name="opmerkingen" type="text"/>
     <property name="analyse_thema" not-null="true"/>
     <property name="locatie_thema" not-null="true"/>
@@ -110,7 +110,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     <property name="maptipstring"/>
     <property name="sldattribuut"/>
     <property name="layoutadmindata"/>
-    <many-to-one name="gegevensbron" lazy="false"/>
+    <many-to-one lazy="false" name="gegevensbron"/>
   </class>
   <class name="nl.b3p.gis.viewer.db.WaardeTypen">
     <id name="id" type="int">
@@ -121,69 +121,57 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
     </id>
     <property name="naam"/>
   </class>
-
-    <class name="nl.b3p.gis.viewer.db.Configuratie">
+  <class name="nl.b3p.gis.viewer.db.Configuratie">
     <id name="id" type="int">
       <column name="id" not-null="true"/>
       <generator class="sequence">
         <param name="sequence">configuratie_id_seq</param>
       </generator>
     </id>
-        <property name="property"/>
-        <property name="propval"/>
-        <property name="setting"/>
-        <property name="type" column="soort"/>
-    </class>
-
-    <class name="nl.b3p.gis.viewer.db.Gegevensbron">
-        <id name="id" type="int">
-            <column name="id" not-null="true"/>
-            <generator class="sequence">
-            <param name="sequence">gegevensbron_id_seq</param>
-            </generator>
-        </id>
-
-        <property name="naam"/>
-        <many-to-one name="bron" lazy="false"/>
-        <property name="admin_tabel"/>
-        <property name="admin_pk"/>
-        <property name="admin_query" type="text"/>
-
-        <many-to-one name="parent" column="parent"/>
-        <set name="children" inverse="true" cascade="all-delete-orphan">
-            <key column="parent"/>
-            <one-to-many class="nl.b3p.gis.viewer.db.Gegevensbron"/>
-        </set>
-      
-        <property name="admin_fk"/>
-        <property name="admin_tabel_opmerkingen"/>
-        <property name="volgordenr"/>
-
-        <set name="themaData" lazy="false" cascade="all-delete-orphan" order-by="dataorder, basisregel desc, label">
-            <key column="gegevensbron"/>
-            <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
-        </set>
-
-        <set name="themas" lazy="false" cascade="all-delete-orphan">
-            <key column="gegevensbron"/>
-            <one-to-many class="nl.b3p.gis.viewer.db.Themas"/>
-        </set>
-    </class>
-
-    <class name="nl.b3p.gis.viewer.db.Tekstblok" table="tekstblok">
-        <id name="id" type="int">
-            <column name="id" not-null="true"/>
-            <generator class="sequence">
-                <param name="sequence">tekstblok_id_seq</param>
-            </generator>
-        </id>
-        <property name="titel" not-null="true" type="string" />
-        <property name="tekst" type="text"/>
-        <property name="url" type="string"/>
-        <property name="toonUrl" type="boolean" column="toonurl" />
-        <property name="pagina" not-null="true" type="string"/>
-        <property name="volgordeNr" type="integer" column="volgordenr"/>
-        <property name="auteur" type="string"/>
-        <property name="cdate" not-null="true" type="timestamp"/>
-    </class>
+    <property name="property"/>
+    <property name="propval"/>
+    <property name="setting"/>
+    <property column="soort" name="type"/>
+  </class>
+  <class name="nl.b3p.gis.viewer.db.Gegevensbron">
+    <id name="id" type="int">
+      <column name="id" not-null="true"/>
+      <generator class="sequence">
+        <param name="sequence">gegevensbron_id_seq</param>
+      </generator>
+    </id>
+    <property name="naam"/>
+    <many-to-one lazy="false" name="bron"/>
+    <property name="admin_tabel"/>
+    <property name="admin_pk"/>
+    <property name="admin_query" type="text"/>
+    <many-to-one column="parent" name="parent"/>
+    <set cascade="all-delete-orphan" inverse="true" name="children">
+      <key column="parent"/>
+      <one-to-many class="nl.b3p.gis.viewer.db.Gegevensbron"/>
+    </set>
+    <property name="admin_fk"/>
+    <property name="admin_tabel_opmerkingen"/>
+    <property name="volgordenr"/>
+    <set cascade="all-delete-orphan" lazy="false" name="themaData" order-by="dataorder, basisregel desc, label">
+      <key column="gegevensbron"/>
+      <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
+    </set>    
+  </class>
+  <class name="nl.b3p.gis.viewer.db.Tekstblok" table="tekstblok">
+    <id name="id" type="int">
+      <column name="id" not-null="true"/>
+      <generator class="sequence">
+        <param name="sequence">tekstblok_id_seq</param>
+      </generator>
+    </id>
+    <property name="titel" not-null="true" type="string"/>
+    <property name="tekst" type="text"/>
+    <property name="url" type="string"/>
+    <property column="toonurl" name="toonUrl" type="boolean"/>
+    <property name="pagina" not-null="true" type="string"/>
+    <property column="volgordenr" name="volgordeNr" type="integer"/>
+    <property name="auteur" type="string"/>
+    <property name="cdate" not-null="true" type="timestamp"/>
+  </class>
 </hibernate-mapping>
