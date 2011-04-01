@@ -39,6 +39,7 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -176,16 +177,24 @@ public class PrintAction extends BaseHibernateAction {
         String maxy = Double.toString(settings.getBbox().getMaxy());
         String bbox = minx + "," + miny + "," + maxx + "," + maxy;
 
-        /* ratio bepalen voor berekenen nieuwe height */
-        float ratio = calcPixelRatio(settings.getWidth(), settings.getHeight());        
-        int newHeight = calcNewHeight(ratio, kwaliteit, settings.getHeight());
+        String imageUrl = null;
 
-        /* nieuwe width en height opgeven voor nieuw verzoek */
-        settings.setWidth(kwaliteit);
-        settings.setHeight(newHeight);
+        List urls = settings.getCalculatedUrls();
+        if (urls == null) {
+            urls = settings.getUrls();
+        }
+        if (urls == null || urls.isEmpty()) {
+            throw new Exception("No image urls found!");
+        }
 
-        /* tijdelijk plaatje maken, pad wordt gebruikt in xsl */
-        String imageUrl = createTempImage(settings);
+        if (urls != null && urls.size() == 1) {
+            imageUrl = createImageUrl(urls.get(0).toString());
+        }
+
+        /* url naar servlet klaarzetten die nieuw plaatje geeft waar ook de
+         * redlining nog inzit */
+        
+        //imageUrl = "/printmap.do?image=t&keepAlive=true&imageId=" + imageId;
 
         /* nu */
         Date now = new Date();
@@ -197,9 +206,8 @@ public class PrintAction extends BaseHibernateAction {
         info.setDatum(df.format(now));
         info.setImageUrl(imageUrl);
         info.setBbox(bbox);
-        info.setMapWidth(kwaliteit);
-        info.setMapHeight(newHeight);
         info.setOpmerking(remark);
+        info.setKwaliteit(kwaliteit);
 
         /* doorgeven mimetype en template */
         String mimeType = null;
@@ -237,6 +245,30 @@ public class PrintAction extends BaseHibernateAction {
 
         return null;
     }
+
+    private String createImageUrl(String url) {
+        String imageUrl = null;
+
+        int index = url.indexOf("&HEIGHT=");
+        imageUrl = url.substring(0, index);
+
+        return imageUrl;
+    }
+
+    /*
+    private String getCombineImageUrl(HttpServletRequest request, String bbox) {
+        String ciu = request.getRequestURL().toString();
+        int index = ciu.lastIndexOf("/");
+        ciu = ciu.substring(0, index + 1);
+        ciu += GETPROJECTIMGSERVLET;
+
+        String ondergronden = request.getParameter("ondergrondlagen");
+        ciu += "?ondergrondlagen=" + ondergronden;
+        ciu += "&bbox=" + bbox;
+        ciu += "&key=" + request.getParameter("key");
+        ciu += "&projectId=";
+        return ciu;
+    }*/
 
     private String createTempImage(CombineImageSettings settings) throws IOException {
 
