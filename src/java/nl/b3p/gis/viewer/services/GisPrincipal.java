@@ -293,7 +293,6 @@ public class GisPrincipal implements Principal {
             }
         }
 
-
         if (gp == null || (flushCache)) { //(flushCache && isAdmin)
             // log in new principal
             SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
