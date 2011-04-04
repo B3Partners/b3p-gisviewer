@@ -15,7 +15,7 @@ public class PrintInfo {
     private int kwaliteit;
 
     public PrintInfo() {
-    }
+    }    
 
     @XmlElement(name="titel")
     public String getTitel() {

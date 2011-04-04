@@ -8,8 +8,11 @@ import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.PdfWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -23,6 +26,9 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.sax.SAXResult;
 import javax.xml.transform.stream.StreamSource;
+import nl.b3p.commons.services.FormUtils;
+import nl.b3p.imagetool.CombineImageSettings;
+import nl.b3p.imagetool.CombineImagesHandler;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,6 +48,54 @@ public class PrintServlet extends HttpServlet {
     public static String xsl_A4_Staand = null;
     public static String xsl_A3_Liggend = null;
     public static String xsl_A3_Staand = null;
+
+    public static CombineImageSettings settings = null;
+    private static final int MAX_IMAGE_SIZE_PX = 2048;
+
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException, Exception {
+
+        String sWidth = FormUtils.nullIfEmpty(request.getParameter("width"));
+        String sHeight = FormUtils.nullIfEmpty(request.getParameter("height"));
+        String sBbox = FormUtils.nullIfEmpty(request.getParameter("bbox"));
+
+        if (sWidth == null || sHeight == null || sBbox == null) {
+            throw new ServletException("Not all print parameters are given!");
+        }
+
+        Integer height = null;
+        Integer width = null;
+
+        try {
+            width = new Integer(sWidth);
+            height = new Integer(sHeight);
+        } catch (Exception e) {
+            throw new ServletException("One of the parameters given (widht,height and/or id) is not a Integer");
+        }
+
+        /* combine settings ophalen */
+        CombineImageSettings imageSettings = settings;
+
+        if (imageSettings == null) {
+            throw new ServletException("No print settings found!");
+        }
+
+        /* nieuwe settings zetten */
+        imageSettings.setWidth(width);
+        imageSettings.setHeight(height);
+        imageSettings.setBbox(sBbox);
+
+        /* Nieuw plaatje klaarzetten */
+        OutputStream out = response.getOutputStream();
+
+        CombineImagesHandler.combineImage(out, imageSettings, imageSettings.getMimeType(), 0);
+
+        response.setContentType(imageSettings.getMimeType());
+        //response.setHeader("Content-Disposition", "attachment; filename=\"kaart1.png\";");
+
+        response.getOutputStream().flush();
+
+    }
 
     public static void createOutput(PrintInfo info, String mimeType, String template,
             boolean addJavascript, HttpServletResponse response) throws MalformedURLException, IOException {
@@ -76,6 +130,7 @@ public class PrintServlet extends HttpServlet {
 
             /* Setup xslt */
             Source xsltSrc = new StreamSource(xslFile);
+            //xsltSrc.setSystemId(path);
 
             TransformerFactory factory = TransformerFactory.newInstance();
             Transformer transformer = factory.newTransformer(xsltSrc);
@@ -137,11 +192,7 @@ public class PrintServlet extends HttpServlet {
         writer.addJavaScript("this.print({bSilent:true,bShrinkToFit:true});");
 
         document.close();
-    }
-    
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-    }
+    }    
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -174,7 +225,12 @@ public class PrintServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+
+        try {
+            processRequest(request, response);
+        } catch (Exception ex) {
+            Logger.getLogger(PrintServlet.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**
@@ -185,7 +241,11 @@ public class PrintServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+        try {
+            processRequest(request, response);
+        } catch (Exception ex) {
+            Logger.getLogger(PrintServlet.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**

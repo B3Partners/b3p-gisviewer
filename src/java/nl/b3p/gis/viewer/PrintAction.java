@@ -44,6 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import nl.b3p.combineimages.CombineImagesServlet;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
@@ -177,28 +178,26 @@ public class PrintAction extends BaseHibernateAction {
         String maxy = Double.toString(settings.getBbox().getMaxy());
         String bbox = minx + "," + miny + "," + maxx + "," + maxy;
 
-        String imageUrl = null;
-
-        List urls = settings.getCalculatedUrls();
-        if (urls == null) {
-            urls = settings.getUrls();
-        }
-        if (urls == null || urls.isEmpty()) {
-            throw new Exception("No image urls found!");
-        }
-
-        if (urls != null && urls.size() == 1) {
-            imageUrl = createImageUrl(urls.get(0).toString());
-        }
-
-        /* url naar servlet klaarzetten die nieuw plaatje geeft waar ook de
-         * redlining nog inzit */
-        
-        //imageUrl = "/printmap.do?image=t&keepAlive=true&imageId=" + imageId;
-
         /* nu */
         Date now = new Date();
         SimpleDateFormat df = new SimpleDateFormat("d-M-yyyy", new Locale("NL"));
+
+        String imageUrl = "http://192.168.1.15:8084/gisviewer/services/PrintServlet?";
+
+        /* template keuze */
+        String template = null;
+
+        if (landscape && pageSize.equals("A4")) {
+            template = PrintServlet.xsl_A4_Liggend;
+        } else if (!landscape && pageSize.equals("A4")) {
+            template = PrintServlet.xsl_A4_Staand;
+        } else if (landscape && pageSize.equals("A3")) {
+            template = PrintServlet.xsl_A3_Liggend;
+        } else if (!landscape && pageSize.equals("A3")) {
+            template = PrintServlet.xsl_A3_Staand;
+        } else {
+            template = PrintServlet.xsl_A4_Liggend;
+        }
 
         /* nieuw (xml) Object voor gebruik met fop */
         PrintInfo info = new PrintInfo();
@@ -220,20 +219,6 @@ public class PrintAction extends BaseHibernateAction {
             mimeType = MimeConstants.MIME_PDF;
         }
 
-        String template = null;
-
-        if (landscape && pageSize.equals("A4")) {
-            template = PrintServlet.xsl_A4_Liggend;
-        } else if (!landscape && pageSize.equals("A4")) {
-            template = PrintServlet.xsl_A4_Staand;
-        } else if (landscape && pageSize.equals("A3")) {
-            template = PrintServlet.xsl_A3_Liggend;
-        } else if (!landscape && pageSize.equals("A3")) {
-            template = PrintServlet.xsl_A3_Staand;
-        } else {
-            template = PrintServlet.xsl_A4_Liggend;
-        }
-
         /* add javascript print dialog to pdf ? */
         boolean addJavascript = false;
         if (outputType != null && outputType.equals(OUTPUT_PDF_PRINT)) {
@@ -241,6 +226,7 @@ public class PrintAction extends BaseHibernateAction {
         }
 
         /* Maak de output */
+        PrintServlet.settings = settings;
         PrintServlet.createOutput(info, mimeType, template, addJavascript, response);
 
         return null;
