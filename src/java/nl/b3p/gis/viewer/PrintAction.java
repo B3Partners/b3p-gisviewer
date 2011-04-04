@@ -39,12 +39,10 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import nl.b3p.combineimages.CombineImagesServlet;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
@@ -182,7 +180,7 @@ public class PrintAction extends BaseHibernateAction {
         Date now = new Date();
         SimpleDateFormat df = new SimpleDateFormat("d-M-yyyy", new Locale("NL"));
 
-        String imageUrl = "http://192.168.1.15:8084/gisviewer/services/PrintServlet?";
+        String imageUrl = createImageUrl(request);
 
         /* template keuze */
         String template = null;
@@ -226,35 +224,23 @@ public class PrintAction extends BaseHibernateAction {
         }
 
         /* Maak de output */
-        PrintServlet.settings = settings;
+        PrintServlet.setSettings(settings);
         PrintServlet.createOutput(info, mimeType, template, addJavascript, response);
 
         return null;
     }
 
-    private String createImageUrl(String url) {
-        String imageUrl = null;
+    private String createImageUrl(HttpServletRequest request) {
+        String requestUrl = request.getRequestURL().toString();
 
-        int index = url.indexOf("&HEIGHT=");
-        imageUrl = url.substring(0, index);
+        int lastIndex = requestUrl.lastIndexOf("/");
+        
+        String basePart = requestUrl.substring(0, lastIndex);
+        String servletPart = "/services/PrintServlet?";
+        String imageUrl = basePart + servletPart;
 
         return imageUrl;
     }
-
-    /*
-    private String getCombineImageUrl(HttpServletRequest request, String bbox) {
-        String ciu = request.getRequestURL().toString();
-        int index = ciu.lastIndexOf("/");
-        ciu = ciu.substring(0, index + 1);
-        ciu += GETPROJECTIMGSERVLET;
-
-        String ondergronden = request.getParameter("ondergrondlagen");
-        ciu += "?ondergrondlagen=" + ondergronden;
-        ciu += "&bbox=" + bbox;
-        ciu += "&key=" + request.getParameter("key");
-        ciu += "&projectId=";
-        return ciu;
-    }*/
 
     private String createTempImage(CombineImageSettings settings) throws IOException {
 

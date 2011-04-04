@@ -74,7 +74,7 @@ public class PrintServlet extends HttpServlet {
         }
 
         /* combine settings ophalen */
-        CombineImageSettings imageSettings = settings;
+        CombineImageSettings imageSettings = getSettings();
 
         if (imageSettings == null) {
             throw new ServletException("No print settings found!");
@@ -95,6 +95,14 @@ public class PrintServlet extends HttpServlet {
 
         response.getOutputStream().flush();
 
+    }
+
+    public static CombineImageSettings getSettings() {
+        return settings;
+    }
+
+    public static void setSettings(CombineImageSettings settings) {
+        PrintServlet.settings = settings;
     }
 
     public static void createOutput(PrintInfo info, String mimeType, String template,
