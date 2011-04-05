@@ -106,9 +106,11 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         /* Indien via code ingelogd cachen met code */
         String key = "";
 
-        if (username.equals("anoniem") && code != null) {
+        if (username == null && code != null) {
             key = code;
-        } else {
+        } else if (username != null && username.equals("anoniem")) {
+            key = code;
+        } else if (code == null && username != null) {
             key = username;
         }
 
@@ -127,6 +129,15 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             if (isInSPCache(key)) {
                 sp = getFromSPCache(key);
 
+                /* wachtwoord controleren. Anders kun je nadat de serviceprovider
+                 * de eerste gecached is inloggen met de username zonder een geldig wachtwoord
+                 * in te vullen */
+                if (username != null && username.length() > 0 && password != null ) {
+                    if (!sp.getPassword().equals(password)) {
+                        return null;
+                    }
+                }
+
                 /* Controleren of provider niet over datum is */
                 expDate = sp.getExpireDate();
                 if (isExpired(expDate)) {
@@ -144,7 +155,11 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                     log.info("EXPIRED: Login for " + sp.getUserName() + " has expired on " + df.format(expDate));
                     return null;
 
-                } else {
+                } else {                    
+                    if (username != null && password != null && password.length() > 0) {
+                        sp.setPassword(password);
+                    }
+
                     putInSPCache(key, sp);
                 }
             }
