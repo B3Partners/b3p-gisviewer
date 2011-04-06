@@ -112,12 +112,22 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             key = code;
         } else if (code == null && username != null) {
             key = username;
+        } else if (username != null && password != null) {
+            key = username;
         }
 
         String ip = null;
 
         if (request != null) {
             ip = request.getRemoteAddr();
+
+            if (ip == null) {
+                ip = request.getLocalAddr();
+            }
+        }
+
+        if (ip == null) {
+            ip = "invalidIp";
         }
 
         key = key + "_" + ip;
