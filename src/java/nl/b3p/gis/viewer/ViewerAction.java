@@ -225,8 +225,87 @@ public class ViewerAction extends BaseGisAction {
             }
         }
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        JSONObject treeObject = createJasonObject(rootClusterMap, actieveThemas, actieveClusters, user);
+
+        /* Ophalen toegekende kaartenbalie rollen van ingelogde gebruiker */
+        Set roles = user.getRoles();
+
+        /* Ophalen rollen in configuratie database */
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Configuratie rollenPrio = null;
+
+        try {
+            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
+        } catch (Exception ex) {
+            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
+        }
+
+        /* alleen doen als configuratie tabel bestaat */
+        Map map = null;
+        if (rollenPrio != null && rollenPrio.getPropval() != null) {
+            String[] configRollen = rollenPrio.getPropval().split(",");
+
+            String rolnaam = "";
+            String inlogRol = "";
+
+            Boolean foundRole = false;
+
+            /* Zoeken of gebruiker een rol heeft die in de rollen
+             * configuratie voorkomt. Hoogste rol wordt geladen */
+            for (int i = 0; i < configRollen.length; i++) {
+
+                if (foundRole) {
+                    break;
+                }
+
+                rolnaam = configRollen[i];
+
+                /* per rol uit config database loopen door
+                 * toegekende rollen */
+                Iterator iter = roles.iterator();
+
+                while (iter.hasNext()) {
+                    inlogRol = iter.next().toString();
+
+                    if (rolnaam.equals(inlogRol)) {
+                        map = configKeeper.getConfigMap(rolnaam);
+                        foundRole = true;
+
+                        break;
+                    }
+                }
+            }
+
+            /* als gevonden rol geen configuratie records heeft dan defaults laden */
+            if ((map == null) || (map.size() < 1)) {
+                map = configKeeper.getConfigMap("default");
+            }
+
+            request.setAttribute("configMap", map);
+        }
+
+        /* opstart kaartlagen meegeven aan opbouwen jsonObject. Indien opstartKaart
+         * instellingen aanwezig zijn. */
+        String opstartKaarten = null;
+
+        if (map != null) {
+            opstartKaarten = (String) map.get("opstartKaarten");
+        }
+
+        String[] arrKaarten = null;
+        if (opstartKaarten != null) {
+            arrKaarten = opstartKaarten.split(",");
+        }
+
+        JSONObject treeObject = createJasonObject(rootClusterMap, actieveThemas, actieveClusters, user, arrKaarten);
         request.setAttribute("tree", treeObject);
+
+        /* tree op alfabet zetten voor bepaalde klanten */
+        if (map != null) {
+            String treeOrder = (String) map.get("treeOrder");
+            if (treeOrder != null && treeOrder.equals("alphabet")) {
+                convertTreeOrderPlim(treeObject);
+            }
+        }
 
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(PrecisionModel.FLOATING), 28992);
         Polygon extentBbox = null;
@@ -460,70 +539,6 @@ public class ViewerAction extends BaseGisAction {
             request.setAttribute(EXPANDNODES, nodes);
         }
 
-        /* Ophalen toegekende kaartenbalie rollen van ingelogde gebruiker */
-        Set roles = user.getRoles();
-
-        /* Ophalen rollen in configuratie database */
-        ConfigKeeper configKeeper = new ConfigKeeper();
-        Configuratie rollenPrio = null;
-
-        try {
-            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
-        } catch (Exception ex) {
-            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
-        }
-
-        /* alleen doen als configuratie tabel bestaat */
-        if (rollenPrio != null && rollenPrio.getPropval() != null) {
-            String[] configRollen = rollenPrio.getPropval().split(",");
-
-            String rolnaam = "";
-            String inlogRol = "";
-
-            Map map = null;
-            Boolean foundRole = false;
-
-            /* Zoeken of gebruiker een rol heeft die in de rollen
-             * configuratie voorkomt. Hoogste rol wordt geladen */
-            for (int i = 0; i < configRollen.length; i++) {
-
-                if (foundRole) {
-                    break;
-                }
-
-                rolnaam = configRollen[i];
-
-                /* per rol uit config database loopen door
-                 * toegekende rollen */
-                Iterator iter = roles.iterator();
-
-                while (iter.hasNext()) {
-                    inlogRol = iter.next().toString();
-
-                    if (rolnaam.equals(inlogRol)) {
-                        map = configKeeper.getConfigMap(rolnaam);
-                        foundRole = true;
-
-                        break;
-                    }
-                }
-            }
-
-            /* als gevonden rol geen configuratie records heeft dan defaults laden */
-            if ((map == null) || (map.size() < 1)) {
-                map = configKeeper.getConfigMap("default");
-            }
-
-            /* tree op alfabet zetten voor bepaalde klanten */
-            if (map != null) {
-                String treeOrder = (String) map.get("treeOrder");
-                if (treeOrder != null && treeOrder.equals("alphabet")) {
-                    convertTreeOrderPlim(treeObject);
-                }
-            }
-
-            request.setAttribute("configMap", map);
-        }
         //get tekstblokken
         List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_TAB);
         request.setAttribute("tekstBlokken", tekstBlokken);
@@ -606,7 +621,7 @@ public class ViewerAction extends BaseGisAction {
         return;
     }
 
-    protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas, List actieveClusters, GisPrincipal user) throws JSONException {
+    protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas, List actieveClusters, GisPrincipal user, String[] opstartKaarten) throws JSONException {
         JSONObject root = new JSONObject().put("id", "root").put("type", "root").put("title", "root");
         if (rootClusterMap == null || rootClusterMap.isEmpty()) {
             return root;
@@ -615,12 +630,12 @@ public class ViewerAction extends BaseGisAction {
         if (clusterMaps == null || clusterMaps.isEmpty()) {
             return root;
         }
-        root.put("children", getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0));
+        root.put("children", getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0, opstartKaarten));
 
         return root;
     }
 
-    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas, List actieveClusters, GisPrincipal user, int order) throws JSONException {
+    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas, List actieveClusters, GisPrincipal user, int order, String[] opstartKaarten) throws JSONException {
         if (subclusterMaps == null) {
             return clusterArray;
         }
@@ -666,9 +681,9 @@ public class ViewerAction extends BaseGisAction {
             List childrenList = (List) clMap.get("children");
 
             JSONArray childrenArray = new JSONArray();
-            order = getChildren(childrenArray, childrenList, actieveThemas, user, order);
+            order = getChildren(childrenArray, childrenList, actieveThemas, user, order, opstartKaarten);
             List subsubclusterMaps = (List) clMap.get("subclusters");
-            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order);
+            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order, opstartKaarten);
             jsonCluster.put("children", childrenArray);
 
             if (clusterArray == null) {
@@ -680,7 +695,7 @@ public class ViewerAction extends BaseGisAction {
         return clusterArray;
     }
 
-    private int getChildren(JSONArray childrenArray, List children, List actieveThemas, GisPrincipal user, int order) throws JSONException {
+    private int getChildren(JSONArray childrenArray, List children, List actieveThemas, GisPrincipal user, int order, String[] opstartKaarten) throws JSONException {
         if (children == null || childrenArray == null) {
             return order;
         }
@@ -744,11 +759,24 @@ public class ViewerAction extends BaseGisAction {
                     jsonCluster.put("analyse", "off");
                 }
             } else {
-                if (th.isVisible()) {
+                if (th.isVisible() && opstartKaarten == null) {
                     jsonCluster.put("visible", "on");
                 } else {
                     jsonCluster.put("visible", "off");
                 }
+
+                /* indien in opstartlaag array dan aanvinken */
+                String wmsLayerReal = th.getWms_layers_real();
+
+                if (wmsLayerReal != null && opstartKaarten != null && opstartKaarten.length > 0) {
+                    for (int i=0; i<opstartKaarten.length; i++) {
+
+                        if (wmsLayerReal.equalsIgnoreCase(opstartKaarten[i])) {
+                            jsonCluster.put("visible", "on");
+                        }
+                    }
+                }
+
                 if (th.isAnalyse_thema() && validAdmindataSource) {
                     jsonCluster.put("analyse", "on");
                 } else {
