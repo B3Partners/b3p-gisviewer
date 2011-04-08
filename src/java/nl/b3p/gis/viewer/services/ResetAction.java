@@ -143,4 +143,9 @@ public class ResetAction extends BaseGisAction {
 
         return getDefaultForward(mapping, request);
     }
+
+    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        
+        return mapping.findForward(SUCCESS);
+    }
 }
