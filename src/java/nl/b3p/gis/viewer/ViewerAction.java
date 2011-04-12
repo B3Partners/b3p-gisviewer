@@ -666,7 +666,7 @@ public class ViewerAction extends BaseGisAction {
             if (actieveClusters != null && actieveClusters.contains(cluster.getId())) {
                 jsonCluster.put("active", true);
                 jsonCluster.put("visible", true);
-            } else if (cluster.isDefault_visible()) {
+            } else if ((actieveClusters==null || actieveClusters.isEmpty()) && cluster.isDefault_visible()) {
                 jsonCluster.put("visible", true);
             } else {
                 jsonCluster.put("visible", false);
@@ -758,7 +758,7 @@ public class ViewerAction extends BaseGisAction {
                 } else {
                     jsonCluster.put("analyse", "off");
                 }
-            } else {
+            } else if (actieveThemas == null || actieveThemas.isEmpty()){
                 if (th.isVisible() && opstartKaarten == null) {
                     jsonCluster.put("visible", "on");
                 } else {
