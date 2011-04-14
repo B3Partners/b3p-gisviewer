@@ -698,6 +698,15 @@ public class DataStoreUtil {
                 Envelope env = geom.getEnvelopeInternal();
                 CoordinateReferenceSystem crs = f.getDefaultGeometryProperty().getDescriptor().getCoordinateReferenceSystem();
                 return new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
+            }else if((geom instanceof Point)){
+                Envelope env = geom.getEnvelopeInternal();
+                Double minX = env.getMinX() - 10;
+                Double minY = env.getMinY() + 10;
+                Double maxX = env.getMaxX() + 10;
+                Double maxY = env.getMaxY() - 10;
+
+                CoordinateReferenceSystem crs = f.getDefaultGeometryProperty().getDescriptor().getCoordinateReferenceSystem();
+                return new ReferencedEnvelope(minX, maxX, minY, maxY, crs);
             }
         }
         return null;

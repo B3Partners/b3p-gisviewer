@@ -328,7 +328,7 @@ public class GetViewerDataAction extends BaseGisAction {
      * @throws Exception
      * @deprecated
      */
-    private List getThemaObjectsWithId(Gegevensbron gb, List thema_items, HttpServletRequest request) throws Exception {
+    protected List getThemaObjectsWithId(Gegevensbron gb, List thema_items, HttpServletRequest request) throws Exception {
         if (gb == null) {
             return null;
         }
