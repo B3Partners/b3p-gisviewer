@@ -862,7 +862,7 @@ public class CollectAdmindata {
                 && FormUtils.nullIfEmpty(organizationcode) != null) {
             Filter organizationFilter = FilterBuilder.createEqualsFilter(organizationcodekey, organizationcode);
             if (sldFilter == null) {
-                //return organizationFilter;
+                return organizationFilter; 
             } else {
                 return FilterBuilder.getFactory().and(sldFilter, organizationFilter);
             }

@@ -174,17 +174,4 @@ public class SpatialUtil {
         return null;
     }
 
-    public static String getEnvelopeQuery(String tableName, String geomColumn, String attributeName, String compareValue) {
-        StringBuilder sq = new StringBuilder();
-        sq.append("select asText(ENVELOPE(\"");
-        sq.append(geomColumn);
-        sq.append("\")) from \"");
-        sq.append(tableName + "\" tb where tb.\"");
-        sq.append(attributeName);
-        sq.append("\" = '");
-        sq.append(compareValue);
-        sq.append("';");
-        return sq.toString();
-    }
-
 }
