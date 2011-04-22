@@ -40,6 +40,15 @@ public class SpatialUtil {
         return q.list();
     }
 
+    /* Functie die alle clusters teruggeeft voor in boom kaartgroep config */
+    public static List getClusters() {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        String hquery = "FROM Clusters ";
+        hquery += "ORDER BY belangnr, naam DESC";
+        Query q = sess.createQuery(hquery);
+        return q.list();
+    }
+
     public static Clusters getDefaultCluster() {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         String hquery = "FROM Clusters WHERE default_cluster = true ";
