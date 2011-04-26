@@ -453,7 +453,7 @@ public class ViewerAction extends BaseGisAction {
                 Integer zcId = zc.getId();
                 if (zoekIngangNaam == null && zoekConfigId != null && zcId.intValue() == zoekConfigId.intValue()) {
                     velden = zc.getZoekVelden();
-                } else if (zoekIngangNaam != null && zc.getNaam().equals(zoekIngangNaam)) {
+                } else if (zoekIngangNaam != null && zc.getNaam() != null && zc.getNaam().equals(zoekIngangNaam)) {
                     velden = zc.getZoekVelden();
                     zoekConfigId = zc.getId();
                 }
@@ -486,7 +486,13 @@ public class ViewerAction extends BaseGisAction {
                     }
                     if (waarde == null) {
                         waarde = "null";
-                    }                        
+                    }    
+
+                    /* Bij het zoekveld type lijkt op moet er ook %% om de waarde heen
+                     anders vind de back-end niets */
+                    if (za.getType() == 0) {
+                        waarde = "%" + waarde.trim() + "%";
+                    }
 
                     if (i < 1)
                         params += waarde;
