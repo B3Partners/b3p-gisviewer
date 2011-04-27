@@ -82,7 +82,7 @@ public class ViewerAction extends BaseGisAction {
     //de extent waarde kaart naar moet zoomen
     public static final String EXTENT = "extent";
     //de scale waar de kaart naar moet zoomen
-    public static final String SCALE = "scale";
+    public static final String RESOLUTION = "resolution";
     //de zoekConfiguratie id die moet worden gebruikt om te zoeken
     public static final String SEARCHCONFIGID = "searchConfigId";
     // zoekconfig naam om op te zoeken
@@ -354,8 +354,8 @@ public class ViewerAction extends BaseGisAction {
                 extent = null;
             }
         }
-        if (FormUtils.nullIfEmpty(request.getParameter(SCALE))!=null){
-            request.setAttribute(SCALE,request.getParameter(SCALE));
+        if (FormUtils.nullIfEmpty(request.getParameter(RESOLUTION))!=null){
+            request.setAttribute(RESOLUTION,request.getParameter(RESOLUTION));
         }
         //als er geen juiste extent is gevonden en er is een actiefthemaid meegegeven gebruik de bbox van die layer
         if (extent == null && actiefThema != null) {
