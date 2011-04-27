@@ -81,6 +81,8 @@ public class ViewerAction extends BaseGisAction {
     public static final String CLUSTERID = "clusterId";
     //de extent waarde kaart naar moet zoomen
     public static final String EXTENT = "extent";
+    //de scale waar de kaart naar moet zoomen
+    public static final String SCALE = "scale";
     //de zoekConfiguratie id die moet worden gebruikt om te zoeken
     public static final String SEARCHCONFIGID = "searchConfigId";
     // zoekconfig naam om op te zoeken
@@ -351,6 +353,9 @@ public class ViewerAction extends BaseGisAction {
                 log.error("1 of meer van de opgegeven extent coordinaten is geen getal.");
                 extent = null;
             }
+        }
+        if (FormUtils.nullIfEmpty(request.getParameter(SCALE))!=null){
+            request.setAttribute(SCALE,request.getParameter(SCALE));
         }
         //als er geen juiste extent is gevonden en er is een actiefthemaid meegegeven gebruik de bbox van die layer
         if (extent == null && actiefThema != null) {
