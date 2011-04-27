@@ -57,13 +57,13 @@ public class GetLocationData {
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
-        try {            
+        try {
             tx = sess.beginTransaction();
-            
+
             Integer id = -1;
-            
+
             id = new Integer(ggbId);
-            
+
             if (id != null) {
                 WebContext ctx = WebContextFactory.get();
                 HttpServletRequest request = ctx.getHttpServletRequest();
@@ -89,12 +89,12 @@ public class GetLocationData {
                                     Feature f = list.get(0);
                                     wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
                                 }
-                            }                            
-                        }                        
-                    }                    
+                            }
+                        }
+                    }
                 }
             }
-            
+
             tx.commit();
 
         } catch (NumberFormatException ex) {
@@ -105,7 +105,7 @@ public class GetLocationData {
             }
         } catch (Exception ex) {
             log.error("Fout tijdens ophalen wkt: " + ex);
-            
+
             if (tx != null && tx.isActive()) {
                 tx.rollback();
             }
@@ -203,14 +203,14 @@ public class GetLocationData {
         String message = "<p>Een bericht met de inhoud \"";
         message += tekst;
         message += "\" voor locatie met RD-coordinaten (";
-        message += (int)p.getX();
+        message += (int) p.getX();
         message += ",";
-        message += (int)p.getY();
+        message += (int) p.getY();
         message += ") is verzonden naar de beheerder.<p>";
 
         long now = (new Date()).getTime();
-        message += "<p>Uw referentienummer is: \""+ Long.toString(now, 32) + "\".<p>";
-        
+        message += "<p>Uw referentienummer is: \"" + Long.toString(now, 32) + "\".<p>";
+
         return message;
     }
 
@@ -268,13 +268,14 @@ public class GetLocationData {
                 tx.rollback();
             }
         }
-        
+
         return results;
     }
 
     private double roundOneDigit(double val) {
         return Math.round(10.0 * val) / 10.0;
     }
+
     /**
      * TODO vullen met properties
      * @param results
@@ -296,19 +297,19 @@ public class GetLocationData {
         }
         if (results.get("maxPolygon") != null) {
             double maxPolygon = ((Double) results.get("maxPolygon")).doubleValue();
-            maxPolygon =  roundOneDigit(maxPolygon / analyseFactor);
+            maxPolygon = roundOneDigit(maxPolygon / analyseFactor);
             results.put("maxPolygonFormatted", "Grootst oppervlak " + themaName + Double.toString(maxPolygon) + eenheid);
             results.remove("maxPolygon");
         }
         if (results.get("minPolygon") != null) {
             double minPolygon = ((Double) results.get("minPolygon")).doubleValue();
-            minPolygon =  roundOneDigit(minPolygon / analyseFactor);
+            minPolygon = roundOneDigit(minPolygon / analyseFactor);
             results.put("minPolygonFormatted", "Kleinst oppervlak " + themaName + Double.toString(minPolygon) + eenheid);
             results.remove("minPolygon");
         }
         if (results.get("avgPolygon") != null) {
             double avgPolygon = ((Double) results.get("avgPolygon")).doubleValue();
-            avgPolygon =  roundOneDigit(avgPolygon / analyseFactor);
+            avgPolygon = roundOneDigit(avgPolygon / analyseFactor);
             results.put("avgPolygonFormatted", "Gemiddeld oppervlak " + themaName + Double.toString(avgPolygon) + eenheid);
             results.remove("avgPolygon");
         }
@@ -316,25 +317,25 @@ public class GetLocationData {
         analyseFactor = 1000.0;
         if (results.get("sumLineString") != null) {
             double sumLineString = ((Double) results.get("sumLineString")).doubleValue();
-            sumLineString =  roundOneDigit(sumLineString / analyseFactor);
+            sumLineString = roundOneDigit(sumLineString / analyseFactor);
             results.put("sumLineStringFormatted", "Totale lengte " + themaName + Double.toString(sumLineString) + eenheid);
             results.remove("sumLineString");
         }
         if (results.get("maxLineString") != null) {
             double maxLineString = ((Double) results.get("maxLineString")).doubleValue();
-            maxLineString =  roundOneDigit(maxLineString / analyseFactor);
+            maxLineString = roundOneDigit(maxLineString / analyseFactor);
             results.put("maxLineStringFormatted", "Grootste lengte " + themaName + Double.toString(maxLineString) + eenheid);
             results.remove("maxLineString");
         }
         if (results.get("minLineString") != null) {
             double minLineString = ((Double) results.get("minLineString")).doubleValue();
-            minLineString =  roundOneDigit(minLineString / analyseFactor);
+            minLineString = roundOneDigit(minLineString / analyseFactor);
             results.put("minLineStringFormatted", "Kleinste lengte " + themaName + Double.toString(minLineString) + eenheid);
             results.remove("minLineString");
         }
         if (results.get("avgLineString") != null) {
             double avgLineString = ((Double) results.get("avgLineString")).doubleValue();
-            avgLineString =  roundOneDigit(avgLineString / analyseFactor);
+            avgLineString = roundOneDigit(avgLineString / analyseFactor);
             results.put("avgLineStringFormatted", "Gemiddelde lengte " + themaName + Double.toString(avgLineString) + eenheid);
             results.remove("avgLineString");
         }
@@ -515,10 +516,28 @@ public class GetLocationData {
         }
     }
 
-    /* LatLon coord teruggeven voor gebruik in Google Map url
-     Input is Point in het midden van kaartbeeld */
-    public String[] getLatLonForRDPoint(String wkt) {
-        String[] latlon = new String[2];
+    /* LatLon coordinaten en latlon span teruggeven voor gebruik in Google Map url
+    Input is Point in het midden en Point linksonder en rechtsboven van de huidige extent */
+    public String[] getLatLonForRDPoint(String centerWkt, String minWkt, String maxWkt) {
+        String[] llSpnParams = new String[4];
+
+        Point centerPoint = convertWktToLatLonPoint(centerWkt);
+        Point southWestPoint = convertWktToLatLonPoint(minWkt);
+        Point northEastPoint = convertWktToLatLonPoint(maxWkt);
+
+        double spnLat = northEastPoint.getX() - southWestPoint.getX();
+        double spnLon = northEastPoint.getY() - southWestPoint.getY();
+
+        llSpnParams[0] = Double.toString(centerPoint.getX());
+        llSpnParams[1] = Double.toString(centerPoint.getY());
+        llSpnParams[2] = Double.toString(spnLat);
+        llSpnParams[3] = Double.toString(spnLon);
+
+        return llSpnParams;
+    }
+
+    private Point convertWktToLatLonPoint(String wkt) {
+        Point p = null;
 
         try {
             Geometry sourceGeometry = DataStoreUtil.createGeomFromWKTString(wkt);
@@ -530,25 +549,20 @@ public class GetLocationData {
                 MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
 
                 if (transform != null) {
-                    Geometry targetGeometry = JTS.transform( sourceGeometry, transform);
+                    Geometry targetGeometry = JTS.transform(sourceGeometry, transform);
 
                     if (targetGeometry != null) {
                         targetGeometry.setSRID(4326);
-
-                        Point p = targetGeometry.getCentroid();
-
-                        if (p != null) {
-                            latlon[0] = Double.toString(p.getX());
-                            latlon[1] = Double.toString(p.getY());
-                        }
+                        p = targetGeometry.getCentroid();
                     }
                 }
             }
+
         } catch (Exception ex) {
-            log.error("Fout tijdens ophalen latlon: " + ex);
+            log.error("Fout tijdens conversie wkt naar latlon: " + ex);
         }
 
-        return latlon;
+        return p;
     }
 
     /**
