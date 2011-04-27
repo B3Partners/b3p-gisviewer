@@ -32,10 +32,14 @@ import java.util.Map;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import org.geotools.data.DataStore;
+import org.geotools.geometry.jts.JTS;
+import org.geotools.referencing.CRS;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.GeometryDescriptor;
 import org.opengis.feature.type.GeometryType;
 import org.opengis.filter.Filter;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.MathTransform;
 
 public class GetLocationData {
 
@@ -509,6 +513,42 @@ public class GetLocationData {
         } else {
             return FilterBuilder.getFactory().and(andFilters);
         }
+    }
+
+    /* LatLon coord teruggeven voor gebruik in Google Map url
+     Input is Point in het midden van kaartbeeld */
+    public String[] getLatLonForRDPoint(String wkt) {
+        String[] latlon = new String[2];
+
+        try {
+            Geometry sourceGeometry = DataStoreUtil.createGeomFromWKTString(wkt);
+
+            if (sourceGeometry != null) {
+                CoordinateReferenceSystem sourceCRS = CRS.decode("EPSG:28992");
+                CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326");
+
+                MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
+
+                if (transform != null) {
+                    Geometry targetGeometry = JTS.transform( sourceGeometry, transform);
+
+                    if (targetGeometry != null) {
+                        targetGeometry.setSRID(4326);
+
+                        Point p = targetGeometry.getCentroid();
+
+                        if (p != null) {
+                            latlon[0] = Double.toString(p.getX());
+                            latlon[1] = Double.toString(p.getY());
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.error("Fout tijdens ophalen latlon: " + ex);
+        }
+
+        return latlon;
     }
 
     /**
