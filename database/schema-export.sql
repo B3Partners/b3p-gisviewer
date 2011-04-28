@@ -1,157 +1,157 @@
 
     create table bron (
-        id  serial not null,
-        naam varchar(255),
-        url varchar(255),
-        gebruikersnaam varchar(255),
-        wachtwoord varchar(255),
-        volgorde int4,
+        id number(10,0) not null,
+        naam varchar2(255 char),
+        url varchar2(255 char),
+        gebruikersnaam varchar2(255 char),
+        wachtwoord varchar2(255 char),
+        volgorde number(10,0),
         primary key (id)
     );
 
     create table clusters (
-        id  serial not null,
-        naam varchar(255),
-        omschrijving varchar(255),
-        belangnr int4 not null,
-        metadatalink varchar(255),
-        default_cluster bool not null,
-        hide_legend bool not null,
-        hide_tree bool not null,
-        background_cluster bool not null,
-        extra_level bool not null,
-        callable bool not null,
-        default_visible bool not null,
-        exclusive_childs bool not null,
-        parent int4,
+        id number(10,0) not null,
+        naam varchar2(255 char),
+        omschrijving varchar2(255 char),
+        belangnr number(10,0) not null,
+        metadatalink varchar2(255 char),
+        default_cluster number(1,0) not null,
+        hide_legend number(1,0) not null,
+        hide_tree number(1,0) not null,
+        background_cluster number(1,0) not null,
+        extra_level number(1,0) not null,
+        callable number(1,0) not null,
+        default_visible number(1,0) not null,
+        exclusive_childs number(1,0) not null,
+        parent number(10,0),
         primary key (id)
     );
 
     create table configuratie (
-        id  serial not null,
-        property varchar(255),
-        propval varchar(255),
-        setting varchar(255),
-        soort varchar(255),
+        id number(10,0) not null,
+        property varchar2(255 char),
+        propval varchar2(255 char),
+        setting varchar2(255 char),
+        soort varchar2(255 char),
         primary key (id)
     );
 
     create table data_typen (
-        id  serial not null,
-        naam varchar(255),
+        id number(10,0) not null,
+        naam varchar2(255 char),
         primary key (id)
     );
 
     create table gegevensbron (
-        id  serial not null,
-        naam varchar(255),
-        bron int4,
-        admin_tabel varchar(255),
-        admin_pk varchar(255),
-        admin_query text,
-        parent int4,
-        admin_fk varchar(255),
-        admin_tabel_opmerkingen varchar(255),
-        volgordenr int4,
+        id number(10,0) not null,
+        naam varchar2(255 char),
+        bron number(10,0),
+        admin_tabel varchar2(255 char),
+        admin_pk varchar2(255 char),
+        admin_query clob,
+        parent number(10,0),
+        admin_fk varchar2(255 char),
+        admin_tabel_opmerkingen varchar2(255 char),
+        volgordenr number(10,0),
         primary key (id)
     );
 
     create table resultaatveld (
-        id  serial not null,
-        naam varchar(255),
-        label varchar(255),
-        volgorde int4,
-        attribuutnaam varchar(255),
-        soort int4,
-        zoekconfiguratie int4,
+        id number(10,0) not null,
+        naam varchar2(255 char),
+        label varchar2(255 char),
+        volgorde number(10,0),
+        attribuutnaam varchar2(255 char),
+        soort number(10,0),
+        zoekconfiguratie number(10,0),
         primary key (id)
     );
 
     create table tekstblok (
-        id  serial not null,
-        titel varchar(255) not null,
-        tekst text,
-        url varchar(255),
-        toonurl bool,
-        pagina varchar(255) not null,
-        volgordenr int4,
-        auteur varchar(255),
+        id number(10,0) not null,
+        titel varchar2(255 char) not null,
+        tekst clob,
+        url varchar2(255 char),
+        toonurl number(1,0),
+        pagina varchar2(255 char) not null,
+        volgordenr number(10,0),
+        auteur varchar2(255 char),
         cdate timestamp not null,
         primary key (id)
     );
 
     create table thema_data (
-        id  serial not null,
-        label varchar(255),
-        eenheid varchar(255),
-        omschrijving varchar(255),
-        basisregel bool not null,
-        voorbeelden varchar(255),
-        kolombreedte int4 not null,
-        waarde_type int4,
-        data_type int4,
-        commando varchar(255),
-        kolomnaam varchar(255),
-        dataorder int4,
-        gegevensbron int4,
+        id number(10,0) not null,
+        label varchar2(255 char),
+        eenheid varchar2(255 char),
+        omschrijving varchar2(255 char),
+        basisregel number(1,0) not null,
+        voorbeelden varchar2(255 char),
+        kolombreedte number(10,0) not null,
+        waarde_type number(10,0),
+        data_type number(10,0),
+        commando varchar2(255 char),
+        kolomnaam varchar2(255 char),
+        dataorder number(10,0),
+        gegevensbron number(10,0),
         primary key (id)
     );
 
     create table themas (
-        id  serial not null,
-        code varchar(255),
-        naam varchar(255),
-        metadata_link varchar(255),
-        belangnr int4 not null,
-        clusters int4 not null,
-        opmerkingen text,
-        analyse_thema bool not null,
-        locatie_thema bool not null,
-        visible bool not null,
-        wms_url varchar(255),
-        wms_layers varchar(255),
-        wms_layers_real varchar(255),
-        wms_legendlayer varchar(255),
-        wms_legendlayer_real varchar(255),
-        wms_querylayers varchar(255),
-        wms_querylayers_real varchar(255),
-        update_frequentie_in_dagen int4,
-        view_geomtype varchar(255),
-        organizationcodekey varchar(255),
-        maptipstring varchar(255),
-        sldattribuut varchar(255),
-        layoutadmindata varchar(255),
-        gegevensbron int4,
+        id number(10,0) not null,
+        code varchar2(255 char),
+        naam varchar2(255 char),
+        metadata_link varchar2(255 char),
+        belangnr number(10,0) not null,
+        clusters number(10,0) not null,
+        opmerkingen clob,
+        analyse_thema number(1,0) not null,
+        locatie_thema number(1,0) not null,
+        visible number(1,0) not null,
+        wms_url varchar2(255 char),
+        wms_layers varchar2(255 char),
+        wms_layers_real varchar2(255 char),
+        wms_legendlayer varchar2(255 char),
+        wms_legendlayer_real varchar2(255 char),
+        wms_querylayers varchar2(255 char),
+        wms_querylayers_real varchar2(255 char),
+        update_frequentie_in_dagen number(10,0),
+        view_geomtype varchar2(255 char),
+        organizationcodekey varchar2(255 char),
+        maptipstring varchar2(255 char),
+        sldattribuut varchar2(255 char),
+        layoutadmindata varchar2(255 char),
+        gegevensbron number(10,0),
         primary key (id)
     );
 
     create table waarde_typen (
-        id  serial not null,
-        naam varchar(255),
+        id number(10,0) not null,
+        naam varchar2(255 char),
         primary key (id)
     );
 
     create table zoekconfiguratie (
-        id  serial not null,
-        naam varchar(255),
-        resultlistdynamic bool,
-        featuretype varchar(255),
-        parentbron int4,
-        parentzoekconfiguratie int4,
+        id number(10,0) not null,
+        naam varchar2(255 char),
+        resultlistdynamic number(1,0),
+        featuretype varchar2(255 char),
+        parentbron number(10,0),
+        parentzoekconfiguratie number(10,0),
         primary key (id)
     );
 
     create table zoekveld (
-        id  serial not null,
-        naam varchar(255),
-        label varchar(255),
-        attribuutnaam varchar(255),
-        soort int4,
-        volgorde int4,
-        zoekconfiguratie int4,
-        inputtype int4,
-        inputsize int4,
-        inputzoekconfiguratie int4,
+        id number(10,0) not null,
+        naam varchar2(255 char),
+        label varchar2(255 char),
+        attribuutnaam varchar2(255 char),
+        soort number(10,0),
+        volgorde number(10,0),
+        zoekconfiguratie number(10,0),
+        inputtype number(10,0),
+        inputsize number(10,0),
+        inputzoekconfiguratie number(10,0),
         primary key (id)
     );
 
@@ -219,3 +219,27 @@
         add constraint FK239789828F5D4DF5 
         foreign key (inputzoekconfiguratie) 
         references zoekconfiguratie;
+
+    create sequence bron_id_seq;
+
+    create sequence clusters_id_seq;
+
+    create sequence configuratie_id_seq;
+
+    create sequence data_typen_id_seq;
+
+    create sequence gegevensbron_id_seq;
+
+    create sequence resultaatveld_id_seq;
+
+    create sequence tekstblok_id_seq;
+
+    create sequence thema_data_id_seq;
+
+    create sequence themas_id_seq;
+
+    create sequence waarde_typen_id_seq;
+
+    create sequence zoekconfiguratie_id_seq;
+
+    create sequence zoekveld_id_seq;
