@@ -85,7 +85,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="metadata_link"/>
         <property name="belangnr" not-null="true"/>
         <many-to-one column="clusters" lazy="false" name="cluster" not-null="true"/>
-        <property name="opmerkingen" type="materialized_clob"/>
+        <property name="opmerkingen" type="text"/>
         <property name="analyse_thema" not-null="true"/>
         <property name="locatie_thema" not-null="true"/>
         <property name="visible" not-null="true"/>
@@ -127,7 +127,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <many-to-one lazy="false" name="bron"/>
         <property name="admin_tabel"/>
         <property name="admin_pk"/>
-        <property name="admin_query" type="materialized_clob"/>
+        <property name="admin_query" type="text"/>
         <many-to-one column="parent" name="parent"/>
         <set cascade="all-delete-orphan" inverse="true" name="children">
             <key column="parent"/>
@@ -146,7 +146,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
             <generator class="identity"/>
         </id>
         <property name="titel" not-null="true" type="string"/>
-        <property name="tekst" type="materialized_clob"/>
+        <property name="tekst" type="text"/>
         <property name="url" type="string"/>
         <property column="toonurl" name="toonUrl" type="boolean"/>
         <property name="pagina" not-null="true" type="string"/>
