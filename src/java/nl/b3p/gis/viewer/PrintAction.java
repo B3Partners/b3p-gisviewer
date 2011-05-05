@@ -22,9 +22,6 @@
  */
 package nl.b3p.gis.viewer;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -88,9 +85,6 @@ public class PrintAction extends BaseHibernateAction {
 
         return map;
 
-    }
-
-    protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
     }
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -230,51 +224,6 @@ public class PrintAction extends BaseHibernateAction {
         String imageUrl = basePart + servletPart;
 
         return imageUrl;
-    }
-
-    private String createTempImage(CombineImageSettings settings) throws IOException {
-
-        File temp = File.createTempFile("kaart_", ".png");
-        temp.deleteOnExit();
-
-        FileOutputStream out = new FileOutputStream(temp);
-
-        try {
-            CombineImagesHandler.combineImage(out,settings,settings.getMimeType(),30000);
-
-        } catch (Exception e) {
-            logFile.error("Fout bij maken tijdelijk plaatje: " + e);
-        } finally {
-            out.close();
-        }
-
-        return temp.toURI().toString();
-    }
-
-    /* berekend nieuwe hoogte voor plaatje zodat deze overeenkomt
-     * met ingestelde kwaliteit (width) */
-    private int calcNewHeight(float ratio, int kwaliteit, int height) {
-        int hoogte = height;
-
-        if (kwaliteit >= height) {
-            hoogte = new Float(kwaliteit * ratio).intValue();
-        } else {
-            hoogte = new Float(kwaliteit / ratio).intValue();
-        }
-
-        return hoogte;
-    }
-
-    private float calcPixelRatio(int width, int height) {
-        float factor = 0;
-
-        if (width >= height) {
-            factor = new Float(height).floatValue() / width;
-        } else {
-            factor = new Float(width).floatValue() / height;
-        }
-
-        return factor;
     }
 
     private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
