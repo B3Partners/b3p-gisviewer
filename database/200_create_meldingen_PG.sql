@@ -13,4 +13,4 @@ CREATE TABLE meldingen (
 	primary key (id)
 );
 
-SELECT AddGeometryColumn ('the_geom',28992,'GEOMETRY',2);
+SELECT addgeometrycolumn ('meldingen', 'the_geom', 28992, 'GEOMETRY', 2);

@@ -24,6 +24,7 @@ import com.vividsolutions.jts.geom.MultiPoint;
 import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
+import java.sql.DriverManager;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -590,28 +591,35 @@ public class GetLocationData {
             }
             Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
             transaction = sess.beginTransaction();
-            Themas t = (Themas) sess.get(Themas.class, id);
-            if (t == null) {
+
+            Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, id);
+            if (gb == null) {
                 return returnValue;
             }
 
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
-            Bron b = (Bron) t.getConnectie(request);
+            Bron b = (Bron) gb.getBron(request);
+
             if (b == null) {
                 return returnValue;
             }
 
             if (b.checkType(Bron.TYPE_JDBC)) {
-                Connection conn = t.getJDBCConnection();
+                Connection conn = DriverManager
+                        .getConnection(b.getUrl(), b.getGebruikersnaam(), b.getWachtwoord());
 
                 /*let op indien table een view is dan kan deze alleen geupdate worden indien
                  * er een UPDATE INSTEAD rule is aangemaakt */
-                String tableName = t.getGegevensbron().getAdmin_tabel();
+                String tableName = gb.getAdmin_tabel();
 
                 try {
                     String retVal = SpatialUtil.setAttributeValue(conn, tableName, keyName, keyValueInt, attributeName, newValue);
-                    returnValue[1] = retVal;
+
+                    if (retVal != null) {
+                        returnValue[1] = retVal;
+                    }
+
                 } catch (SQLException ex) {
                     log.error("", ex);
                 } finally {
@@ -624,11 +632,12 @@ public class GetLocationData {
                     }
                 }
             } else {
-                log.error("Thema heeft geen JDBC connectie: " + t.getNaam(), new UnsupportedOperationException("Function only supports jdbc connections"));
+                log.error("Incorrecte bron: " + gb.getBron().getNaam(), new UnsupportedOperationException("Function only supports jdbc connections"));
             }
         } catch (Exception e) {
             log.error("", e);
         }
+
         return returnValue;
     }
 
