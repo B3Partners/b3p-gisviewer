@@ -154,4 +154,59 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="auteur" type="string"/>
         <property name="cdate" not-null="true" type="timestamp"/>
     </class>
+
+    <class name="nl.b3p.gis.viewer.db.UserKaartgroep">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="code" not-null="true" type="string"/>
+        <property name="clusterid" not-null="true" type="integer"/>
+        <property name="default_on" type="boolean"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.UserKaartlaag">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="code" not-null="true" type="string"/>
+        <property name="themaid" not-null="true" type="integer"/>
+        <property name="default_on" type="boolean"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.UserService">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="code" not-null="true" type="string"/>
+        <property name="url" not-null="true" type="string"/>
+        <property name="groupname" not-null="true" type="string"/>
+        <property name="sld_url" type="string"/>
+        <set cascade="all-delete-orphan" lazy="false" name="user_layers" order-by="id, title">
+            <key column="serviceid"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.UserLayer"/>
+        </set>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.UserLayer">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <many-to-one lazy="false" name="serviceid"/>
+        <property name="title" type="string"/>
+        <property name="name" type="string"/>
+        <property name="queryable" type="boolean"/>
+        <property name="scalehint_min" type="string"/>
+        <property name="scalehint_max" type="string"/>
+        <property name="use_style" type="string"/>
+        <property name="sld_part" type="string"/>
+        <property name="default_on" type="boolean"/>
+        <set cascade="all-delete-orphan" lazy="false" name="user_layer_styles" order-by="id, name">
+            <key column="layerid"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.UserLayerStyle"/>
+        </set>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.UserLayerStyle">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <many-to-one lazy="false" name="layerid"/>
+        <property name="name" type="string"/>
+    </class>
 </hibernate-mapping>

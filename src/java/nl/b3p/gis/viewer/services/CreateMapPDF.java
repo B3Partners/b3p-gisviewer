@@ -89,7 +89,7 @@ public class CreateMapPDF extends HttpServlet {
 
         String pageSize = FormUtils.nullIfEmpty(request.getParameter("pageSize"));
         boolean landscape = Boolean.valueOf(request.getParameter("landscape")).booleanValue();
-        String outputType = OUTPUT_PDF_PRINT;
+        String outputType = OUTPUT_PDF;
         if (FormUtils.nullIfEmpty(request.getParameter("outputType")) != null) {
             outputType = FormUtils.nullIfEmpty(request.getParameter("outputType"));
         }
