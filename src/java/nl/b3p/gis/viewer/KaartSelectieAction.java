@@ -3,6 +3,9 @@ package nl.b3p.gis.viewer;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.gis.viewer.db.UserKaartlaag;
+import nl.b3p.gis.viewer.db.UserLayer;
+import nl.b3p.gis.viewer.db.UserLayerStyle;
+import nl.b3p.gis.viewer.db.UserService;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,15 +24,20 @@ public class KaartSelectieAction extends ViewerCrudAction {
     @Override
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm,
             HttpServletRequest request, HttpServletResponse response) throws Exception {
-        
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();        
-
-        //UserKaartlaag ukl = new UserKaartlaag("1", 1, true);
-        //sess.save(ukl);
-
-        //List user_kaartgroepen = sess.createQuery("from UserKaartgroep").list();
-        //request.setAttribute("user_kaartgroepen", user_kaartgroepen);
 
         return mapping.findForward(SUCCESS);
+    }
+
+    private void testAddService() {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        UserService us = new UserService("123", "http://service.nl/service?", "Groep 1");
+        UserLayer ul = new UserLayer(us, "laag 1", true, true);
+        UserLayerStyle uls = new UserLayerStyle(ul, "default");
+
+        ul.addStyle(uls);
+        us.addLayer(ul);
+
+        sess.save(us);
     }
 }

@@ -1,5 +1,6 @@
 package nl.b3p.gis.viewer.db;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -13,7 +14,7 @@ public class UserService {
     private String url;
     private String groupname;
     private String sld_url;
-    private Set user_layers;
+    private Set user_layers = new HashSet<UserLayer>();
 
     public UserService() {
     }
@@ -70,5 +71,9 @@ public class UserService {
 
     public void setUser_layers(Set user_layers) {
         this.user_layers = user_layers;
+    }
+
+    public void addLayer(UserLayer ul) {
+        this.user_layers.add(ul);
     }
 }

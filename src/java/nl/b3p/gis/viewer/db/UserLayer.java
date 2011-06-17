@@ -1,5 +1,6 @@
 package nl.b3p.gis.viewer.db;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -18,7 +19,7 @@ public class UserLayer {
     private String use_style;
     private String sld_part;
     private Boolean default_on;
-    private Set user_layer_styles;
+    private Set user_layer_styles = new HashSet<UserLayerStyle>();
 
     public UserLayer() {
     }
@@ -116,5 +117,9 @@ public class UserLayer {
 
     public void setUser_layer_styles(Set user_layer_styles) {
         this.user_layer_styles = user_layer_styles;
+    }
+
+    public void addStyle(UserLayerStyle uls) {
+        this.user_layer_styles.add(uls);
     }
 }
