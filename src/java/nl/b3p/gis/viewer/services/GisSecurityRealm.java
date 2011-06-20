@@ -139,10 +139,13 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             if (isInSPCache(key)) {
                 sp = getFromSPCache(key);
 
-                /* wachtwoord controleren. Anders kun je nadat de serviceprovider
-                 * de eerste gecached is inloggen met de username zonder een geldig wachtwoord
-                 * in te vullen */
-                if (username != null && username.length() > 0 && password != null ) {
+                /* Wachtwoord controleren. Anders kun je nadat de serviceprovider
+                 * de eerste gecached is inloggen met de username zonder een geldig
+                 * wachtwoord in te vullen. Dus bekijken we of het wachtwoord voor
+                 * de gecachte serviceprovider is gezet en houden we die tegen het
+                 * ingevulde wachtwoord aan.
+                 */
+                if (username != null && username.length() > 0 && sp.getPassword() != null ) {
                     if (!sp.getPassword().equals(password)) {
                         return null;
                     }
