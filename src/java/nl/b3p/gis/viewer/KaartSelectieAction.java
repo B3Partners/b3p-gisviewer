@@ -3,6 +3,8 @@ package nl.b3p.gis.viewer;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -13,6 +15,8 @@ import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.db.UserKaartgroep;
+import nl.b3p.gis.viewer.db.UserKaartlaag;
 import nl.b3p.gis.viewer.db.UserLayer;
 import nl.b3p.gis.viewer.db.UserLayerStyle;
 import nl.b3p.gis.viewer.db.UserService;
@@ -37,9 +41,6 @@ public class KaartSelectieAction extends BaseGisAction {
 
     private static final Log log = LogFactory.getLog(KaartSelectieAction.class);
 
-    public static final String ID = "id";
-    public static final String CLUSTERID = "clusterId";
-
     protected static final String SAVE = "save";
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm,
@@ -51,9 +52,64 @@ public class KaartSelectieAction extends BaseGisAction {
     }
 
     public ActionForward save(ActionMapping mapping, DynaValidatorForm dynaForm,
-            HttpServletRequest request, HttpServletResponse response) throws Exception {
+            HttpServletRequest request, HttpServletResponse response) throws Exception {        
 
         String[] kaartgroepenAan = (String[]) dynaForm.get("kaartgroepenAan");
+        String[] kaartlagenAan = (String[]) dynaForm.get("kaartlagenAan");
+        String[] kaartgroepenDefaultAan = (String[]) dynaForm.get("kaartgroepenDefaultAan");
+        String[] kaartlagenDefaultAan = (String[]) dynaForm.get("kaartlagenDefaultAan");
+
+        /* groepen en lagen die default aan staan ook toevoegen aan
+         * kaartgroepenAan en kaartlagenAan arrays. */
+        kaartgroepenAan = addDefaultOnValues(kaartgroepenDefaultAan, kaartgroepenAan);
+        kaartlagenAan = addDefaultOnValues(kaartlagenDefaultAan, kaartlagenAan);
+
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        String code = user.getCode();
+
+        /* Eerst alle huidige records verwijderen. Dan hoeven we geen
+         * onoverzichtelijke if meuk toe te voegen om te kijken of er vinkjes
+         * ergens wel of niet aan staan en dan wissen */
+        removeExistingUserKaartgroepAndLayers(code);
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        /* Opslaan user kaartgroepen */
+        for (int i=0; i < kaartgroepenAan.length; i++) {
+            Integer clusterId = new Integer(kaartgroepenAan[i]);
+            boolean defaultOn = isKaartGroepDefaultOn(kaartgroepenDefaultAan, clusterId);
+
+            UserKaartgroep groep = getUserKaartGroep(code, clusterId);
+
+            if (groep != null) {
+                groep.setDefault_on(defaultOn);
+                sess.merge(groep);
+            } else {
+                UserKaartgroep newGroep = new UserKaartgroep(code, clusterId, defaultOn);
+                sess.save(newGroep);
+            }
+        }
+        
+        /* Opslaan user kaartlagen */
+        for (int j=0; j < kaartlagenAan.length; j++) {
+            Integer themaId = new Integer(kaartlagenAan[j]);
+            boolean defaultOn = isKaartlaagDefaultOn(kaartlagenDefaultAan, themaId);
+
+            UserKaartlaag laag = getUserKaartlaag(code, themaId);
+
+            if (laag != null) {
+                laag.setDefault_on(defaultOn);
+                sess.merge(laag);
+            } else {
+                UserKaartlaag newLaag = new UserKaartlaag(code, themaId, defaultOn);
+                sess.save(newLaag);
+            }
+        }
+
+        //dynaForm.set("kaartgroepenAan", kaartgroepenAan);
+        //dynaForm.set("kaartlagenAan", kaartlagenAan);
+        //dynaForm.set("kaartgroepenDefaultAan", kaartgroepenDefaultAan);
+        //dynaForm.set("kaartlagenDefaultAan", kaartlagenDefaultAan);
 
         setTree(request);
 
@@ -63,13 +119,16 @@ public class KaartSelectieAction extends BaseGisAction {
     private void setTree(HttpServletRequest request) throws JSONException, Exception {
 
         List ctl = SpatialUtil.getValidClusters();
+
+        /* Nodig zodat ongeconfigureerde layers niet getoond worden */
+        HibernateUtil.setUseKaartenbalieCluster(false);
+
         List themalist = getValidThemas(false, ctl, request);
         Map rootClusterMap = getClusterMap(themalist, ctl, null);
 
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        String[] arrKaarten = null;
 
-        JSONObject treeObject = createJasonObject(rootClusterMap, null, null, user, arrKaarten);
+        JSONObject treeObject = createJasonObject(rootClusterMap, user);
         request.setAttribute("tree", treeObject);
     }
 
@@ -124,7 +183,7 @@ public class KaartSelectieAction extends BaseGisAction {
         return children;
     }
 
-    protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas, List actieveClusters, GisPrincipal user, String[] opstartKaarten) throws JSONException {
+    protected JSONObject createJasonObject(Map rootClusterMap, GisPrincipal user) throws JSONException {
         JSONObject root = new JSONObject().put("id", "root").put("type", "root").put("title", "root");
         if (rootClusterMap == null || rootClusterMap.isEmpty()) {
             return root;
@@ -133,15 +192,20 @@ public class KaartSelectieAction extends BaseGisAction {
         if (clusterMaps == null || clusterMaps.isEmpty()) {
             return root;
         }
-        root.put("children", getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0, opstartKaarten));
+        root.put("children", getSubClusters(clusterMaps, null, user, 0));
 
         return root;
     }
 
-    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas, List actieveClusters, GisPrincipal user, int order, String[] opstartKaarten) throws JSONException {
+    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, GisPrincipal user, int order) throws JSONException {
+
+        /* ophalen user kaartgroepen voor aanzetten vinkjes */
+        List<UserKaartgroep> groepen = getUserKaartGroepen(user.getCode());
+
         if (subclusterMaps == null) {
             return clusterArray;
         }
+
         Iterator it = subclusterMaps.iterator();
         while (it.hasNext()) {
             Map clMap = (Map) it.next();
@@ -166,14 +230,9 @@ public class KaartSelectieAction extends BaseGisAction {
                 jsonCluster.put("exclusive_childs", false);
             }
             setExtraClusterProperties(jsonCluster, cluster);
-            if (actieveClusters != null && actieveClusters.contains(cluster.getId())) {
-                jsonCluster.put("active", true);
-                jsonCluster.put("visible", true);
-            } else if ((actieveClusters==null || actieveClusters.isEmpty()) && cluster.isDefault_visible()) {
-                jsonCluster.put("visible", true);
-            } else {
-                jsonCluster.put("visible", false);
-            }
+
+            jsonCluster.put("visible", true);
+            
             if (cluster.getMetadatalink() != null) {
                 String metadatalink = cluster.getMetadatalink();
                 metadatalink = metadatalink.replaceAll("%id%", "" + cluster.getId());
@@ -181,12 +240,27 @@ public class KaartSelectieAction extends BaseGisAction {
             } else {
                 jsonCluster.put("metadatalink", "#");
             }
+
+            /* kijken of cluster voorkomt in user kaartgroepen */
+            jsonCluster.put("groepSelected", false);
+            jsonCluster.put("groupDefaultOn", false);
+
+            for (UserKaartgroep kaartGroep : groepen) {
+                if (cluster.getId().intValue() == kaartGroep.getClusterid().intValue()) {
+                    jsonCluster.put("groepSelected", true);
+
+                    if (kaartGroep.getDefault_on()) {
+                        jsonCluster.put("groupDefaultOn", true);
+                    }
+                }
+            }
+
             List childrenList = (List) clMap.get("children");
 
             JSONArray childrenArray = new JSONArray();
-            order = getChildren(childrenArray, childrenList, actieveThemas, user, order, opstartKaarten);
+            order = getChildren(childrenArray, childrenList, user, order);
             List subsubclusterMaps = (List) clMap.get("subclusters");
-            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order, opstartKaarten);
+            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, user, order);
             jsonCluster.put("children", childrenArray);
 
             if (clusterArray == null) {
@@ -231,10 +305,13 @@ public class KaartSelectieAction extends BaseGisAction {
         }
     }
 
-    private int getChildren(JSONArray childrenArray, List children, List actieveThemas, GisPrincipal user, int order, String[] opstartKaarten) throws JSONException {
+    private int getChildren(JSONArray childrenArray, List children, GisPrincipal user, int order) throws JSONException {
         if (children == null || childrenArray == null) {
             return order;
         }
+
+        /* ophalen user kaartgroepen voor aanzetten vinkjes */
+        List<UserKaartlaag> lagen = getUserKaartLagen(user.getCode());
 
         Iterator it = children.iterator();
         while (it.hasNext()) {
@@ -287,38 +364,8 @@ public class KaartSelectieAction extends BaseGisAction {
                 jsonCluster.put("maptipfield", th.getMaptipstring());
             }
 
-            if (actieveThemas != null && themaId != null && actieveThemas.contains(themaId)) {
-                jsonCluster.put("visible", "on");
-                if (th.isAnalyse_thema() && validAdmindataSource) {
-                    jsonCluster.put("analyse", "active");
-                } else {
-                    jsonCluster.put("analyse", "off");
-                }
-            } else if (actieveThemas == null || actieveThemas.isEmpty()){
-                if (th.isVisible() && opstartKaarten == null) {
-                    jsonCluster.put("visible", "on");
-                } else {
-                    jsonCluster.put("visible", "off");
-                }
-
-                /* indien in opstartlaag array dan aanvinken */
-                String wmsLayerReal = th.getWms_layers_real();
-
-                if (wmsLayerReal != null && opstartKaarten != null && opstartKaarten.length > 0) {
-                    for (int i=0; i<opstartKaarten.length; i++) {
-
-                        if (wmsLayerReal.equalsIgnoreCase(opstartKaarten[i])) {
-                            jsonCluster.put("visible", "on");
-                        }
-                    }
-                }
-
-                if (th.isAnalyse_thema() && validAdmindataSource) {
-                    jsonCluster.put("analyse", "on");
-                } else {
-                    jsonCluster.put("analyse", "off");
-                }
-            }
+            jsonCluster.put("visible", "on");
+            jsonCluster.put("analyse", "off");
 
             /* Extra property die gebruikt wordt voor highLightThemaObject
              * deze gebruikte eerste analyse property maar de highlight knop
@@ -329,6 +376,20 @@ public class KaartSelectieAction extends BaseGisAction {
                 jsonCluster.put("highlight", "on");
             else
                 jsonCluster.put("highlight", "off");
+
+            /* kijken of thema voorkomt in user kaartlagen */
+            jsonCluster.put("kaartSelected", false);
+            jsonCluster.put("kaartDefaultOn", false);
+
+            for (UserKaartlaag kaartlaag : lagen) {
+                if (th.getId().intValue() == kaartlaag.getThemaid().intValue()) {
+                    jsonCluster.put("kaartSelected", true);
+
+                    if (kaartlaag.getDefault_on()) {
+                        jsonCluster.put("kaartDefaultOn", true);
+                    }
+                }
+            }
 
             /*Set some cluster properties that are used by the thema.*/
             Clusters cluster = th.getCluster();
@@ -409,6 +470,40 @@ public class KaartSelectieAction extends BaseGisAction {
         sess.save(us);
     }
 
+    private UserKaartgroep getUserKaartGroep(String code, Integer clusterId) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List groepen = sess.createQuery("from UserKaartgroep where code = :code and"
+                + " clusterid = :clusterid")
+                .setParameter("code", code)
+                .setParameter("clusterid", clusterId)
+                .setMaxResults(1)
+                .list();
+
+        if (groepen != null && groepen.size() == 1) {
+            return (UserKaartgroep) groepen.get(0);
+        }
+
+        return null;
+    }
+
+    private UserKaartlaag getUserKaartlaag(String code, Integer themaId) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List groepen = sess.createQuery("from UserKaartlaag where code = :code and"
+                + " themaid = :themaid")
+                .setParameter("code", code)
+                .setParameter("themaid", themaId)
+                .setMaxResults(1)
+                .list();
+
+        if (groepen != null && groepen.size() == 1) {
+            return (UserKaartlaag) groepen.get(0);
+        }
+
+        return null;
+    }
+
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
 
@@ -420,5 +515,85 @@ public class KaartSelectieAction extends BaseGisAction {
         map.put(SAVE, hibProp);
 
         return map;
+    }
+
+    private boolean isKaartGroepDefaultOn(String[] kaartgroepenDefaultAan, Integer clusterId) {
+
+        boolean defaultOn = false;
+
+        for (int i=0; i < kaartgroepenDefaultAan.length; i++) {
+            Integer defaultOnId = new Integer(kaartgroepenDefaultAan[i]);
+
+            if (defaultOnId.intValue() == clusterId.intValue()) {
+                defaultOn = true;
+                break;
+            }
+        }
+
+        return defaultOn;
+    }
+
+    private boolean isKaartlaagDefaultOn(String[] kaartlagenDefaultAan, Integer themaId) {
+
+        boolean defaultOn = false;
+
+        for (int i=0; i < kaartlagenDefaultAan.length; i++) {
+            Integer defaultOnId = new Integer(kaartlagenDefaultAan[i]);
+
+            if (defaultOnId.intValue() == themaId.intValue()) {
+                defaultOn = true;
+                break;
+            }
+        }
+
+        return defaultOn;
+    }
+
+    private List<UserKaartgroep> getUserKaartGroepen(String code) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserKaartgroep> groepen = sess.createQuery("from UserKaartgroep where code = :code")
+                .setParameter("code", code)
+                .list();
+
+        return groepen;
+    }
+
+    private List<UserKaartlaag> getUserKaartLagen(String code) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserKaartlaag> lagen = sess.createQuery("from UserKaartlaag where code = :code")
+                .setParameter("code", code)
+                .list();
+
+        return lagen;
+    }
+
+    private void removeExistingUserKaartgroepAndLayers(String code) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        int deletedGroepen = sess.createQuery("delete from UserKaartgroep where code = :code")
+                .setParameter("code", code)
+                .executeUpdate();
+
+        int deletedlagen = sess.createQuery("delete from UserKaartlaag where code = :code")
+                .setParameter("code", code)
+                .executeUpdate();
+    }
+
+    private String[] addDefaultOnValues(String[] defaults, String[] current) {
+        List col2 = new ArrayList();
+        
+        /* eerst huidige waardes erin stoppen */
+        col2.addAll(Arrays.asList(current));
+
+        /* daarna de nieuwe default waardes toevoegen */
+        for (int j=0; j < defaults.length; j++) {
+            if (!col2.contains(defaults[j])) {
+                col2.add(defaults[j]);
+            }
+        }
+
+        return (String[]) col2.toArray(new String[0]);
     }
 }
