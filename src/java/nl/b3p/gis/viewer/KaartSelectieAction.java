@@ -1,5 +1,6 @@
 package nl.b3p.gis.viewer;
 
+import java.net.URI;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -28,6 +29,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
+import org.geotools.data.ows.StyleImpl;
+import org.geotools.data.wms.WMSUtils;
+import org.geotools.data.wms.WebMapServer;
 import org.hibernate.Session;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -40,6 +44,7 @@ public class KaartSelectieAction extends BaseGisAction {
 
     private static final Log log = LogFactory.getLog(KaartSelectieAction.class);
     protected static final String SAVE = "save";
+    protected static final String SAVE_WMS_SERVICE = "saveWMSService";
 
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
@@ -53,6 +58,13 @@ public class KaartSelectieAction extends BaseGisAction {
         hibProp.setAlternateMessageKey("message.layerselection.failed");
         map.put(SAVE, hibProp);
 
+        hibProp = new ExtendedMethodProperties(SAVE_WMS_SERVICE);
+        hibProp.setDefaultForwardName(SUCCESS);
+        hibProp.setDefaultMessageKey("message.userwms.success");
+        hibProp.setAlternateForwardName(FAILURE);
+        hibProp.setAlternateMessageKey("message.userwms.failed");
+        map.put(SAVE_WMS_SERVICE, hibProp);
+
         return map;
     }
 
@@ -65,7 +77,7 @@ public class KaartSelectieAction extends BaseGisAction {
     }
 
     public ActionForward save(ActionMapping mapping, DynaValidatorForm dynaForm,
-            HttpServletRequest request, HttpServletResponse response) throws Exception {        
+            HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         String[] kaartgroepenAan = (String[]) dynaForm.get("kaartgroepenAan");
         String[] kaartlagenAan = (String[]) dynaForm.get("kaartlagenAan");
@@ -88,7 +100,7 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         /* Opslaan user kaartgroepen */
-        for (int i=0; i < kaartgroepenAan.length; i++) {
+        for (int i = 0; i < kaartgroepenAan.length; i++) {
             Integer clusterId = new Integer(kaartgroepenAan[i]);
             boolean defaultOn = isKaartGroepDefaultOn(kaartgroepenDefaultAan, clusterId);
 
@@ -102,9 +114,9 @@ public class KaartSelectieAction extends BaseGisAction {
                 sess.save(newGroep);
             }
         }
-        
+
         /* Opslaan user kaartlagen */
-        for (int j=0; j < kaartlagenAan.length; j++) {
+        for (int j = 0; j < kaartlagenAan.length; j++) {
             Integer themaId = new Integer(kaartlagenAan[j]);
             boolean defaultOn = isKaartlaagDefaultOn(kaartlagenDefaultAan, themaId);
 
@@ -122,6 +134,84 @@ public class KaartSelectieAction extends BaseGisAction {
         setTree(request);
 
         return mapping.findForward(SUCCESS);
+    }
+
+    public ActionForward saveWMSService(ActionMapping mapping, DynaValidatorForm dynaForm,
+            HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+        String groupName = (String) dynaForm.get("groupName");
+        String serviceUrl = (String) dynaForm.get("serviceUrl");
+        String sldUrl = (String) dynaForm.get("sldUrl");
+
+        /* controleren of serviceUrl al voorkomt bij gebruiker */
+
+        /* WMS Service layers ophalen met Geotools */
+        URI uri = new URI(serviceUrl);
+        WebMapServer wms = new WebMapServer(uri.toURL(), 30000);
+        org.geotools.data.ows.Layer[] layers = WMSUtils.getNamedLayers(wms.getCapabilities());
+
+        /* Nieuwe UserService entity aanmaken en opslaan */
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        String code = user.getCode();
+
+        UserService us = new UserService(code, serviceUrl, groupName);
+
+        /* Layers van service toevoegen aan user layers */
+        for (int i = layers.length - 1; i >= 0; i--) {
+            UserLayer ul = createUserLayer(layers[i]);
+            ul.setServiceid(us);
+
+            us.addLayer(ul);
+        }
+
+        sess.save(us);
+
+        setTree(request);
+
+        return mapping.findForward(SUCCESS);
+    }
+
+    private UserLayer createUserLayer(org.geotools.data.ows.Layer layer) {
+        String layerTitle = layer.getTitle();
+        String layerName = layer.getName();
+        boolean queryable = layer.isQueryable();
+        double scaleMin = layer.getScaleDenominatorMin();
+        double scaleMax = layer.getScaleDenominatorMax();
+
+        UserLayer ul = new UserLayer();
+
+        if (layerName != null && !layerName.isEmpty()) {
+            ul.setName(layerName);
+        }
+
+        if (layerTitle != null && !layerTitle.isEmpty()) {
+            ul.setTitle(layerTitle);
+        }
+
+        ul.setQueryable(queryable);
+
+        if (scaleMin > 0) {
+            ul.setScalehint_min(Double.toString(scaleMin));
+        }
+
+        if (scaleMax > 0) {
+            ul.setScalehint_max(Double.toString(scaleMax));
+        }
+
+        List<StyleImpl> styles = layer.getStyles();
+
+        for (StyleImpl style : styles) {
+            String styleName = style.getName();
+
+            if (styleName != null && !styleName.isEmpty()) {
+                UserLayerStyle uls = new UserLayerStyle(ul, styleName);
+                ul.addStyle(uls);
+            }
+        }
+
+        return ul;
     }
 
     private void setTree(HttpServletRequest request) throws JSONException, Exception {
@@ -226,8 +316,9 @@ public class KaartSelectieAction extends BaseGisAction {
             jsonCluster.put("type", "child");
 
             String titel = cluster.getNaam();
-            if (titel == null || titel.equals(""))
+            if (titel == null || titel.equals("")) {
                 titel = "(geen naam opgegeven)";
+            }
 
             jsonCluster.put("title", titel);
             jsonCluster.put("cluster", true);
@@ -240,7 +331,7 @@ public class KaartSelectieAction extends BaseGisAction {
             setExtraClusterProperties(jsonCluster, cluster);
 
             jsonCluster.put("visible", true);
-            
+
             if (cluster.getMetadatalink() != null) {
                 String metadatalink = cluster.getMetadatalink();
                 metadatalink = metadatalink.replaceAll("%id%", "" + cluster.getId());
@@ -356,8 +447,9 @@ public class KaartSelectieAction extends BaseGisAction {
              * in de boom. */
             if (log.isDebugEnabled()) {
                 String title = jsonCluster.getString("title");
-                if (title == null || title.equals(""))
+                if (title == null || title.equals("")) {
                     title = "(geen naam opgegeven)";
+                }
 
                 jsonCluster.put("title", title + "(" + order + ")");
             }
@@ -380,10 +472,11 @@ public class KaartSelectieAction extends BaseGisAction {
              * hoeft nu alleen maar te highlighten en geen info meer op te halen.
              * Dus analyse moet ook aanstaan als er geen valdAdmindatasource is.
              */
-            if (th.isAnalyse_thema())
+            if (th.isAnalyse_thema()) {
                 jsonCluster.put("highlight", "on");
-            else
+            } else {
                 jsonCluster.put("highlight", "off");
+            }
 
             /* kijken of thema voorkomt in user kaartlagen */
             jsonCluster.put("kaartSelected", false);
@@ -482,11 +575,7 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         List groepen = sess.createQuery("from UserKaartgroep where code = :code and"
-                + " clusterid = :clusterid")
-                .setParameter("code", code)
-                .setParameter("clusterid", clusterId)
-                .setMaxResults(1)
-                .list();
+                + " clusterid = :clusterid").setParameter("code", code).setParameter("clusterid", clusterId).setMaxResults(1).list();
 
         if (groepen != null && groepen.size() == 1) {
             return (UserKaartgroep) groepen.get(0);
@@ -499,11 +588,7 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         List groepen = sess.createQuery("from UserKaartlaag where code = :code and"
-                + " themaid = :themaid")
-                .setParameter("code", code)
-                .setParameter("themaid", themaId)
-                .setMaxResults(1)
-                .list();
+                + " themaid = :themaid").setParameter("code", code).setParameter("themaid", themaId).setMaxResults(1).list();
 
         if (groepen != null && groepen.size() == 1) {
             return (UserKaartlaag) groepen.get(0);
@@ -516,7 +601,7 @@ public class KaartSelectieAction extends BaseGisAction {
 
         boolean defaultOn = false;
 
-        for (int i=0; i < kaartgroepenDefaultAan.length; i++) {
+        for (int i = 0; i < kaartgroepenDefaultAan.length; i++) {
             Integer defaultOnId = new Integer(kaartgroepenDefaultAan[i]);
 
             if (defaultOnId.intValue() == clusterId.intValue()) {
@@ -532,7 +617,7 @@ public class KaartSelectieAction extends BaseGisAction {
 
         boolean defaultOn = false;
 
-        for (int i=0; i < kaartlagenDefaultAan.length; i++) {
+        for (int i = 0; i < kaartlagenDefaultAan.length; i++) {
             Integer defaultOnId = new Integer(kaartlagenDefaultAan[i]);
 
             if (defaultOnId.intValue() == themaId.intValue()) {
@@ -547,23 +632,19 @@ public class KaartSelectieAction extends BaseGisAction {
     private void removeExistingUserKaartgroepAndLayers(String code) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
-        int deletedGroepen = sess.createQuery("delete from UserKaartgroep where code = :code")
-                .setParameter("code", code)
-                .executeUpdate();
+        int deletedGroepen = sess.createQuery("delete from UserKaartgroep where code = :code").setParameter("code", code).executeUpdate();
 
-        int deletedlagen = sess.createQuery("delete from UserKaartlaag where code = :code")
-                .setParameter("code", code)
-                .executeUpdate();
+        int deletedlagen = sess.createQuery("delete from UserKaartlaag where code = :code").setParameter("code", code).executeUpdate();
     }
 
     private String[] addDefaultOnValues(String[] defaults, String[] current) {
         List col2 = new ArrayList();
-        
+
         /* eerst huidige waardes erin stoppen */
         col2.addAll(Arrays.asList(current));
 
         /* daarna de nieuwe default waardes toevoegen */
-        for (int j=0; j < defaults.length; j++) {
+        for (int j = 0; j < defaults.length; j++) {
             if (!col2.contains(defaults[j])) {
                 col2.add(defaults[j]);
             }
