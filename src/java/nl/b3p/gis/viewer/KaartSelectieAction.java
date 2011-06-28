@@ -4,7 +4,6 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -40,8 +39,22 @@ import org.json.JSONObject;
 public class KaartSelectieAction extends BaseGisAction {
 
     private static final Log log = LogFactory.getLog(KaartSelectieAction.class);
-
     protected static final String SAVE = "save";
+
+    protected Map getActionMethodPropertiesMap() {
+        Map map = new HashMap();
+
+        ExtendedMethodProperties hibProp = null;
+
+        hibProp = new ExtendedMethodProperties(SAVE);
+        hibProp.setDefaultForwardName(SUCCESS);
+        hibProp.setDefaultMessageKey("message.layerselection.success");
+        hibProp.setAlternateForwardName(FAILURE);
+        hibProp.setAlternateMessageKey("message.layerselection.failed");
+        map.put(SAVE, hibProp);
+
+        return map;
+    }
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm,
             HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -105,11 +118,6 @@ public class KaartSelectieAction extends BaseGisAction {
                 sess.save(newLaag);
             }
         }
-
-        //dynaForm.set("kaartgroepenAan", kaartgroepenAan);
-        //dynaForm.set("kaartlagenAan", kaartlagenAan);
-        //dynaForm.set("kaartgroepenDefaultAan", kaartgroepenDefaultAan);
-        //dynaForm.set("kaartlagenDefaultAan", kaartlagenDefaultAan);
 
         setTree(request);
 
@@ -502,19 +510,6 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         return null;
-    }
-
-    protected Map getActionMethodPropertiesMap() {
-        Map map = new HashMap();
-
-        ExtendedMethodProperties hibProp = null;
-
-        hibProp = new ExtendedMethodProperties(SAVE);
-        hibProp.setDefaultForwardName(SAVE);
-        hibProp.setAlternateForwardName(FAILURE);
-        map.put(SAVE, hibProp);
-
-        return map;
     }
 
     private boolean isKaartGroepDefaultOn(String[] kaartgroepenDefaultAan, Integer clusterId) {
