@@ -208,7 +208,7 @@ public class KaartSelectieAction extends BaseGisAction {
     private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, GisPrincipal user, int order) throws JSONException {
 
         /* ophalen user kaartgroepen voor aanzetten vinkjes */
-        List<UserKaartgroep> groepen = getUserKaartGroepen(user.getCode());
+        List<UserKaartgroep> groepen = SpatialUtil.getUserKaartGroepen(user.getCode());
 
         if (subclusterMaps == null) {
             return clusterArray;
@@ -319,7 +319,7 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         /* ophalen user kaartgroepen voor aanzetten vinkjes */
-        List<UserKaartlaag> lagen = getUserKaartLagen(user.getCode());
+        List<UserKaartlaag> lagen = SpatialUtil.getUserKaartLagen(user.getCode());
 
         Iterator it = children.iterator();
         while (it.hasNext()) {
@@ -542,26 +542,6 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         return defaultOn;
-    }
-
-    private List<UserKaartgroep> getUserKaartGroepen(String code) {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-        List<UserKaartgroep> groepen = sess.createQuery("from UserKaartgroep where code = :code")
-                .setParameter("code", code)
-                .list();
-
-        return groepen;
-    }
-
-    private List<UserKaartlaag> getUserKaartLagen(String code) {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-        List<UserKaartlaag> lagen = sess.createQuery("from UserKaartlaag where code = :code")
-                .setParameter("code", code)
-                .list();
-
-        return lagen;
     }
 
     private void removeExistingUserKaartgroepAndLayers(String code) {

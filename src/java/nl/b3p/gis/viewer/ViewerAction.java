@@ -47,6 +47,8 @@ import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.db.UserKaartgroep;
+import nl.b3p.gis.viewer.db.UserKaartlaag;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
@@ -143,7 +145,7 @@ public class ViewerAction extends BaseGisAction {
     // <editor-fold defaultstate="" desc="public ActionForward knop(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)">
     public ActionForward list(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        List themalist = getValidThemas(false, null, request);
+        List themalist = getValidUserThemas(false, null, request);
         request.setAttribute("themalist", themalist);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
@@ -165,6 +167,7 @@ public class ViewerAction extends BaseGisAction {
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         //als er geen user principal is (ook geen anoniem) dan forwarden naar de login.
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+
         if (user == null) {
             log.info("Geen user beschikbaar, ook geen anoniem. Forward naar login om te proberen een user te maken met login gegevens.");
             return mapping.findForward(LOGIN);
@@ -186,8 +189,12 @@ public class ViewerAction extends BaseGisAction {
     protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         super.createLists(dynaForm, request);
         List ctl = SpatialUtil.getValidClusters();
-        List themalist = getValidThemas(false, ctl, request);
-        Map rootClusterMap = getClusterMap(themalist, ctl, null);
+        List themalist = getValidUserThemas(false, ctl, request);
+
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        String userCode = user.getCode();
+
+        Map rootClusterMap = getClusterMap(themalist, ctl, null, userCode);
         List actieveThemas = null;
         if (FormUtils.nullIfEmpty(request.getParameter(ID)) != null) {
             actieveThemas = new ArrayList();
@@ -226,7 +233,6 @@ public class ViewerAction extends BaseGisAction {
                 actieveClusters = null;
             }
         }
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
 
         /* Ophalen toegekende kaartenbalie rollen van ingelogde gebruiker */
         Set roles = user.getRoles();
@@ -565,7 +571,7 @@ public class ViewerAction extends BaseGisAction {
         return ca;
     }
 
-    private Map getClusterMap(List themalist, List clusterlist, Clusters rootCluster) throws JSONException, Exception {
+    private Map getClusterMap(List themalist, List clusterlist, Clusters rootCluster, String userCode) throws JSONException, Exception {
         if (themalist == null || clusterlist == null) {
             return null;
         }
@@ -575,8 +581,9 @@ public class ViewerAction extends BaseGisAction {
         Iterator it = clusterlist.iterator();
         while (it.hasNext()) {
             Clusters cluster = (Clusters) it.next();
+
             if (rootCluster == cluster.getParent()) {
-                Map clusterMap = getClusterMap(themalist, clusterlist, cluster);
+                Map clusterMap = getClusterMap(themalist, clusterlist, cluster, userCode);
                 if (clusterMap == null || clusterMap.isEmpty()) {
                     continue;
                 }
@@ -711,9 +718,30 @@ public class ViewerAction extends BaseGisAction {
             return order;
         }
 
+        /* ophalen user kaartlagen om custom boom op te bouwen */
+        List<UserKaartlaag> lagen = SpatialUtil.getUserKaartLagen(user.getCode());
+
         Iterator it = children.iterator();
         while (it.hasNext()) {
             Themas th = (Themas) it.next();
+
+            /* controleren of thema in user kaartlagen voorkomt */
+            boolean defaultOn = false;
+            if (lagen != null && lagen.size() > 0) {
+                boolean isInList = false;
+                for (UserKaartlaag laag: lagen) {
+                    if (laag.getThemaid() == th.getId()) {
+                        isInList = true;
+
+                        if (laag.getDefault_on()) {
+                            defaultOn = true;
+                        }
+                    }
+                }
+
+                if (!isInList)
+                    continue;
+            }
             
             /* TODO: validAdmindataSource ging eerst via th.hasValidAdmindataSource(user)
              * maar dit duurt soms erg lang, nu wordt er gekeken of er een gegevensbron is */
@@ -793,6 +821,13 @@ public class ViewerAction extends BaseGisAction {
                 } else {
                     jsonCluster.put("analyse", "off");
                 }
+            }
+
+            /* user kaartlaag default on zetten */
+            if (defaultOn && lagen.size() > 0) {
+                jsonCluster.put("visible", "on");
+            } else if (!defaultOn && lagen.size() > 0) {
+                jsonCluster.put("visible", "off");
             }
 
             /* Extra property die gebruikt wordt voor highLightThemaObject

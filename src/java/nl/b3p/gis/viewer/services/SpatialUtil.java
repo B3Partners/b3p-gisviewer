@@ -15,6 +15,8 @@ import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.db.UserKaartgroep;
+import nl.b3p.gis.viewer.db.UserKaartlaag;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.Query;
@@ -183,4 +185,23 @@ public class SpatialUtil {
         return null;
     }
 
+    public static List<UserKaartgroep> getUserKaartGroepen(String code) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserKaartgroep> groepen = sess.createQuery("from UserKaartgroep where code = :code")
+                .setParameter("code", code)
+                .list();
+
+        return groepen;
+    }
+
+    public static List<UserKaartlaag> getUserKaartLagen(String code) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserKaartlaag> lagen = sess.createQuery("from UserKaartlaag where code = :code")
+                .setParameter("code", code)
+                .list();
+
+        return lagen;
+    }
 }

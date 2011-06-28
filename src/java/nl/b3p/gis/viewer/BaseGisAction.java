@@ -9,6 +9,7 @@ import nl.b3p.gis.viewer.admindata.CollectAdmindata;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.db.UserKaartlaag;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
@@ -23,12 +24,11 @@ import org.hibernate.Session;
 public abstract class BaseGisAction extends BaseHibernateAction {
 
     private static final Log logger = LogFactory.getLog(BaseGisAction.class);
-
     public static final String URL_AUTH = "code";
     protected static final double DEFAULTTOLERANCE = 5.0;
     protected static final String ACKNOWLEDGE_MESSAGES = "acknowledgeMessages";
 
-     protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
+    protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
         String code = null;
         if (gp != null) {
@@ -91,10 +91,10 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         String themaid = (String) request.getParameter("themaid");
         return getThema(themaid, request);
     }
-    
+
     protected Gegevensbron getGegevensbron(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request) {
         String bronId = (String) request.getParameter("themaid");
-        
+
         return getGegevensbron(bronId, request);
     }
 
@@ -133,28 +133,28 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      */
     private Themas getThema(String themaid, HttpServletRequest request) {
         Themas t = SpatialUtil.getThema(themaid);
-        logger.debug("getting thema: " + t==null?"<null>":t.getNaam());
+        logger.debug("getting thema: " + t == null ? "<null>" : t.getNaam());
 
         if (!HibernateUtil.isCheckLoginKaartenbalie()) {
-            logger.debug("No kb login required, thema: " + t==null?"<null>":t.getNaam());
+            logger.debug("No kb login required, thema: " + t == null ? "<null>" : t.getNaam());
             return t;
         }
 
         // Zoek layers die via principal binnen komen
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         if (user == null) {
-            logger.debug("No user found, thema: " + t==null?"<null>":t.getNaam());
+            logger.debug("No user found, thema: " + t == null ? "<null>" : t.getNaam());
             return null;
         }
         List layersFromRoles = user.getLayerNames(false);
         if (layersFromRoles == null) {
-            logger.debug("No layers found, thema: " + t==null?"<null>":t.getNaam());
+            logger.debug("No layers found, thema: " + t == null ? "<null>" : t.getNaam());
             return null;
         }
 
         // Check de rechten op alle layers uit het thema
         if (!checkThemaLayers(t, layersFromRoles)) {
-            logger.debug("No rights for layers found, thema: " + t==null?"<null>":t.getNaam());
+            logger.debug("No rights for layers found, thema: " + t == null ? "<null>" : t.getNaam());
             return null;
         }
 
@@ -192,6 +192,121 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             Iterator it2 = configuredThemasList.iterator();
             while (it2.hasNext()) {
                 Themas t = (Themas) it2.next();
+
+                // Als geen check via kaartenbalie dan alle layers doorgeven
+                if (checkThemaLayers(t, layersFromRoles)
+                        || !HibernateUtil.isCheckLoginKaartenbalie()) {
+                    checkedThemaList.add(t);
+                    layersFound.add(t.getWms_layers_real());
+                }
+            }
+        }
+
+        // als alleen configureerde layers getoond mogen worden,
+        // dan hier stoppen
+        if (!HibernateUtil.isUseKaartenbalieCluster()) {
+            return checkedThemaList;
+        }
+
+        //zoek of maak een cluster aan voor als er kaarten worden gevonden die geen thema hebben.
+        Clusters c = SpatialUtil.getDefaultCluster();
+        if (c == null) {
+            c = new Clusters();
+            c.setNaam(HibernateUtil.getKaartenbalieCluster());
+            c.setParent(null);
+        }
+
+        Iterator it = layersFromRoles.iterator();
+        int tid = 100000;
+        ArrayList extraThemaList = new ArrayList();
+        // Kijk welke lagen uit de rollen nog niet zijn toegevoegd
+        // en voeg deze alsnog toe via dummy thema en cluster.
+        while (it.hasNext()) {
+            String layer = (String) it.next();
+            if (layersFound.contains(layer)) {
+                continue;
+            }
+
+            // Layer bestaat nog niet dus aanmaken
+            Layer l = user.getLayer(layer);
+            if (l != null) {
+                Themas t = new Themas();
+                t.setNaam(l.getTitle());
+                t.setId(new Integer(tid++));
+                if (user.hasLegendGraphic(l)) {
+                    t.setWms_legendlayer_real(layer);
+                }
+                if ("1".equalsIgnoreCase(l.getQueryable())) {
+                    t.setWms_querylayers_real(layer);
+                }
+                t.setWms_layers_real(layer);
+                t.setCluster(c);
+                // voeg extra laag als nieuw thema toe
+                extraThemaList.add(t);
+            }
+        }
+        if (extraThemaList.size() > 0) {
+            if (ctl == null) {
+                ctl = new ArrayList();
+            }
+            ctl.add(c);
+            for (int i = 0; i < extraThemaList.size(); i++) {
+                checkedThemaList.add(extraThemaList.get(i));
+            }
+        }
+
+        return checkedThemaList;
+    }
+
+    /**
+     * Indien een cluster wordt meegegeven dan voegt deze functie ook de layers
+     * die niet als thema geconfigureerd zijn, maar toch als role aan de principal
+     * zijn meegegeven als dummy thema toe. Als dit niet de bedoeling is dan
+     * dient null als cluster meegegeven te worden.
+     *
+     * @param locatie
+     * @param request
+     * @return
+     */
+    protected List getValidUserThemas(boolean locatie, List ctl, HttpServletRequest request) {
+        List configuredThemasList = SpatialUtil.getValidThemas(locatie);
+
+        List layersFromRoles = null;
+        // Zoek layers die via principal binnen komen
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        if (user != null) {
+            layersFromRoles = user.getLayerNames(false);
+        }
+        if (layersFromRoles == null) {
+            return null;
+        }
+
+        /* ophalen user kaartlagen om custom boom op te bouwen */
+        List<UserKaartlaag> lagen = SpatialUtil.getUserKaartLagen(user.getCode());
+
+        // Voeg alle themas toe die layers hebben die volgens de rollen
+        // acceptabel zijn (voldoende rechten dus).
+        List layersFound = new ArrayList();
+        List checkedThemaList = new ArrayList();
+        if (configuredThemasList != null) {
+            Iterator it2 = configuredThemasList.iterator();
+            while (it2.hasNext()) {
+                Themas t = (Themas) it2.next();
+
+                /* controleren of thema in user kaartlagen voorkomt */
+                if (lagen != null && lagen.size() > 0) {
+                    boolean isInList = false;
+                    for (UserKaartlaag laag : lagen) {
+                        if (laag.getThemaid() == t.getId()) {
+                            isInList = true;
+                        }
+                    }
+
+                    if (!isInList) {
+                        continue;
+                    }
+                }
+
                 // Als geen check via kaartenbalie dan alle layers doorgeven
                 if (checkThemaLayers(t, layersFromRoles)
                         || !HibernateUtil.isCheckLoginKaartenbalie()) {
@@ -314,9 +429,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         List tekstBlokken = sess.createQuery("from Tekstblok where pagina = :pagina"
-                + " order by volgordenr, cdate")
-                .setParameter("pagina", pagina)
-                .list();
+                + " order by volgordenr, cdate").setParameter("pagina", pagina).list();
 
         return tekstBlokken;
     }
