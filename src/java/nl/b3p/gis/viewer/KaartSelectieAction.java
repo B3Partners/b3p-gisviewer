@@ -160,10 +160,23 @@ public class KaartSelectieAction extends BaseGisAction {
 
         /* Layers van service toevoegen aan user layers */
         for (int i = layers.length - 1; i >= 0; i--) {
-            UserLayer ul = createUserLayer(layers[i]);
-            ul.setServiceid(us);
 
-            us.addLayer(ul);
+            /* parent layer toevoegen en children */
+            if (layers[i].getParent() == null) {
+                UserLayer ul = createUserLayer(layers[i], null);
+                ul.setServiceid(us);
+                us.addLayer(ul);
+
+                if (layers[i].getChildren().length > 0) {
+                    org.geotools.data.ows.Layer[] childs = layers[i].getChildren();
+
+                    for (int j=0; j < childs.length; j++) {
+                        UserLayer cl = createUserLayer(childs[j], ul);
+                        ul.setServiceid(us);
+                        us.addLayer(cl);
+                    }
+                }
+            }
         }
 
         sess.save(us);
@@ -173,7 +186,7 @@ public class KaartSelectieAction extends BaseGisAction {
         return mapping.findForward(SUCCESS);
     }
 
-    private UserLayer createUserLayer(org.geotools.data.ows.Layer layer) {
+    private UserLayer createUserLayer(org.geotools.data.ows.Layer layer, UserLayer parent) {
         String layerTitle = layer.getTitle();
         String layerName = layer.getName();
         boolean queryable = layer.isQueryable();
@@ -209,6 +222,10 @@ public class KaartSelectieAction extends BaseGisAction {
                 UserLayerStyle uls = new UserLayerStyle(ul, styleName);
                 ul.addStyle(uls);
             }
+        }
+
+        if (parent != null) {
+            ul.setParent(parent);
         }
 
         return ul;

@@ -19,6 +19,8 @@ public class UserLayer {
     private String use_style;
     private String sld_part;
     private Boolean default_on;
+    private UserLayer parent;
+
     private Set user_layer_styles = new HashSet<UserLayerStyle>();
 
     public UserLayer() {
@@ -117,6 +119,14 @@ public class UserLayer {
 
     public void setUser_layer_styles(Set user_layer_styles) {
         this.user_layer_styles = user_layer_styles;
+    }
+
+    public UserLayer getParent() {
+        return parent;
+    }
+
+    public void setParent(UserLayer parent) {
+        this.parent = parent;
     }
 
     public void addStyle(UserLayerStyle uls) {

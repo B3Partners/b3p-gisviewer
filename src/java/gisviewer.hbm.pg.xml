@@ -197,6 +197,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="use_style" type="string"/>
         <property name="sld_part" type="string"/>
         <property name="default_on" type="boolean"/>
+        <many-to-one class="nl.b3p.gis.viewer.db.UserLayer" name="parent"/>
         <set cascade="all-delete-orphan" lazy="false" name="user_layer_styles" order-by="id, name">
             <key column="layerid"/>
             <one-to-many class="nl.b3p.gis.viewer.db.UserLayerStyle"/>
