@@ -158,24 +158,21 @@ public class KaartSelectieAction extends BaseGisAction {
 
         UserService us = new UserService(code, serviceUrl, groupName);
 
-        /* Layers van service toevoegen aan user layers */
-        for (int i = layers.length - 1; i >= 0; i--) {
+        /* Eerst parents ophalen. */
+        List<org.geotools.data.ows.Layer> parents = getParentLayers(layers);
 
-            /* parent layer toevoegen en children */
-            if (layers[i].getParent() == null) {
-                UserLayer ul = createUserLayer(layers[i], null);
-                ul.setServiceid(us);
+        for (org.geotools.data.ows.Layer layer : parents) {
+            UserLayer ul = createUserLayers(us, layer, null);
+            us.addLayer(ul);
+        }
+
+        /* Indien geen parents gevonden maar wel layers dan gewoon allemaal
+         * toevoegen.
+         */
+        if (parents.size() < 1) {
+            for (int i=0; i < layers.length; i++) {
+                UserLayer ul = createUserLayers(us, layers[i], null);
                 us.addLayer(ul);
-
-                if (layers[i].getChildren().length > 0) {
-                    org.geotools.data.ows.Layer[] childs = layers[i].getChildren();
-
-                    for (int j=0; j < childs.length; j++) {
-                        UserLayer cl = createUserLayer(childs[j], ul);
-                        ul.setServiceid(us);
-                        us.addLayer(cl);
-                    }
-                }
             }
         }
 
@@ -186,7 +183,19 @@ public class KaartSelectieAction extends BaseGisAction {
         return mapping.findForward(SUCCESS);
     }
 
-    private UserLayer createUserLayer(org.geotools.data.ows.Layer layer, UserLayer parent) {
+    private List<org.geotools.data.ows.Layer> getParentLayers(org.geotools.data.ows.Layer[] layers) {
+        List<org.geotools.data.ows.Layer> parents = new ArrayList();
+
+        for (int i=0; i < layers.length; i++) {
+            if (layers[i].getChildren().length > 0 || layers[i].getParent() == null) {
+                parents.add(layers[i]);
+            }
+        }
+
+        return parents;
+    }
+
+    private UserLayer createUserLayers(UserService us, org.geotools.data.ows.Layer layer, UserLayer parent) {
         String layerTitle = layer.getTitle();
         String layerName = layer.getName();
         boolean queryable = layer.isQueryable();
@@ -194,6 +203,8 @@ public class KaartSelectieAction extends BaseGisAction {
         double scaleMax = layer.getScaleDenominatorMax();
 
         UserLayer ul = new UserLayer();
+
+        ul.setServiceid(us);
 
         if (layerName != null && !layerName.isEmpty()) {
             ul.setName(layerName);
@@ -226,6 +237,12 @@ public class KaartSelectieAction extends BaseGisAction {
 
         if (parent != null) {
             ul.setParent(parent);
+        }
+
+        org.geotools.data.ows.Layer[] childs = layer.getChildren();
+        for (int i=0; i < childs.length; i++) {
+            UserLayer child = createUserLayers(us, childs[i], ul);
+            us.addLayer(child);
         }
 
         return ul;
