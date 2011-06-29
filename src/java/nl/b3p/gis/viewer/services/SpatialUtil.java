@@ -82,7 +82,7 @@ public class SpatialUtil {
         Themas t = (Themas) sess.get(Themas.class, id);
         return t;
     }
-    
+
     public static Gegevensbron getGegevensbron(String gbId) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         if (gbId == null || gbId.length() == 0) {
@@ -91,7 +91,7 @@ public class SpatialUtil {
 
         Integer id = new Integer(gbId);
         Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, id);
-        
+
         return gb;
     }
 
@@ -172,7 +172,6 @@ public class SpatialUtil {
         conn.setAutoCommit(orgAutoCommit);
         return newValue;
     }
-
 
     public static Geometry geometrieFromText(String wktgeom, int srid) {
         WKTReader wktreader = new WKTReader(new GeometryFactory(new PrecisionModel(), srid));

@@ -18,6 +18,7 @@ public class UserLayer {
     private String scalehint_max;
     private String use_style;
     private String sld_part;
+    private Boolean show;
     private Boolean default_on;
     private UserLayer parent;
 
@@ -131,5 +132,13 @@ public class UserLayer {
 
     public void addStyle(UserLayerStyle uls) {
         this.user_layer_styles.add(uls);
+    }
+
+    public Boolean getShow() {
+        return show;
+    }
+
+    public void setShow(Boolean show) {
+        this.show = show;
     }
 }

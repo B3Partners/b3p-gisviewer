@@ -33,6 +33,7 @@ import org.geotools.data.ows.StyleImpl;
 import org.geotools.data.wms.WMSUtils;
 import org.geotools.data.wms.WebMapServer;
 import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -68,26 +69,35 @@ public class KaartSelectieAction extends BaseGisAction {
         return map;
     }
 
-    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm,
-            HttpServletRequest request, HttpServletResponse response) throws Exception {
-
+    private void reloadFormData(HttpServletRequest request) throws JSONException, Exception {
         setTree(request);
+        setUserviceTrees(request);
+    }
+
+    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm,
+            HttpServletRequest request, HttpServletResponse response)
+            throws JSONException, Exception {
+
+        reloadFormData(request);
 
         return mapping.findForward(SUCCESS);
     }
 
     public ActionForward save(ActionMapping mapping, DynaValidatorForm dynaForm,
-            HttpServletRequest request, HttpServletResponse response) throws Exception {
+            HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
 
         String[] kaartgroepenAan = (String[]) dynaForm.get("kaartgroepenAan");
         String[] kaartlagenAan = (String[]) dynaForm.get("kaartlagenAan");
         String[] kaartgroepenDefaultAan = (String[]) dynaForm.get("kaartgroepenDefaultAan");
         String[] kaartlagenDefaultAan = (String[]) dynaForm.get("kaartlagenDefaultAan");
+        String[] layersAan = (String[]) dynaForm.get("layersAan");
+        String[] layersDefaultAan = (String[]) dynaForm.get("layersDefaultAan");
 
-        /* groepen en lagen die default aan staan ook toevoegen aan
-         * kaartgroepenAan en kaartlagenAan arrays. */
+        /* groepen en lagen die default aan staan ook toevoegen aan arrays */
         kaartgroepenAan = addDefaultOnValues(kaartgroepenDefaultAan, kaartgroepenAan);
         kaartlagenAan = addDefaultOnValues(kaartlagenDefaultAan, kaartlagenAan);
+        layersAan = addDefaultOnValues(layersDefaultAan, layersAan);
 
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         String code = user.getCode();
@@ -129,9 +139,23 @@ public class KaartSelectieAction extends BaseGisAction {
                 UserKaartlaag newLaag = new UserKaartlaag(code, themaId, defaultOn);
                 sess.save(newLaag);
             }
+        }        
+
+        /* Opslaan Service layers */
+        for (int k = 0; k < layersAan.length; k++) {
+            Integer layerId = new Integer(layersAan[k]);
+            boolean defaultOn = isKaartlaagDefaultOn(layersDefaultAan, layerId);
+
+            UserLayer layer = getUserLayerById(layerId);
+
+            if (layer != null) {
+                layer.setDefault_on(defaultOn);
+                layer.setShow(true);
+                sess.merge(layer);
+            }
         }
 
-        setTree(request);
+        reloadFormData(request);
 
         return mapping.findForward(SUCCESS);
     }
@@ -170,7 +194,7 @@ public class KaartSelectieAction extends BaseGisAction {
          * toevoegen.
          */
         if (parents.size() < 1) {
-            for (int i=0; i < layers.length; i++) {
+            for (int i = 0; i < layers.length; i++) {
                 UserLayer ul = createUserLayers(us, layers[i], null);
                 us.addLayer(ul);
             }
@@ -178,7 +202,7 @@ public class KaartSelectieAction extends BaseGisAction {
 
         sess.save(us);
 
-        setTree(request);
+        reloadFormData(request);
 
         return mapping.findForward(SUCCESS);
     }
@@ -186,7 +210,7 @@ public class KaartSelectieAction extends BaseGisAction {
     private List<org.geotools.data.ows.Layer> getParentLayers(org.geotools.data.ows.Layer[] layers) {
         List<org.geotools.data.ows.Layer> parents = new ArrayList();
 
-        for (int i=0; i < layers.length; i++) {
+        for (int i = 0; i < layers.length; i++) {
             if (layers[i].getChildren().length > 0 || layers[i].getParent() == null) {
                 parents.add(layers[i]);
             }
@@ -240,7 +264,7 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         org.geotools.data.ows.Layer[] childs = layer.getChildren();
-        for (int i=0; i < childs.length; i++) {
+        for (int i = 0; i < childs.length; i++) {
             UserLayer child = createUserLayers(us, childs[i], ul);
             us.addLayer(child);
         }
@@ -609,7 +633,10 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         List groepen = sess.createQuery("from UserKaartgroep where code = :code and"
-                + " clusterid = :clusterid").setParameter("code", code).setParameter("clusterid", clusterId).setMaxResults(1).list();
+                + " clusterid = :clusterid").setParameter("code", code)
+                .setParameter("clusterid", clusterId)
+                .setMaxResults(1)
+                .list();
 
         if (groepen != null && groepen.size() == 1) {
             return (UserKaartgroep) groepen.get(0);
@@ -622,10 +649,28 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         List groepen = sess.createQuery("from UserKaartlaag where code = :code and"
-                + " themaid = :themaid").setParameter("code", code).setParameter("themaid", themaId).setMaxResults(1).list();
+                + " themaid = :themaid").setParameter("code", code)
+                .setParameter("themaid", themaId)
+                .setMaxResults(1)
+                .list();
 
         if (groepen != null && groepen.size() == 1) {
             return (UserKaartlaag) groepen.get(0);
+        }
+
+        return null;
+    }
+
+    private UserLayer getUserLayerById(Integer layerId) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List layers = sess.createQuery("from UserLayer where id = :id")
+                .setParameter("id", layerId)
+                .setMaxResults(1)
+                .list();
+
+        if (layers != null && layers.size() == 1) {
+            return (UserLayer) layers.get(0);
         }
 
         return null;
@@ -665,10 +710,24 @@ public class KaartSelectieAction extends BaseGisAction {
 
     private void removeExistingUserKaartgroepAndLayers(String code) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+       
+        int deletedGroepen = sess.createQuery("delete from UserKaartgroep where code = :code")
+            .setParameter("code", code)
+            .executeUpdate();
 
-        int deletedGroepen = sess.createQuery("delete from UserKaartgroep where code = :code").setParameter("code", code).executeUpdate();
+        int deletedlagen = sess.createQuery("delete from UserKaartlaag where code = :code")
+                .setParameter("code", code)
+                .executeUpdate();
 
-        int deletedlagen = sess.createQuery("delete from UserKaartlaag where code = :code").setParameter("code", code).executeUpdate();
+        List<UserService> services = getUserServices(code);
+        for (UserService service : services) {
+            int updateLayers = sess.createQuery("update UserLayer set default_on = :on,"
+                + " show = :show where serviceid = :service")
+                .setParameter("on", null)
+                .setParameter("show", null)
+                .setParameter("service", service)
+                .executeUpdate();
+        }
     }
 
     private String[] addDefaultOnValues(String[] defaults, String[] current) {
@@ -685,5 +744,127 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         return (String[]) col2.toArray(new String[0]);
+    }
+    
+    private List<UserService> getUserServices(String code) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        
+        List<UserService> services = sess.createQuery("from UserService where code = :code")
+                .setParameter("code", code)
+                .list();
+        
+        return services;
+    }
+    
+    private void setUserviceTrees(HttpServletRequest request) throws JSONException, Exception {
+        List<JSONObject> servicesTrees = new ArrayList();
+        
+        /* user services ophalen */
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        String code = user.getCode();
+        
+        List<UserService> services = getUserServices(code);
+        
+        /* per service een tree maken */
+        for (UserService service : services) {
+            JSONObject tree = createUserServiceTree(service);
+            servicesTrees.add(tree);
+        }
+        
+        /* lijst van tree's klaarzetten */
+        request.setAttribute("servicesTrees", servicesTrees);
+    }
+
+    protected JSONObject createUserServiceTree(UserService service) throws JSONException, Exception {
+        JSONObject root = new JSONObject();
+
+        root.put("id", "0");
+        root.put("title", "root");
+        root.put("name", "root");
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        List ctl = sess.createQuery("from UserLayer where serviceid = :service"
+                + " order by name, title, id")
+                .setParameter("service", service)
+                .list();
+
+        Map rootLayerMap = getUserLayersMap(ctl, null);
+        List lMaps = (List) rootLayerMap.get("sublayers");
+
+        root.put("children", getSubLayers(lMaps, null));
+
+        return root;
+    }
+
+    private Map getUserLayersMap(List layerList, UserLayer root) throws JSONException, Exception {
+        if (layerList == null) {
+            return null;
+        }
+
+        List subLayers = null;
+        Iterator it = layerList.iterator();
+        while (it.hasNext()) {
+            UserLayer la = (UserLayer) it.next();
+            if (root == la.getParent()) {
+                Map lMap = getUserLayersMap(layerList, la);
+                if (lMap == null || lMap.isEmpty()) {
+                    continue;
+                }
+                if (subLayers == null) {
+                    subLayers = new ArrayList();
+                }
+                subLayers.add(lMap);
+            }
+        }
+
+        Map lNode = new HashMap();
+        lNode.put("sublayers", subLayers);
+        lNode.put("userlayer", root);
+
+        return lNode;
+    }
+
+    private JSONArray getSubLayers(List subLayers, JSONArray layersArray) throws JSONException {
+        if (subLayers == null) {
+            return layersArray;
+        }
+
+        Iterator it = subLayers.iterator();
+        while (it.hasNext()) {
+            Map lMap = (Map) it.next();
+
+            UserLayer layer = (UserLayer) lMap.get("userlayer");
+
+            JSONObject jsonLayer = new JSONObject();
+
+            jsonLayer.put("id", layer.getId().intValue());
+            jsonLayer.put("serviceid", layer.getServiceid().getId().intValue());
+            jsonLayer.put("title", layer.getTitle());
+            jsonLayer.put("name", layer.getName());
+            jsonLayer.put("queryable", layer.getQueryable());
+            jsonLayer.put("scalehintmin", layer.getScalehint_min());
+            jsonLayer.put("scalehintmax", layer.getScalehint_max());
+            jsonLayer.put("use_style", layer.getUse_style());
+            jsonLayer.put("sld_part", layer.getSld_part());
+            jsonLayer.put("show", layer.getShow());
+            jsonLayer.put("default_on", layer.getDefault_on());
+
+            List subsubMaps = (List) lMap.get("sublayers");
+
+            if (subsubMaps != null && !subsubMaps.isEmpty()) {
+                JSONArray childrenArray = new JSONArray();
+
+                childrenArray = getSubLayers(subsubMaps, childrenArray);
+                jsonLayer.put("children", childrenArray);
+            }
+
+            if (layersArray == null) {
+                layersArray = new JSONArray();
+            }
+
+            layersArray.put(jsonLayer);
+        }
+
+        return layersArray;
     }
 }
