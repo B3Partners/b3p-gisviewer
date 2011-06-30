@@ -974,7 +974,7 @@ public class ViewerAction extends BaseGisAction {
         Map rootLayerMap = getUserLayersMap(ctl, null);
         List lMaps = (List) rootLayerMap.get("sublayers");
 
-        root.put("children", getSubLayers(lMaps, null));
+        root.put("children", getSubLayers(lMaps, null, service));
 
         return root;
     }
@@ -1007,10 +1007,15 @@ public class ViewerAction extends BaseGisAction {
         return lNode;
     }
 
-    private JSONArray getSubLayers(List subLayers, JSONArray layersArray) throws JSONException {
+    private JSONArray getSubLayers(List subLayers, JSONArray layersArray, UserService service)
+            throws JSONException {
+
         if (subLayers == null) {
             return layersArray;
         }
+
+        String serviceUrl = service.getUrl();
+        String serviceSld = service.getSld_url();
 
         Iterator it = subLayers.iterator();
         while (it.hasNext()) {
@@ -1031,13 +1036,15 @@ public class ViewerAction extends BaseGisAction {
             jsonLayer.put("sld_part", layer.getSld_part());
             jsonLayer.put("show", layer.getShow());
             jsonLayer.put("default_on", layer.getDefault_on());
+            jsonLayer.put("service_url", serviceUrl);
+            jsonLayer.put("service_sld", serviceSld);
 
             List subsubMaps = (List) lMap.get("sublayers");
 
             if (subsubMaps != null && !subsubMaps.isEmpty()) {
                 JSONArray childrenArray = new JSONArray();
 
-                childrenArray = getSubLayers(subsubMaps, childrenArray);
+                childrenArray = getSubLayers(subsubMaps, childrenArray, service);
                 jsonLayer.put("children", childrenArray);
             }
 
