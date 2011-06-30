@@ -779,8 +779,8 @@ public class KaartSelectieAction extends BaseGisAction {
         JSONObject root = new JSONObject();
 
         root.put("id", "0");
-        root.put("title", "root");
-        root.put("name", "root");
+        root.put("title", service.getGroupname());
+        root.put("name", service.getGroupname());
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List ctl = sess.createQuery("from UserLayer where serviceid = :service"
