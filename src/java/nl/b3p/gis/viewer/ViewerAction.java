@@ -47,8 +47,9 @@ import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
-import nl.b3p.gis.viewer.db.UserKaartgroep;
 import nl.b3p.gis.viewer.db.UserKaartlaag;
+import nl.b3p.gis.viewer.db.UserLayer;
+import nl.b3p.gis.viewer.db.UserService;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
@@ -314,6 +315,9 @@ public class ViewerAction extends BaseGisAction {
                 convertTreeOrderPlim(treeObject);
             }
         }
+
+        /* Klaarzetten UserLayers uit eigen toegevoegde WMS Services */
+        setUserviceTrees(request);
 
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(PrecisionModel.FLOATING), 28992);
         Polygon extentBbox = null;
@@ -937,5 +941,113 @@ public class ViewerAction extends BaseGisAction {
         } else {
             jsonCluster.put("callable", false);
         }
+    }
+
+    private void setUserviceTrees(HttpServletRequest request) throws JSONException, Exception {
+        List<JSONObject> servicesTrees = new ArrayList();
+
+        /* user services ophalen */
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        String code = user.getCode();
+
+        List<UserService> services = SpatialUtil.getValidUserServices(code);
+        
+        /* per service een tree maken */
+        for (UserService service : services) {
+            JSONObject tree = createUserServiceTree(service);
+            servicesTrees.add(tree);
+        }
+
+        /* lijst van tree's klaarzetten */
+        request.setAttribute("servicesTrees", servicesTrees);
+    }
+
+    protected JSONObject createUserServiceTree(UserService service) throws JSONException, Exception {
+        JSONObject root = new JSONObject();
+
+        root.put("id", "0");
+        root.put("title", service.getGroupname());
+        root.put("name", service.getGroupname());
+
+        List<UserLayer> ctl = SpatialUtil.getValidUserLayers(service);
+
+        Map rootLayerMap = getUserLayersMap(ctl, null);
+        List lMaps = (List) rootLayerMap.get("sublayers");
+
+        root.put("children", getSubLayers(lMaps, null));
+
+        return root;
+    }
+
+    private Map getUserLayersMap(List layerList, UserLayer root) throws JSONException, Exception {
+        if (layerList == null) {
+            return null;
+        }
+
+        List subLayers = null;
+        Iterator it = layerList.iterator();
+        while (it.hasNext()) {
+            UserLayer la = (UserLayer) it.next();
+            if (root == la.getParent()) {
+                Map lMap = getUserLayersMap(layerList, la);
+                if (lMap == null || lMap.isEmpty()) {
+                    continue;
+                }
+                if (subLayers == null) {
+                    subLayers = new ArrayList();
+                }
+                subLayers.add(lMap);
+            }
+        }
+
+        Map lNode = new HashMap();
+        lNode.put("sublayers", subLayers);
+        lNode.put("userlayer", root);
+
+        return lNode;
+    }
+
+    private JSONArray getSubLayers(List subLayers, JSONArray layersArray) throws JSONException {
+        if (subLayers == null) {
+            return layersArray;
+        }
+
+        Iterator it = subLayers.iterator();
+        while (it.hasNext()) {
+            Map lMap = (Map) it.next();
+
+            UserLayer layer = (UserLayer) lMap.get("userlayer");
+
+            JSONObject jsonLayer = new JSONObject();
+
+            jsonLayer.put("id", layer.getId().intValue());
+            jsonLayer.put("serviceid", layer.getServiceid().getId().intValue());
+            jsonLayer.put("title", layer.getTitle());
+            jsonLayer.put("name", layer.getName());
+            jsonLayer.put("queryable", layer.getQueryable());
+            jsonLayer.put("scalehintmin", layer.getScalehint_min());
+            jsonLayer.put("scalehintmax", layer.getScalehint_max());
+            jsonLayer.put("use_style", layer.getUse_style());
+            jsonLayer.put("sld_part", layer.getSld_part());
+            jsonLayer.put("show", layer.getShow());
+            jsonLayer.put("default_on", layer.getDefault_on());
+
+            List subsubMaps = (List) lMap.get("sublayers");
+
+            if (subsubMaps != null && !subsubMaps.isEmpty()) {
+                JSONArray childrenArray = new JSONArray();
+
+                childrenArray = getSubLayers(subsubMaps, childrenArray);
+                jsonLayer.put("children", childrenArray);
+            }
+
+            if (layersArray == null) {
+                layersArray = new JSONArray();
+            }
+
+            layersArray.put(jsonLayer);
+        }
+
+        return layersArray;
     }
 }

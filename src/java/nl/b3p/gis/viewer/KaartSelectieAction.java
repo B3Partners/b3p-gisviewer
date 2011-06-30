@@ -105,7 +105,8 @@ public class KaartSelectieAction extends BaseGisAction {
         /* Eerst alle huidige records verwijderen. Dan hoeven we geen
          * onoverzichtelijke if meuk toe te voegen om te kijken of er vinkjes
          * ergens wel of niet aan staan en dan wissen */
-        removeExistingUserKaartgroepAndLayers(code);
+        removeExistingUserKaartgroepAndUserKaartlagen(code);
+        resetExistingUserLayers(code);
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
@@ -143,15 +144,19 @@ public class KaartSelectieAction extends BaseGisAction {
 
         /* Opslaan Service layers */
         for (int k = 0; k < layersAan.length; k++) {
-            Integer layerId = new Integer(layersAan[k]);
-            boolean defaultOn = isKaartlaagDefaultOn(layersDefaultAan, layerId);
+            Integer id = new Integer(layersAan[k]);
+            boolean defaultOn = isKaartlaagDefaultOn(layersDefaultAan, id);
 
-            UserLayer layer = getUserLayerById(layerId);
+            UserLayer layer = getUserLayerById(id);
 
             if (layer != null) {
                 layer.setDefault_on(defaultOn);
                 layer.setShow(true);
+
+                /* nodig omdat anders nieuwe update
+                 van layer obj mis gaat */
                 sess.merge(layer);
+                sess.evict(layer);
             }
         }
 
@@ -708,18 +713,23 @@ public class KaartSelectieAction extends BaseGisAction {
         return defaultOn;
     }
 
-    private void removeExistingUserKaartgroepAndLayers(String code) {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-       
+    private void removeExistingUserKaartgroepAndUserKaartlagen(String code) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();        
+
         int deletedGroepen = sess.createQuery("delete from UserKaartgroep where code = :code")
             .setParameter("code", code)
             .executeUpdate();
 
         int deletedlagen = sess.createQuery("delete from UserKaartlaag where code = :code")
-                .setParameter("code", code)
-                .executeUpdate();
+            .setParameter("code", code)
+            .executeUpdate();
+    }
 
-        List<UserService> services = getUserServices(code);
+    private void resetExistingUserLayers(String code) {
+        List<UserService> services = SpatialUtil.getUserServices(code);
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
         for (UserService service : services) {
             int updateLayers = sess.createQuery("update UserLayer set default_on = :on,"
                 + " show = :show where serviceid = :service")
@@ -746,16 +756,6 @@ public class KaartSelectieAction extends BaseGisAction {
         return (String[]) col2.toArray(new String[0]);
     }
     
-    private List<UserService> getUserServices(String code) {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        
-        List<UserService> services = sess.createQuery("from UserService where code = :code")
-                .setParameter("code", code)
-                .list();
-        
-        return services;
-    }
-    
     private void setUserviceTrees(HttpServletRequest request) throws JSONException, Exception {
         List<JSONObject> servicesTrees = new ArrayList();
         
@@ -763,7 +763,7 @@ public class KaartSelectieAction extends BaseGisAction {
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         String code = user.getCode();
         
-        List<UserService> services = getUserServices(code);
+        List<UserService> services = SpatialUtil.getUserServices(code);
         
         /* per service een tree maken */
         for (UserService service : services) {

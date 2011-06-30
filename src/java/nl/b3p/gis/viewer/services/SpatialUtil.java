@@ -17,6 +17,8 @@ import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.db.UserKaartgroep;
 import nl.b3p.gis.viewer.db.UserKaartlaag;
+import nl.b3p.gis.viewer.db.UserLayer;
+import nl.b3p.gis.viewer.db.UserService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.Query;
@@ -202,5 +204,65 @@ public class SpatialUtil {
                 .list();
 
         return lagen;
+    }
+
+    public static List<UserService> getUserServices(String code) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserService> services = sess.createQuery("from UserService where code = :code")
+                .setParameter("code", code)
+                .list();
+
+        return services;
+    }
+
+    public static List<UserService> getValidUserServices(String code) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserService> validServices = new ArrayList();
+
+        /* selecteer eerst alle services */
+        List<UserService> services = sess.createQuery("from UserService where code = :code"
+                + " order by groupname")
+                .setParameter("code", code)
+                .list();
+
+        /* geef alleen services terug die ook layers aan hebben */
+        for (UserService service : services) {
+            List<UserLayer> layers = sess.createQuery("from UserLayer where serviceid = :ser"
+                    + " and show = :show")
+                .setParameter("ser", service)
+                .setParameter("show", true)
+                .list();
+
+            if (layers != null && layers.size() > 0)
+                validServices.add(service);
+        }
+
+        return validServices;
+    }
+
+    public static List<UserLayer> getValidUserLayers(UserService service) {
+        List<UserLayer> validUserLayers = new ArrayList();
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        List<UserLayer> layers = sess.createQuery("from UserLayer where serviceid = :service and"
+                + " show = :show order by name, title, id")
+                .setParameter("service", service)
+                .setParameter("show", true)
+                .list();
+
+        /* kijken of er ook parent layers in de List erbij moeten */
+        for (UserLayer layer : layers) {
+            if (layer.getParent() != null) {
+                if (!validUserLayers.contains(layer.getParent())) {
+                    validUserLayers.add(layer.getParent());
+                }
+            }
+        }
+
+        layers.addAll(validUserLayers);
+
+        return layers;
     }
 }
