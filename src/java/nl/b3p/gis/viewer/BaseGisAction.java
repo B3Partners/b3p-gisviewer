@@ -72,7 +72,10 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 themas.add(t);
             }
         }
-        Collections.sort(themas);
+
+        if (themas != null && themas.size() > 0)
+            Collections.sort(themas);
+
         return themas;
     }
 
@@ -133,8 +136,11 @@ public abstract class BaseGisAction extends BaseHibernateAction {
      */
     private Themas getThema(String themaid, HttpServletRequest request) {
         Themas t = SpatialUtil.getThema(themaid);
-        logger.debug("getting thema: " + t == null ? "<null>" : t.getNaam());
 
+        if (t == null)
+            return null;
+
+        /*
         if (!HibernateUtil.isCheckLoginKaartenbalie()) {
             logger.debug("No kb login required, thema: " + t == null ? "<null>" : t.getNaam());
             return t;
@@ -157,6 +163,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             logger.debug("No rights for layers found, thema: " + t == null ? "<null>" : t.getNaam());
             return null;
         }
+        */
 
         return t;
     }
