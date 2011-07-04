@@ -44,8 +44,11 @@ import org.json.JSONObject;
 public class KaartSelectieAction extends BaseGisAction {
 
     private static final Log log = LogFactory.getLog(KaartSelectieAction.class);
+
     protected static final String SAVE = "save";
     protected static final String SAVE_WMS_SERVICE = "saveWMSService";
+
+    protected static final String ERROR_SAVE_WMS = "error.save.wms";
 
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
@@ -176,8 +179,17 @@ public class KaartSelectieAction extends BaseGisAction {
 
         /* WMS Service layers ophalen met Geotools */
         URI uri = new URI(serviceUrl);
-        WebMapServer wms = new WebMapServer(uri.toURL(), 30000);
-        org.geotools.data.ows.Layer[] layers = WMSUtils.getNamedLayers(wms.getCapabilities());
+        org.geotools.data.ows.Layer[] layers = null;
+        try {
+            WebMapServer wms = new WebMapServer(uri.toURL(), 30000);
+            layers = WMSUtils.getNamedLayers(wms.getCapabilities());
+        } catch (Exception ex) {
+            log.error("Fout tijdens opslaan WMS. ", ex);
+            
+            reloadFormData(request);
+            addMessage(request, ERROR_SAVE_WMS, uri.toString());
+            return getAlternateForward(mapping, request);
+        }
 
         /* Nieuwe UserService entity aanmaken en opslaan */
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -206,9 +218,7 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         sess.save(us);
-
         reloadFormData(request);
-
         return mapping.findForward(SUCCESS);
     }
 
