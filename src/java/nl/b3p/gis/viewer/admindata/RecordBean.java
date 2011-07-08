@@ -15,6 +15,8 @@ public class RecordBean {
     private List<RecordValueBean> values;
     private List<RecordChildBean> childs;
 
+    private boolean showMagicWand;
+
     public Object getId() {
         return id;
     }
@@ -45,6 +47,14 @@ public class RecordBean {
 
     public void setWkt(String wkt) {
         this.wkt = wkt;
+    }
+
+    public boolean isShowMagicWand() {
+        return showMagicWand;
+    }
+
+    public void setShowMagicWand(boolean showMagicWand) {
+        this.showMagicWand = showMagicWand;
     }
 
     public void addValue(RecordValueBean rvb) {

@@ -42,6 +42,7 @@ import org.geotools.filter.text.cql2.CQLException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.opengis.feature.Feature;
+import org.opengis.feature.GeometryAttribute;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
 import org.opengis.filter.Filter;
@@ -86,8 +87,7 @@ public class CollectAdmindata {
             
                 bean.setId(gb.getId());
                 bean.setAdminPk(gb.getAdmin_pk());
-                bean.setParentHtmlId(parentHtmlId);
-            
+                bean.setParentHtmlId(parentHtmlId);            
 
                 Themas thema = null;
                 if (themaId > 0) {
@@ -176,6 +176,15 @@ public class CollectAdmindata {
 
                             if (record == null) {
                                 continue;
+                            }
+
+                            /* kijken of feature geom kolom heeft voor tonen
+                             * van toverstaf */
+                            GeometryAttribute attrib = f.getDefaultGeometryProperty();
+                            if (attrib == null) {
+                                record.setShowMagicWand(false);
+                            } else {
+                                record.setShowMagicWand(true);
                             }
 
                             Iterator iter4 = childBronnen.iterator();
