@@ -150,6 +150,17 @@ public class PrintServlet extends HttpServlet {
             /* Setup response */
             response.setContentType(mimeType);
             response.setContentLength(out.size());
+			
+			/* Set filename and extension */
+            String filename = "Kaart_" + info.getDatum();
+
+            if (mimeType.equals(MimeConstants.MIME_PDF)) {
+                filename += ".pdf";
+            } else if (mimeType.equals(MimeConstants.MIME_RTF)) {
+                filename += ".rtf";
+            }
+
+            response.setHeader("Content-Disposition", "attachment; filename=" + filename);
 
             /* use postprocessing with itext to add Javascript to output */
             if (addJavascript) {
