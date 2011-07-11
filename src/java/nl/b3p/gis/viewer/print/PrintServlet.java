@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.apps.Fop;
 import org.apache.fop.apps.FopFactory;
+import org.apache.fop.apps.MimeConstants;
 
 /**
  *
