@@ -33,7 +33,6 @@ import org.geotools.data.ows.StyleImpl;
 import org.geotools.data.wms.WMSUtils;
 import org.geotools.data.wms.WebMapServer;
 import org.hibernate.Session;
-import org.hibernate.Transaction;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,6 +46,7 @@ public class KaartSelectieAction extends BaseGisAction {
 
     protected static final String SAVE = "save";
     protected static final String SAVE_WMS_SERVICE = "saveWMSService";
+    protected static final String DELETE_WMS_SERVICES = "deleteWMSServices";
 
     protected static final String ERROR_SAVE_WMS = "error.save.wms";
 
@@ -68,6 +68,13 @@ public class KaartSelectieAction extends BaseGisAction {
         hibProp.setAlternateForwardName(FAILURE);
         hibProp.setAlternateMessageKey("message.userwms.failed");
         map.put(SAVE_WMS_SERVICE, hibProp);
+
+        hibProp = new ExtendedMethodProperties(DELETE_WMS_SERVICES);
+        hibProp.setDefaultForwardName(SUCCESS);
+        hibProp.setDefaultMessageKey("message.userwms.delete.success");
+        hibProp.setAlternateForwardName(FAILURE);
+        hibProp.setAlternateMessageKey("message.userwms.delete.failed");
+        map.put(DELETE_WMS_SERVICES, hibProp);
 
         return map;
     }
@@ -220,6 +227,30 @@ public class KaartSelectieAction extends BaseGisAction {
         sess.save(us);
         reloadFormData(request);
         return mapping.findForward(SUCCESS);
+    }
+
+    public ActionForward deleteWMSServices(ActionMapping mapping, DynaValidatorForm dynaForm,
+            HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+        String[] servicesAan = (String[]) dynaForm.get("servicesAan");
+
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        String code = user.getCode();
+
+        for (int i=0; i < servicesAan.length; i++) {
+            Integer serviceId = new Integer(servicesAan[i]);
+            removeService(code, serviceId);
+        }
+
+        reloadFormData(request);
+        return mapping.findForward(SUCCESS);
+    }
+
+    private void removeService(String code, Integer serviceId) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        UserService service = (UserService) sess.get(UserService.class, serviceId);
+        sess.delete(service);
     }
 
     private List<org.geotools.data.ows.Layer> getParentLayers(org.geotools.data.ows.Layer[] layers) {
@@ -791,6 +822,7 @@ public class KaartSelectieAction extends BaseGisAction {
         root.put("id", "0");
         root.put("title", service.getGroupname());
         root.put("name", service.getGroupname());
+        root.put("serviceid", service.getId());
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List ctl = sess.createQuery("from UserLayer where serviceid = :service"
