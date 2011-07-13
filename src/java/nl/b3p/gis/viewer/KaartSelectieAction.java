@@ -104,6 +104,8 @@ public class KaartSelectieAction extends BaseGisAction {
         String[] layersAan = (String[]) dynaForm.get("layersAan");
         String[] layersDefaultAan = (String[]) dynaForm.get("layersDefaultAan");
 
+        String[] useLayerStyles = (String[]) dynaForm.get("useLayerStyles");
+
         /* groepen en lagen die default aan staan ook toevoegen aan arrays */
         kaartgroepenAan = addDefaultOnValues(kaartgroepenDefaultAan, kaartgroepenAan);
         kaartlagenAan = addDefaultOnValues(kaartlagenDefaultAan, kaartlagenAan);
@@ -165,6 +167,27 @@ public class KaartSelectieAction extends BaseGisAction {
 
                 /* nodig omdat anders nieuwe update
                  van layer obj mis gaat */
+                sess.merge(layer);
+                sess.evict(layer);
+            }
+        }
+
+        /* Opslaan gekozen Layer Styles */
+        for (int m=0; m < useLayerStyles.length; m++) {
+            String[] useStyle = useLayerStyles[m].split("@");
+
+            Integer layerId = new Integer(useStyle[0]);
+            String styleName = useStyle[1];
+
+            if (layerId != null && layerId > 0 && styleName != null) {
+                UserLayer layer = (UserLayer) sess.get(UserLayer.class, layerId);
+
+                if (styleName.equals("default")) {
+                    layer.setUse_style(null);
+                } else {
+                    layer.setUse_style(styleName);
+                }
+
                 sess.merge(layer);
                 sess.evict(layer);
             }
@@ -662,19 +685,6 @@ public class KaartSelectieAction extends BaseGisAction {
         return order;
     }
 
-    private void testAddService() {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-        UserService us = new UserService("123", "http://service.nl/service?", "Groep 1");
-        UserLayer ul = new UserLayer(us, "laag 1", true, true);
-        UserLayerStyle uls = new UserLayerStyle(ul, "default");
-
-        ul.addStyle(uls);
-        us.addLayer(ul);
-
-        sess.save(us);
-    }
-
     private UserKaartgroep getUserKaartGroep(String code, Integer clusterId) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
@@ -891,6 +901,11 @@ public class KaartSelectieAction extends BaseGisAction {
             jsonLayer.put("show", layer.getShow());
             jsonLayer.put("default_on", layer.getDefault_on());
 
+            JSONArray styles = getLayerStyles(layer);
+            if (styles != null && styles.length() > 0) {
+                jsonLayer.put("styles", styles);
+            }
+
             List subsubMaps = (List) lMap.get("sublayers");
 
             if (subsubMaps != null && !subsubMaps.isEmpty()) {
@@ -908,5 +923,20 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         return layersArray;
+    }
+
+    private JSONArray getLayerStyles(UserLayer layer) throws JSONException {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        List<UserLayerStyle> styles = sess.createQuery("from UserLayerStyle where"
+                + " layerid = :layer")
+                .setParameter("layer", layer)
+                .list();
+
+        JSONArray arr = new JSONArray();
+        for (UserLayerStyle uls : styles) {
+            arr.put(uls.getName());
+        }
+
+        return arr;
     }
 }
