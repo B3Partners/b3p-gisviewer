@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
@@ -49,6 +50,7 @@ public class KaartSelectieAction extends BaseGisAction {
     protected static final String DELETE_WMS_SERVICES = "deleteWMSServices";
 
     protected static final String ERROR_SAVE_WMS = "error.save.wms";
+    protected static final String ERROR_DUPLICATE_WMS = "error.duplicate.wms";
 
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
@@ -159,16 +161,12 @@ public class KaartSelectieAction extends BaseGisAction {
             Integer id = new Integer(layersAan[k]);
             boolean defaultOn = isKaartlaagDefaultOn(layersDefaultAan, id);
 
-            UserLayer layer = getUserLayerById(id);
+            UserLayer userLayer = (UserLayer)sess.get(UserLayer.class, id);
+            if (userLayer != null) {
+                userLayer.setDefault_on(defaultOn);
+                userLayer.setShow(true);
 
-            if (layer != null) {
-                layer.setDefault_on(defaultOn);
-                layer.setShow(true);
-
-                /* nodig omdat anders nieuwe update
-                 van layer obj mis gaat */
-                sess.merge(layer);
-                sess.evict(layer);
+                sess.merge(userLayer);
             }
         }
 
@@ -180,16 +178,15 @@ public class KaartSelectieAction extends BaseGisAction {
             String styleName = useStyle[1];
 
             if (layerId != null && layerId > 0 && styleName != null) {
-                UserLayer layer = (UserLayer) sess.get(UserLayer.class, layerId);
+                UserLayer ul = (UserLayer) sess.get(UserLayer.class, layerId);
 
                 if (styleName.equals("default")) {
-                    layer.setUse_style(null);
+                    ul.setUse_style(null);
                 } else {
-                    layer.setUse_style(styleName);
+                    ul.setUse_style(styleName);
                 }
 
-                sess.merge(layer);
-                sess.evict(layer);
+                sess.merge(ul);
             }
         }
 
@@ -206,6 +203,15 @@ public class KaartSelectieAction extends BaseGisAction {
         String sldUrl = (String) dynaForm.get("sldUrl");
 
         /* controleren of serviceUrl al voorkomt bij gebruiker */
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+        String code = user.getCode();
+
+        if (userAlreadyHasThisService(code, serviceUrl)) {
+            reloadFormData(request);
+
+            addMessage(request, ERROR_DUPLICATE_WMS, serviceUrl);
+            return getAlternateForward(mapping, request);
+        }
 
         /* WMS Service layers ophalen met Geotools */
         URI uri = new URI(serviceUrl);
@@ -224,9 +230,6 @@ public class KaartSelectieAction extends BaseGisAction {
         /* Nieuwe UserService entity aanmaken en opslaan */
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        String code = user.getCode();
-
         UserService us = new UserService(code, serviceUrl, groupName);
 
         /* Eerst parents ophalen. */
@@ -238,8 +241,7 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         /* Indien geen parents gevonden maar wel layers dan gewoon allemaal
-         * toevoegen.
-         */
+         * toevoegen. */
         if (parents.size() < 1) {
             for (int i = 0; i < layers.length; i++) {
                 UserLayer ul = createUserLayers(us, layers[i], null);
@@ -248,6 +250,7 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         sess.save(us);
+
         reloadFormData(request);
         return mapping.findForward(SUCCESS);
     }
@@ -767,13 +770,21 @@ public class KaartSelectieAction extends BaseGisAction {
     private void removeExistingUserKaartgroepAndUserKaartlagen(String code) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();        
 
-        int deletedGroepen = sess.createQuery("delete from UserKaartgroep where code = :code")
+        List<UserKaartgroep> groepen = sess.createQuery("from UserKaartgroep where code = :code")
             .setParameter("code", code)
-            .executeUpdate();
+            .list();
 
-        int deletedlagen = sess.createQuery("delete from UserKaartlaag where code = :code")
+        List<UserKaartlaag> lagen = sess.createQuery("from UserKaartlaag where code = :code")
             .setParameter("code", code)
-            .executeUpdate();
+            .list();
+
+        for (UserKaartgroep groep : groepen) {
+            sess.delete(groep);
+        }
+
+        for (UserKaartlaag laag : lagen) {
+            sess.delete(laag);
+        }
     }
 
     private void resetExistingUserLayers(String code) {
@@ -782,12 +793,14 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         for (UserService service : services) {
-            int updateLayers = sess.createQuery("update UserLayer set default_on = :on,"
-                + " show = :show where serviceid = :service")
-                .setParameter("on", null)
-                .setParameter("show", null)
-                .setParameter("service", service)
-                .executeUpdate();
+            Set<UserLayer> userLayers = service.getUser_layers();
+
+            for (UserLayer layer : userLayers) {
+                layer.setDefault_on(null);
+                layer.setShow(null);
+
+                sess.merge(layer);
+            }
         }
     }
 
@@ -938,5 +951,22 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         return arr;
+    }
+
+    private boolean userAlreadyHasThisService(String code, String url) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserService> services = sess.createQuery("from UserService where"
+                + " code = :code and url = :url")
+                .setParameter("code", code)
+                .setParameter("url", url)
+                .setMaxResults(1)
+                .list();
+
+        if (services != null && services.size() == 1) {
+            return true;
+        }
+
+        return false;
     }
 }
