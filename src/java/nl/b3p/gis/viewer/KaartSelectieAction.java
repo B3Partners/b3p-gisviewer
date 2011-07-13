@@ -105,8 +105,8 @@ public class KaartSelectieAction extends BaseGisAction {
         String[] kaartlagenDefaultAan = (String[]) dynaForm.get("kaartlagenDefaultAan");
         String[] layersAan = (String[]) dynaForm.get("layersAan");
         String[] layersDefaultAan = (String[]) dynaForm.get("layersDefaultAan");
-
         String[] useLayerStyles = (String[]) dynaForm.get("useLayerStyles");
+        String[] useLayerSldParts = (String[]) dynaForm.get("useLayerSldParts");
 
         /* groepen en lagen die default aan staan ook toevoegen aan arrays */
         kaartgroepenAan = addDefaultOnValues(kaartgroepenDefaultAan, kaartgroepenAan);
