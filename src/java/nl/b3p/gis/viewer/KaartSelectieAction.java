@@ -106,6 +106,10 @@ public class KaartSelectieAction extends BaseGisAction {
         String[] layersAan = (String[]) dynaForm.get("layersAan");
         String[] layersDefaultAan = (String[]) dynaForm.get("layersDefaultAan");
         String[] useLayerStyles = (String[]) dynaForm.get("useLayerStyles");
+
+        /* userLayerIds wordt gebruikt om de layerid's te kunnen koppelen
+        aan de textarea's */
+        String[] userLayerIds = (String[]) dynaForm.get("userLayerIds");
         String[] useLayerSldParts = (String[]) dynaForm.get("useLayerSldParts");
 
         /* groepen en lagen die default aan staan ook toevoegen aan arrays */
@@ -184,6 +188,26 @@ public class KaartSelectieAction extends BaseGisAction {
                     ul.setUse_style(null);
                 } else {
                     ul.setUse_style(styleName);
+                }
+
+                sess.merge(ul);
+            }
+        }
+
+        /* Opslaan ingevulde sld parts
+         String[] userLayerIds is een hidden input met daarin een even grote
+         array met de layer ids. */
+        for (int n=0; n < useLayerSldParts.length; n++) {
+            String sldPart = useLayerSldParts[n];
+            Integer layerId = new Integer(userLayerIds[n]);
+            
+            if (sldPart != null && layerId != null && layerId > 0) {
+                UserLayer ul = (UserLayer) sess.get(UserLayer.class, layerId);
+
+                if (sldPart == null || sldPart.equals("")) {
+                    ul.setSld_part(null);
+                } else {
+                    ul.setSld_part(sldPart);
                 }
 
                 sess.merge(ul);
