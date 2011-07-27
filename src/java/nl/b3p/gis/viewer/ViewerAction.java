@@ -110,6 +110,8 @@ public class ViewerAction extends BaseGisAction {
     public static final String EXPANDNODES = "expandNodes";
     /*Einde mogelijke request waarden*/
     public static final String ZOEKCONFIGURATIES = "zoekconfiguraties";
+    
+    public static final double squareRootOf2=Math.sqrt(2);
 
     /**
      * Return een hashmap die een property koppelt aan een Action.
@@ -876,10 +878,13 @@ public class ViewerAction extends BaseGisAction {
             //toevoegen scale hints
             if (layer != null) {
                 NumberFormat formatter = new DecimalFormat("#.#####");
-
+                /*LET OP!!!!!!
+                 * in json wordt nu de scalehint(max/min) gevuld met de resolutie!
+                 */
                 double shmax = -1.0;
                 try {
                     shmax = Double.parseDouble(layer.getScaleHintMax());
+                    shmax/=squareRootOf2; 
                 } catch (NumberFormatException nfe) {
                     log.debug("max scale hint not valid: " + layer.getScaleHintMax());
                 }
@@ -889,6 +894,7 @@ public class ViewerAction extends BaseGisAction {
                 double shmin = -1.0;
                 try {
                     shmin = Double.parseDouble(layer.getScaleHintMin());
+                    shmin/=squareRootOf2; 
                 } catch (NumberFormatException nfe) {
                     log.debug("min scale hint not valid: " + layer.getScaleHintMin());
                 }
