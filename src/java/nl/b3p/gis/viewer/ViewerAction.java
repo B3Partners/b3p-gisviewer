@@ -904,6 +904,12 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("metadatalink", "#");
             }
 
+            if (th.getStyle() != null) {
+                jsonCluster.put("use_style", th.getStyle());
+            } else {
+                jsonCluster.put("use_style", "default");
+            }
+
             childrenArray.put(jsonCluster);
         }
 
