@@ -39,6 +39,7 @@ public class Themas implements Comparable {
     private String sldattribuut;
     private boolean uitgebreid;
     private String layoutadmindata;
+    private String style;
     private Gegevensbron gegevensbron;
 
     /** Creates a new instance of Themas */
@@ -259,6 +260,14 @@ public class Themas implements Comparable {
 
     public void setWms_url(String wms_url) {
         this.wms_url = wms_url;
+    }
+
+    public String getStyle() {
+        return style;
+    }
+
+    public void setStyle(String style) {
+        this.style = style;
     }
 
     public int compareTo(Object o) {

@@ -102,6 +102,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="maptipstring"/>
         <property name="sldattribuut"/>
         <property name="layoutadmindata"/>
+        <property name="style"/>
         <many-to-one lazy="false" name="gegevensbron"/>
     </class>
     <class name="nl.b3p.gis.viewer.db.WaardeTypen">
