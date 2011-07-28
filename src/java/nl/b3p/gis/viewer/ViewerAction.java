@@ -912,6 +912,8 @@ public class ViewerAction extends BaseGisAction {
 
             if (th.getStyle() != null) {
                 jsonCluster.put("use_style", th.getStyle());
+            } else {
+                jsonCluster.put("use_style", "default");
             }
 
             childrenArray.put(jsonCluster);
