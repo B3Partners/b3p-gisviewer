@@ -120,7 +120,15 @@ public class GetViewerDataAction extends BaseGisAction {
             ggbBeans = CollectAdmindata.collectGegevensbronRecordChilds(request, themas, false);
         }
         request.setAttribute("beans", ggbBeans);
-
+        boolean onlyFeaturesInGeom=true;
+        if (FormUtils.nullIfEmpty(request.getParameter("onlyFeaturesInGeom"))!=null){
+            try{
+                onlyFeaturesInGeom=Boolean.parseBoolean(request.getParameter("onlyFeaturesInGeom"));
+            }catch(Exception e){
+                logger.error("Param 'onlyFeaturesInGeom' is not a boolean",e);
+            }
+        }            
+        request.setAttribute("onlyFeaturesInGeom",onlyFeaturesInGeom);
         return mapping.findForward(ADMINDATAFW);
     }
 

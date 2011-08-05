@@ -37,12 +37,14 @@ import org.geotools.data.DataStore;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
 import org.geotools.feature.FeatureCollection;
+import org.geotools.feature.simple.SimpleFeatureImpl;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.filter.text.cql2.CQLException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.opengis.feature.Feature;
 import org.opengis.feature.GeometryAttribute;
+import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
 import org.opengis.filter.Filter;
@@ -62,14 +64,16 @@ public class CollectAdmindata {
     public static final String SEARCHCLUSTERID = "searchClusterId";
     public static final String DEFAULT_LAYOUT = "admindata";
 
-    public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, String parentHtmlId) throws Exception {
-
+    /*je wilt juist wel die geom op kunnen halen met een AJAX verzoek!
+     * en aangezien je voor DWR ajax unieke functie namen moet hebben deze verwijderd:
+     */
+    /*public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, String parentHtmlId) throws Exception {
         boolean collectGeom = false;
-
         return fillGegevensBronBean(gegevensBronId, themaId, wkt, cql, collectGeom, parentHtmlId);
-    }
+    }*/
 
-    private GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, boolean collectGeom, String parentHtmlId) {
+    public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, 
+            String wkt, String cql, boolean collectGeom, String parentHtmlId) {
         GegevensBronBean bean = null;
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -154,7 +158,8 @@ public class CollectAdmindata {
 
                 if (b != null) {
                     Geometry geom = null;
-                    geom = DataStoreUtil.createGeomFromWKTString(wkt);
+                    if (wkt!=null)
+                        geom = DataStoreUtil.createGeomFromWKTString(wkt);
 
                     List<String> propnames = bean.getKolomNamenList();
                     Filter cqlFilter = null;
@@ -165,7 +170,14 @@ public class CollectAdmindata {
 
                     List<Feature> features = null;
                     features = DataStoreUtil.getFeatures(b, gb, geom, cqlFilter, propnames, null, collectGeom);
-
+                    
+                    DataStore tempDatastore=b.toDatastore();
+                    SimpleFeatureType featureType=null;
+                    try{
+                        featureType= DataStoreUtil.getSchema(tempDatastore, gb);
+                    }finally{
+                        tempDatastore.dispose();
+                    }
                     if (features != null && !features.isEmpty()) {
                         Iterator featureIter = features.iterator();
                         while (featureIter.hasNext()) {
@@ -178,14 +190,26 @@ public class CollectAdmindata {
                                 continue;
                             }
 
-                            /* kijken of feature geom kolom heeft voor tonen
-                             * van toverstaf */
-                            GeometryAttribute attrib = f.getDefaultGeometryProperty();
-                            if (attrib == null) {
-                                record.setShowMagicWand(false);
-                            } else {
-                                record.setShowMagicWand(true);
+                            /* Controleer of de feature een geometry property heeft.
+                             * Als er geen geometry is opgehaald (collectGeom==false)
+                             * kijk dan of het feature type wel een geometryDescriptor heeft.
+                             */
+                            if (collectGeom){                                
+                                GeometryAttribute attrib = f.getDefaultGeometryProperty();
+                                if  (attrib!=null){                                
+                                    record.setShowMagicWand(true); 
+                                }else if (attrib == null) {                                    
+                                    record.setShowMagicWand(false);
+                                }
+                            }else{
+                                if (featureType!=null && featureType.getGeometryDescriptor()!=null){
+                                    record.setShowMagicWand(true);
+                                } else{
+                                    record.setShowMagicWand(false);
+                                }
                             }
+                            
+                             
 
                             Iterator iter4 = childBronnen.iterator();
 
@@ -218,9 +242,13 @@ public class CollectAdmindata {
                                 if (filters.size() > 1) {
                                     childFilter = filterFac.and(filters);
                                 }
-
+                                SimpleFeatureImpl feature = (SimpleFeatureImpl)f;
                                 int count = 0;
-                                count = getAantalChildRecords(child, childFilter, geom);
+                                Geometry featureGeom=null;
+                                if (feature.getDefaultGeometry()!=null)
+                                    featureGeom=(Geometry) feature.getDefaultGeometry();
+                                        
+                                count = getAantalChildRecords(child, childFilter, featureGeom);
 
                                 if (count > 0) {
                                     RecordChildBean childBean = new RecordChildBean();
@@ -579,7 +607,11 @@ public class CollectAdmindata {
         }
         return url.toString();
     }
-
+    /**
+     * Maak een count op de kinderen. Als er een geometry wordt meegegeven wordt er ook gekeken
+     * of de kinderen in de geometry liggen (vaak van de parent). Als je ze niet mee geeft dan 
+     * worden de kinderen bepaalt aan de hand van de foreign key.
+     */
     protected int getAantalChildRecords(Gegevensbron childGb, Filter filter, Geometry geom) throws Exception {
         int count = -1;
 
