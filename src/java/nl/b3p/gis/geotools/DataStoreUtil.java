@@ -175,10 +175,11 @@ public class DataStoreUtil {
         } else if (filters.size() > 1) {
             filter = ff.and(filters);
         } else {
-            throw new Exception("Geen filter gemaakt. Data wordt niet getoond");
-        }
+            log.info("No filter found. Using the Filter.INCLUDE (all)");
+            filter= Filter.INCLUDE;
+        } 
 
-        if (log.isDebugEnabled()) {
+        if (log.isDebugEnabled() && filter!=null) {
             try {
                 FilterTransformer ft = new FilterTransformer();
                 String s = ft.transform(filter);

@@ -167,7 +167,7 @@ public class CollectAdmindata {
                     if (cql!=null && cql.length()>0) {
                         cqlFilter = CQL.toFilter(cql);
                     }
-
+                    
                     List<Feature> features = null;
                     features = DataStoreUtil.getFeatures(b, gb, geom, cqlFilter, propnames, null, collectGeom);
                     
@@ -221,10 +221,10 @@ public class CollectAdmindata {
 
                                 Filter childFilter = null;
                                 ArrayList<Filter> filters = new ArrayList();
-
-                                if (cqlFilter != null) {
+                                //BAG_CHECK cql van parent ook toepassen op child? Nietnodig lijkt mij.
+                                /*if (cqlFilter != null) {
                                     filters.add(cqlFilter);
-                                }
+                                }*/                                
 
                                 Filter attrFilter = null;
                                 if (fkField != null && recordId != null) {
@@ -762,7 +762,11 @@ public class CollectAdmindata {
     }
 
     static public List collectGegevensbronRecordChilds(HttpServletRequest request, List themas, boolean locatie) {
-        String wkt = getGeometry(request).toText();
+        Geometry geom = getGeometry(request);
+        String wkt=null;
+        if (geom!=null){
+            wkt = geom.toText();
+        }
 
         List beans = new ArrayList();
 
@@ -806,7 +810,7 @@ public class CollectAdmindata {
     }
 
     static public Geometry getGeometry(HttpServletRequest request) {
-        String geom = request.getParameter("geom");
+        String geom = FormUtils.nullIfEmpty(request.getParameter("geom"));
         String withinObject = request.getParameter("withinObject");
 
         double distance = getDistance(request);
@@ -817,7 +821,9 @@ public class CollectAdmindata {
         } else {
             GeometryFactory gf = new GeometryFactory();
             double[] coords = getCoords(request);
-            if (coords.length == 2) {
+            if (coords==null){
+                geometry=null;
+            }else if (coords.length == 2) {
                 geometry = gf.createPoint(new Coordinate(coords[0], coords[1]));
             } else if (coords.length == 10) {
                 Coordinate[] coordinates = new Coordinate[5];
@@ -894,21 +900,37 @@ public class CollectAdmindata {
     }
 
     static public Filter getExtraFilter(Themas t, HttpServletRequest request) {
-        //controleer of er een extra filter meegegeven is en of die op dit thema moet worden toegepast.
-        Filter sldFilter = createSldFilter(t, request);
+        ArrayList<Filter> extraFilters = new ArrayList<Filter>();
+        //controleer of er een extra sld filter meegegeven is en of die op dit thema moet worden toegepast.
+        Filter sldFilter = createSldFilter(t, request);    
+        if (sldFilter!=null){
+            extraFilters.add(sldFilter);
+        }
+        //Haal het extra CQL filter op als die is meegegeven.
+        if (FormUtils.nullIfEmpty(request.getParameter("extraCriteria"))!=null){
+            String cql = request.getParameter("extraCriteria");
+            try{
+                Filter extraFilter=CQL.toFilter(cql);
+                extraFilters.add(extraFilter);
+            }catch(CQLException e){
+                logger.error("Fout bij converteren ExtraCriteria(CQL) naar een filter");
+            }
+        }
         //controleer of er een organization code is voor dit thema
+        //TODO: Dit moet er echt uit. Dit doen zoals hierboven. In een CQL stoppen!
         String organizationcodekey = t.getOrganizationcodekey();
         String organizationcode = getOrganizationCode(request);
         if (FormUtils.nullIfEmpty(organizationcodekey) != null
                 && FormUtils.nullIfEmpty(organizationcode) != null) {
             Filter organizationFilter = FilterBuilder.createEqualsFilter(organizationcodekey, organizationcode);
-            if (sldFilter == null) {
-                return organizationFilter; 
-            } else {
-                return FilterBuilder.getFactory().and(sldFilter, organizationFilter);
-            }
+            extraFilters.add(organizationFilter);
         }
-        return sldFilter;
+        if (extraFilters.size()==0)
+            return null;
+        if (extraFilters.size()==1)
+            return extraFilters.get(0);        
+        //groter dan 1 dus 'and' doen:
+        return FilterBuilder.getFactory().and(extraFilters);
     }
 
     static private Filter createSldFilter(Themas t, HttpServletRequest request) {
