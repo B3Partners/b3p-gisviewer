@@ -1,11 +1,14 @@
 package nl.b3p.gis.viewer;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.mail.MessagingException;
+import javax.mail.internet.InternetAddress;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
@@ -24,6 +27,7 @@ import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.hibernate.Session;
 import nl.b3p.gis.geotools.DataStoreUtil;
+import org.apache.commons.mail.SimpleEmail;
 import org.apache.struts.action.ActionMessage;
 import org.geotools.data.DataStore;
 import org.geotools.data.FeatureWriter;
@@ -152,6 +156,9 @@ public class MeldingAction extends ViewerCrudAction {
             ds.dispose();
         }
 
+        /* Stuur de emails */
+        //sendMeldingEmail(dynaForm, m);
+
         populateMeldingenForm(m, dynaForm, request);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
@@ -159,6 +166,68 @@ public class MeldingAction extends ViewerCrudAction {
         addAttributeMessage(request, ACKNOWLEDGE_MESSAGES, amsg);
 
         return getDefaultForward(mapping, request);
+    }
+
+    private void sendMeldingEmail(DynaValidatorForm dynaForm, Meldingen m)
+            throws MessagingException {
+
+        // generated
+        String kenmerk = m.getKenmerk();
+
+        // config items
+        String meldingStatus = dynaForm.getString("meldingStatus");
+        String naamBehandelaar = dynaForm.getString("naamBehandelaar");
+        String emailBehandelaar = dynaForm.getString("emailBehandelaar");
+
+        Boolean zendEmailMelder = (Boolean) dynaForm.get("zendEmailMelder");
+        Boolean zendEmailBehandelaar = (Boolean) dynaForm.get("zendEmailBehandelaar");
+
+        // ingevuld door gebruiker
+        String naam = m.getNaamZender();
+        String adres = m.getAdresZender();
+        String email = m.getEmailZender();
+        String type = m.getMeldingType();
+        String melding = m.getMeldingTekst();
+
+        // stuur email naar melder
+        if (zendEmailMelder != null && zendEmailMelder) {
+            List<InternetAddress> addressen = new ArrayList<InternetAddress>();
+
+            if (email != null && email.length() > 0) {
+                addressen.add(new InternetAddress(email));
+            }
+
+            SimpleEmail mail = new SimpleEmail();
+            mail.setHostName("kmail.b3partners.nl");
+            mail.setFrom("noreply@b3partners.nl");
+            mail.setTo(addressen);
+            mail.setSubject("Meldingen test");
+
+            String msg = "Test naar melder";
+            mail.setMsg(msg);
+
+            mail.send();
+        }
+
+        // stuur email naar behandelaar
+        if (zendEmailBehandelaar != null && zendEmailBehandelaar) {
+            List<InternetAddress> addressen = new ArrayList<InternetAddress>();
+
+            if (emailBehandelaar != null && emailBehandelaar.length() > 0) {
+                addressen.add(new InternetAddress(emailBehandelaar));
+            }
+
+            SimpleEmail mail = new SimpleEmail();
+            mail.setHostName("kmail.b3partners.nl");
+            mail.setFrom("noreply@b3partners.nl");
+            mail.setTo(addressen);
+            mail.setSubject("Meldingen test");
+
+            String msg = "Test naar behandelaar";
+            mail.setMsg(msg);
+
+            mail.send();
+        }
     }
 
     private void writeMelding(DataStore dataStore2Write, SimpleFeature feature) throws IOException {
@@ -176,6 +245,7 @@ public class MeldingAction extends ViewerCrudAction {
         }
     }
 
+    @Override
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         Meldingen c = getMelding(dynaForm, false);
         if (c == null) {
@@ -188,6 +258,7 @@ public class MeldingAction extends ViewerCrudAction {
         return mapping.findForward(SUCCESS);
     }
 
+    @Override
     public ActionForward edit(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         Meldingen c = getMelding(dynaForm, false);
         if (c == null) {
@@ -199,6 +270,7 @@ public class MeldingAction extends ViewerCrudAction {
         return getDefaultForward(mapping, request);
     }
 
+    @Override
     public ActionForward save(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         if (!isTokenValid(request)) {
@@ -241,6 +313,7 @@ public class MeldingAction extends ViewerCrudAction {
         return getDefaultForward(mapping, request);
     }
 
+    @Override
     public ActionForward delete(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         if (!isTokenValid(request)) {
@@ -329,7 +402,7 @@ public class MeldingAction extends ViewerCrudAction {
         }
 
         Map map = configKeeper.getConfigMap(echteRol);
-        if ((map == null) || (map.size() == 0)) {
+        if ((map == null) || (map.isEmpty())) {
             map = configKeeper.getConfigMap("default");
         }
         return map;
