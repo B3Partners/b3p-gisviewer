@@ -29,7 +29,6 @@ import org.hibernate.Transaction;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.opengis.feature.Feature;
-import org.opengis.feature.Property;
 
 /**
  *
@@ -38,7 +37,7 @@ import org.opengis.feature.Property;
 public class EditUtil {
 
     private static final Log log = LogFactory.getLog(EditUtil.class);
-    private static final int QUAD_SEGS = 16;
+    private static final int QUAD_SEGS = 8;
 
     protected static final double DEFAULTTOLERANCE = 5.0;
 
