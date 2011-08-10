@@ -157,7 +157,7 @@ public class MeldingAction extends ViewerCrudAction {
         }
 
         /* Stuur de emails */
-        //sendMeldingEmail(dynaForm, m);
+        sendMeldingEmail(dynaForm, m, request);
 
         populateMeldingenForm(m, dynaForm, request);
 
@@ -168,8 +168,31 @@ public class MeldingAction extends ViewerCrudAction {
         return getDefaultForward(mapping, request);
     }
 
-    private void sendMeldingEmail(DynaValidatorForm dynaForm, Meldingen m)
-            throws MessagingException {
+    private void sendMeldingEmail(DynaValidatorForm dynaForm, Meldingen m, HttpServletRequest request)
+            throws MessagingException, Exception {
+
+        // ophalen email instellingen
+        String host = "";
+        String from = "";
+        String subject = "";
+
+        Map instellingen = getInstellingenMap(request);
+        if (instellingen != null) {
+            if (instellingen.get("smtpHost") != null) {
+                host = (String) instellingen.get("smtpHost");
+            }
+
+            if (instellingen.get("fromMailAddress") != null) {
+                from = (String) instellingen.get("fromMailAddress");
+            }
+
+            if (instellingen.get("mailSubject") != null) {
+                subject = (String) instellingen.get("mailSubject");
+            }
+        }
+
+        if (host.length() < 1 || from.length() < 1 || subject.length() < 1)
+            throw new Exception("Niet voldoende info om email te verznden.");
 
         // generated
         String kenmerk = m.getKenmerk();
@@ -198,10 +221,10 @@ public class MeldingAction extends ViewerCrudAction {
             }
 
             SimpleEmail mail = new SimpleEmail();
-            mail.setHostName("kmail.b3partners.nl");
-            mail.setFrom("noreply@b3partners.nl");
-            mail.setTo(addressen);
-            mail.setSubject("Meldingen test");
+            mail.setHostName(host);
+            mail.setFrom(from);
+            mail.setSubject(subject);
+            mail.setTo(addressen);            
 
             String msg = "Test naar melder";
             mail.setMsg(msg);
@@ -218,10 +241,10 @@ public class MeldingAction extends ViewerCrudAction {
             }
 
             SimpleEmail mail = new SimpleEmail();
-            mail.setHostName("kmail.b3partners.nl");
-            mail.setFrom("noreply@b3partners.nl");
+            mail.setHostName(host);
+            mail.setFrom(from);
+            mail.setSubject(subject);
             mail.setTo(addressen);
-            mail.setSubject("Meldingen test");
 
             String msg = "Test naar behandelaar";
             mail.setMsg(msg);
@@ -440,9 +463,30 @@ public class MeldingAction extends ViewerCrudAction {
         m.setAdresZender(dynaForm.getString("adresMelder"));
         m.setNaamZender(dynaForm.getString("naamMelder"));
         m.setMeldingType(dynaForm.getString("meldingType"));
-        m.setMeldingStatus(dynaForm.getString("meldingStatus"));
-        m.setMeldingCommentaar(dynaForm.getString("meldingCommentaar"));
-        m.setNaamOntvanger("balie");
+
+        /* TODO: meldingen moeten meerdere statussen kunnen doorlopen. Een status wordt
+         * bijvoorbeeld gewijzigd als de beheerder de melding aanpast in de interface.
+         * Hierbij kan hij ook commentaar opgeven.
+         */
+
+        String status = dynaForm.getString("meldingStatus");
+
+        if (status != null && status.length() > 0) {
+            String[] arr = status.trim().split(",");
+            m.setMeldingStatus(arr[0]);
+        } else {
+            m.setMeldingStatus("Nieuw");
+        }
+        
+        m.setMeldingCommentaar("-");
+
+        String naamBehandelaar = dynaForm.getString("naamBehandelaar");
+
+        if (naamBehandelaar != null && naamBehandelaar.length() > 0)
+            m.setNaamOntvanger(naamBehandelaar);
+        else
+            m.setNaamOntvanger("balie");
+
         try {
             m.setTheGeom(DataStoreUtil.createGeomFromWKTString(dynaForm.getString("wkt")));
         } catch (Exception ex) {
