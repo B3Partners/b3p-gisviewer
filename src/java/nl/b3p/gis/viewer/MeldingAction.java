@@ -1,10 +1,12 @@
 package nl.b3p.gis.viewer;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javax.mail.MessagingException;
@@ -191,8 +193,12 @@ public class MeldingAction extends ViewerCrudAction {
             }
         }
 
-        if (host.length() < 1 || from.length() < 1 || subject.length() < 1)
-            throw new Exception("Niet voldoende info om email te verznden.");
+        if (host.length() < 1 || from.length() < 1 || subject.length() < 1) {
+            log.error("Geprobeerd een melding te emailen terwijl de email "
+                    + "settings nog niet zijn ingevuld door de beheerder.");
+
+            throw new Exception("Niet voldoende info om email te verzenden.");
+        }
 
         // generated
         String kenmerk = m.getKenmerk();
@@ -212,6 +218,9 @@ public class MeldingAction extends ViewerCrudAction {
         String type = m.getMeldingType();
         String melding = m.getMeldingTekst();
 
+        Date now = new Date();
+        SimpleDateFormat df = new SimpleDateFormat("d-M-yyyy", new Locale("NL"));
+
         // stuur email naar melder
         if (zendEmailMelder != null && zendEmailMelder) {
             List<InternetAddress> addressen = new ArrayList<InternetAddress>();
@@ -226,7 +235,21 @@ public class MeldingAction extends ViewerCrudAction {
             mail.setSubject(subject);
             mail.setTo(addressen);            
 
-            String msg = "Test naar melder";
+            String msg = "Geachte heer, mevrouw,\n\n"
+                    + "U ontvangt dit bericht omdat u een nieuwe melding heeft "
+                    + "ingetekend in de viewer. Mocht u deze email ten onrechte "
+                    + "ontvangen of een vraag hebben over uw melding neem dan contact "
+                    + "op met " + naamBehandelaar + " via het e-mailadres "
+                    + emailBehandelaar + ". Vermeld hierbij het referentienummer "
+                    + kenmerk + "\n\n"
+                    + "Ingevulde gegevens melding:\n\n"
+                    + "Naam van melder: " + naam + "\n"
+                    + "Adres van melder: " + adres + "\n"
+                    + "E-mail van melder: " + email + "\n"
+                    + "Datum van melding: " + df.format(now) + "\n"
+                    + "Soort melding: " + type + "\n\n"
+                    + "Melding: " + melding + "\n";
+
             mail.setMsg(msg);
 
             mail.send();
@@ -246,7 +269,20 @@ public class MeldingAction extends ViewerCrudAction {
             mail.setSubject(subject);
             mail.setTo(addressen);
 
-            String msg = "Test naar behandelaar";
+            String msg = "T.a.v. " + naamBehandelaar + "\n\n"
+                    + "U ontvangt dit bericht omdat een gebruiker een nieuwe melding heeft "
+                    + "ingetekend in de viewer en u staat vermeld als behandelaar van deze "
+                    + "meldingen. Mocht u deze email ten onrechte ontvangen neem "
+                    + "dan contact op met de verzender van dit bericht.\n\n"
+                    + "Gegevens over de melding:\n\n"
+                    + "Referentie: " + kenmerk + "\n"
+                    + "Naam van melder: " + naam + "\n"
+                    + "Adres van melder: " + adres + "\n"
+                    + "E-mail van melder: " + email + "\n"
+                    + "Datum van melding: " + df.format(now) + "\n"
+                    + "Soort melding: " + type + "\n\n"
+                    + "Melding: " + melding + "\n";
+
             mail.setMsg(msg);
 
             mail.send();
