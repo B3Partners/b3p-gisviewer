@@ -42,6 +42,8 @@ import org.geotools.filter.text.cql2.CQL;
 import org.geotools.filter.text.cql2.CQLException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.opengis.feature.Feature;
 import org.opengis.feature.GeometryAttribute;
 import org.opengis.feature.simple.SimpleFeatureType;
@@ -73,13 +75,14 @@ public class CollectAdmindata {
     }*/
 
     public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, 
-            String wkt, String cql, boolean collectGeom, String parentHtmlId) {
+            String wkt, String jsonCQL, boolean collectGeom, String parentHtmlId) {
         GegevensBronBean bean = null;
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Transaction tx = null;
-
+                
         try {
+            JSONObject cqlFilters= new JSONObject(jsonCQL);
             tx = sess.beginTransaction();
 
             Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensBronId);
@@ -162,14 +165,16 @@ public class CollectAdmindata {
                         geom = DataStoreUtil.createGeomFromWKTString(wkt);
 
                     List<String> propnames = bean.getKolomNamenList();
-                    Filter cqlFilter = null;
-
+                    Filter parentCqlFilter = null;
+                    String cql=null;
+                    if (cqlFilters.has(""+gb.getId()))
+                        cql=cqlFilters.getString(""+gb.getId());
                     if (cql!=null && cql.length()>0) {
-                        cqlFilter = CQL.toFilter(cql);
+                        parentCqlFilter = CQL.toFilter(cql);
                     }
                     
                     List<Feature> features = null;
-                    features = DataStoreUtil.getFeatures(b, gb, geom, cqlFilter, propnames, null, collectGeom);
+                    features = DataStoreUtil.getFeatures(b, gb, geom, parentCqlFilter, propnames, null, collectGeom);
                     
                     DataStore tempDatastore=b.toDatastore();
                     SimpleFeatureType featureType=null;
@@ -209,8 +214,6 @@ public class CollectAdmindata {
                                 }
                             }
                             
-                             
-
                             Iterator iter4 = childBronnen.iterator();
 
                             while (iter4.hasNext()) {
@@ -224,8 +227,14 @@ public class CollectAdmindata {
                                 //BAG_CHECK cql van parent ook toepassen op child? Nietnodig lijkt mij.
                                 /*if (cqlFilter != null) {
                                     filters.add(cqlFilter);
-                                }*/                                
-
+                                }     */
+                                String childCql=null;
+                                if (cqlFilters.has(""+child.getId()))
+                                    childCql=cqlFilters.getString(""+child.getId());
+                                if (childCql!=null && childCql.length()>0) {                                    
+                                    Filter childCqlFilter = CQL.toFilter(childCql);
+                                    filters.add(childCqlFilter);
+                                }
                                 Filter attrFilter = null;
                                 if (fkField != null && recordId != null) {
                                     attrFilter = FilterBuilder.createEqualsFilter(fkField, recordId);
@@ -242,6 +251,7 @@ public class CollectAdmindata {
                                 if (filters.size() > 1) {
                                     childFilter = filterFac.and(filters);
                                 }
+                                
                                 SimpleFeatureImpl feature = (SimpleFeatureImpl)f;
                                 int count = 0;
                                 Geometry featureGeom=null;
@@ -249,7 +259,10 @@ public class CollectAdmindata {
                                     featureGeom=(Geometry) feature.getDefaultGeometry();
                                         
                                 count = getAantalChildRecords(child, childFilter, featureGeom);
-
+                                JSONObject childCQL= new JSONObject(cqlFilters.toString());
+                                if (childCQL!=null){
+                                    childCQL.put(""+child.getId(), CQL.toCQL(childFilter));
+                                }
                                 if (count > 0) {
                                     RecordChildBean childBean = new RecordChildBean();
                                     childBean.setId(child.getId().toString());
@@ -257,7 +270,8 @@ public class CollectAdmindata {
                                     childBean.setTitle(child.getNaam());
                                     childBean.setAantalRecords(count);
                                     childBean.setThemaId(new Integer(themaId).toString());
-                                    childBean.setCql(CQL.toCQL(attrFilter));
+                                    //childBean.setCql(CQL.toCQL(attrFilter));
+                                    childBean.setCql(childCQL.toString());                                    
                                     childBean.setWkt(wkt);
 
                                     record.addChild(childBean);
@@ -761,7 +775,7 @@ public class CollectAdmindata {
 
     }
 
-    static public List collectGegevensbronRecordChilds(HttpServletRequest request, List themas, boolean locatie) {
+    static public List collectGegevensbronRecordChilds(HttpServletRequest request, List themas, boolean locatie) throws JSONException {
         Geometry geom = getGeometry(request);
         String wkt=null;
         if (geom!=null){
@@ -788,11 +802,32 @@ public class CollectAdmindata {
 
                 /* Filter naar CQL */
                 Filter filter = getExtraFilter(thema, request);
-                String cql = null;
-
+                String gbCQL = null;
                 if (filter != null) {
-                    cql = CQL.toCQL(filter);
+                    gbCQL = CQL.toCQL(filter);
                 }
+                JSONObject cqlFilters= new JSONObject();
+                //Haal het extra CQL filter op als die is meegegeven.
+                if (FormUtils.nullIfEmpty(request.getParameter("extraCriteria"))!=null){
+                    try{
+                        cqlFilters=new JSONObject(request.getParameter("extraCriteria"));
+                        String cql = null;
+                        if (cqlFilters.has(""+gbId))
+                            cql=cqlFilters.getString(""+gbId);
+                        if (FormUtils.nullIfEmpty(cql)!=null){
+                            if (gbCQL==null){
+                                gbCQL="";
+                            }else{
+                                gbCQL+=" && ";
+                            }
+                            gbCQL+=cql;
+                        }
+                    }catch (JSONException je){
+                        cqlFilters= new JSONObject();
+                        logger.error("Fout bij converteren ExtraCriteria(JSON) naar een JSONObject");
+                    }
+                }                
+                cqlFilters.put(""+gbId, gbCQL);
 
                 RecordChildBean childBean = new RecordChildBean();
                 childBean.setId(gbId);
@@ -800,7 +835,7 @@ public class CollectAdmindata {
                 childBean.setTitle(themaNaam);
                 childBean.setAantalRecords(1);
                 childBean.setThemaId(themaId);
-                childBean.setCql(cql);
+                childBean.setCql(cqlFilters.toString());
                 childBean.setWkt(wkt);
 
                 beans.add(childBean);
@@ -905,17 +940,7 @@ public class CollectAdmindata {
         Filter sldFilter = createSldFilter(t, request);    
         if (sldFilter!=null){
             extraFilters.add(sldFilter);
-        }
-        //Haal het extra CQL filter op als die is meegegeven.
-        if (FormUtils.nullIfEmpty(request.getParameter("extraCriteria"))!=null){
-            String cql = request.getParameter("extraCriteria");
-            try{
-                Filter extraFilter=CQL.toFilter(cql);
-                extraFilters.add(extraFilter);
-            }catch(CQLException e){
-                logger.error("Fout bij converteren ExtraCriteria(CQL) naar een filter");
-            }
-        }
+        }        
         //controleer of er een organization code is voor dit thema
         //TODO: Dit moet er echt uit. Dit doen zoals hierboven. In een CQL stoppen!
         String organizationcodekey = t.getOrganizationcodekey();
