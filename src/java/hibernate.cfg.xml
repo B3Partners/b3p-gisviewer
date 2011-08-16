@@ -21,16 +21,16 @@
         <!-- false to prevent hibernate from "" quoting your identifiers -->
         <property name="hibernate.globally_quoted_identifiers">false</property>
 
-        <!-- Mapping files pg
+        <!-- Mapping files pg -->
         <property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property>
         <property name="hibernate.jdbc.use_streams_for_binary">false</property>
         <mapping resource="gisviewer.hbm.pg.xml"/>
-        <mapping resource="zoeker.hbm.pg.xml"/> -->
+        <mapping resource="zoeker.hbm.pg.xml"/>
 
-        <!-- Mapping files oracle -->
+        <!-- Mapping files oracle
         <property name="dialect">org.hibernate.dialect.Oracle10gDialect</property>
         <property name="hibernate.jdbc.use_streams_for_binary">true</property>
         <mapping resource="gisviewer.hbm.oracle.xml"/>
-        <mapping resource="zoeker.hbm.oracle.xml"/>
+        <mapping resource="zoeker.hbm.oracle.xml"/> -->
     </session-factory>
 </hibernate-configuration>
