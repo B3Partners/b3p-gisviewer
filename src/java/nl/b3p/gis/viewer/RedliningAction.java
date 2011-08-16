@@ -266,58 +266,6 @@ public class RedliningAction extends ViewerCrudAction {
         request.setAttribute("projecten", projecten);
     }
 
-    private Map getInstellingenMap(HttpServletRequest request) throws Exception {
-
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        Set roles = null;
-
-        if (user != null) {
-            roles = user.getRoles();
-        }
-
-
-        ConfigKeeper configKeeper = new ConfigKeeper();
-        Configuratie rollenPrio = null;
-        try {
-            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
-        } catch (Exception ex) {
-            logger.debug("Fout bij ophalen configKeeper configuratie: " + ex);
-        }
-
-        String[] configRollen = null;
-        if (rollenPrio != null && rollenPrio.getPropval() != null) {
-            configRollen = rollenPrio.getPropval().split(",");
-        }
-
-        String echteRol = null;
-
-        Boolean foundRole = false;
-        for (int i = 0; i < configRollen.length; i++) {
-            if (foundRole) {
-                break;
-            }
-            String rolnaam = configRollen[i];
-
-            if (roles != null) {
-                Iterator iter = roles.iterator();
-                while (iter.hasNext()) {
-                    String inlogRol = iter.next().toString();
-                    if (rolnaam.equals(inlogRol)) {
-                        echteRol = rolnaam;
-                        foundRole = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        Map map = configKeeper.getConfigMap(echteRol);
-        if ((map == null) || (map.isEmpty())) {
-            map = configKeeper.getConfigMap("default");
-        }
-        return map;
-    }
-
     private void populateFromInstellingen(Map instellingen, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
 
         String orgCode = getOrganizationCode(request);

@@ -417,56 +417,6 @@ public class MeldingAction extends ViewerCrudAction {
         dynaForm.set("kenmerk", m.getKenmerk());
     }
 
-    private Map getInstellingenMap(HttpServletRequest request) throws Exception {
-
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        ConfigKeeper configKeeper = new ConfigKeeper();
-
-        if (user==null) {
-            //TODO waarom komt dit soms voor?
-            return configKeeper.getConfigMap("default");
-        }
-        
-        Set roles = user.getRoles();
-
-        Configuratie rollenPrio = null;
-        try {
-            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
-        } catch (Exception ex) {
-            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
-        }
-
-        String[] configRollen = null;
-        if (rollenPrio != null && rollenPrio.getPropval() != null) {
-            configRollen = rollenPrio.getPropval().split(",");
-        }
-
-        String echteRol = null;
-
-        Boolean foundRole = false;
-        for (int i = 0; i < configRollen.length; i++) {
-            if (foundRole) {
-                break;
-            }
-            String rolnaam = configRollen[i];
-            Iterator iter = roles.iterator();
-            while (iter.hasNext()) {
-                String inlogRol = iter.next().toString();
-                if (rolnaam.equals(inlogRol)) {
-                    echteRol = rolnaam;
-                    foundRole = true;
-                    break;
-                }
-            }
-        }
-
-        Map map = configKeeper.getConfigMap(echteRol);
-        if ((map == null) || (map.isEmpty())) {
-            map = configKeeper.getConfigMap("default");
-        }
-        return map;
-    }
-
     private void populateFromInstellingen(Map instellingen, DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         String[] mss = null;
 
