@@ -166,6 +166,7 @@ public class CollectAdmindata {
 
                     List<String> propnames = bean.getKolomNamenList();
                     Filter parentCqlFilter = null;
+                    //haal het cql filter op voor de (parent)gegevens bron.
                     String cql=null;
                     if (cqlFilters.has(""+gb.getId()))
                         cql=cqlFilters.getString(""+gb.getId());
@@ -175,7 +176,7 @@ public class CollectAdmindata {
                     
                     List<Feature> features = null;
                     features = DataStoreUtil.getFeatures(b, gb, geom, parentCqlFilter, propnames, null, collectGeom);
-                    
+                    //featuretype waarmee gekeken kan worden of er een geometry in de feature zit. 
                     DataStore tempDatastore=b.toDatastore();
                     SimpleFeatureType featureType=null;
                     try{
@@ -224,10 +225,7 @@ public class CollectAdmindata {
 
                                 Filter childFilter = null;
                                 ArrayList<Filter> filters = new ArrayList();
-                                //BAG_CHECK cql van parent ook toepassen op child? Nietnodig lijkt mij.
-                                /*if (cqlFilter != null) {
-                                    filters.add(cqlFilter);
-                                }     */
+                                //Haal het stukje CQL op voor de child gegevensbron.
                                 String childCql=null;
                                 if (cqlFilters.has(""+child.getId()))
                                     childCql=cqlFilters.getString(""+child.getId());
@@ -255,12 +253,18 @@ public class CollectAdmindata {
                                 SimpleFeatureImpl feature = (SimpleFeatureImpl)f;
                                 int count = 0;
                                 Geometry featureGeom=null;
-                                if (feature.getDefaultGeometry()!=null)
-                                    featureGeom=(Geometry) feature.getDefaultGeometry();
-                                        
-                                count = getAantalChildRecords(child, childFilter, featureGeom);
+                                //geen count doen, is erg traag.
+                                /*if (feature.getDefaultGeometry()!=null)
+                                    featureGeom=(Geometry) feature.getDefaultGeometry();*/
+                                
+                                
+                                //count = getAantalChildRecords(child, childFilter, featureGeom);
+                                //altijd childs tonen.
+                                count = 1;
                                 JSONObject childCQL= new JSONObject(cqlFilters.toString());
+                                //voeg het child filter toe aan het json object zodat het de volgende keer gebruikt kan worden.
                                 if (childCQL!=null){
+                                    
                                     childCQL.put(""+child.getId(), CQL.toCQL(childFilter));
                                 }
                                 if (count > 0) {
