@@ -33,6 +33,9 @@ public class BagAction extends ViewerCrudAction{
             addAlternateMessage(mapping, request, "Er is geen BAG kaartlaag geconfigureerd in het viewerontwerp.");
             return mapping.findForward(FAILURE);  
         }
+        /**********************************************
+         * get het kaartlaag id en gegevensbron ids          
+         */
         Integer bagkaartlaagid= (Integer)instellingen.get("bagkaartlaagid");
         
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -56,7 +59,36 @@ public class BagAction extends ViewerCrudAction{
         //set de attributen
         request.setAttribute(BAGTHEMAID, bagkaartlaagid);
         request.setAttribute(PANDENGEGEVENSBRONID, pandengb.getId());
-        request.setAttribute(VERBIJFSOBJECTENGEGEVENSBRONID, verblijfsObjectengb.getId());        
+        request.setAttribute(VERBIJFSOBJECTENGEGEVENSBRONID, verblijfsObjectengb.getId());  
+        
+        /************************************************
+         * Set de max/min slider waarden
+         */
+        Integer maxBouwJaar = new Integer("1");
+        Integer minBouwJaar = new Integer("0");
+        Integer maxOpp = new Integer("1");
+        Integer minOpp = new Integer("0");
+        if(instellingen.get("bagMaxBouwjaar")==null)
+            addAlternateMessage(mapping,request,"Geen maximaal bouwjaar ingesteld in de BAG module configuratie");
+        else
+            maxBouwJaar = (Integer) instellingen.get("bagMaxBouwjaar");
+        if(instellingen.get("bagMinBouwjaar")==null)
+            addAlternateMessage(mapping,request,"Geen minimaal bouwjaar ingesteld in de BAG module configuratie");
+        else
+            minBouwJaar = (Integer) instellingen.get("bagMinBouwjaar");
+        if(instellingen.get("bagMaxOpp")==null)
+            addAlternateMessage(mapping,request,"Geen maximaal oppervlakte ingesteld in de BAG module configuratie");
+        else
+            maxOpp = (Integer) instellingen.get("bagMaxOpp");
+        if(instellingen.get("bagMinOpp")==null)
+            addAlternateMessage(mapping,request,"Geen minimaal oppervlakte ingesteld in de BAG module configuratie");
+        else
+            minOpp = (Integer) instellingen.get("bagMinOpp");
+        
+        request.setAttribute("bagMaxBouwjaar", maxBouwJaar);
+        request.setAttribute("bagMinBouwjaar", minBouwJaar);
+        request.setAttribute("bagMaxOpp", maxOpp);
+        request.setAttribute("bagMinOpp", minOpp);
         return mapping.findForward(SUCCESS);
     }
 }
