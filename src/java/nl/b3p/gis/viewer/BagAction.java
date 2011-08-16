@@ -89,6 +89,24 @@ public class BagAction extends ViewerCrudAction{
         request.setAttribute("bagMinBouwjaar", minBouwJaar);
         request.setAttribute("bagMaxOpp", maxOpp);
         request.setAttribute("bagMinOpp", minOpp);
+        
+        if(instellingen.get("bagBouwjaarAttr")==null)
+            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Bouwjaar niet ingevuld");
+        else
+            request.setAttribute("bagBouwjaarAttr",instellingen.get("bagBouwjaarAttr"));
+        if(instellingen.get("bagOppAttr")==null)
+            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Oppervlakte niet ingevuld");
+        else
+            request.setAttribute("bagOppAttr",instellingen.get("bagOppAttr"));
+        if(instellingen.get("bagGebruiksfunctieAttr")==null)
+            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Gebruiksfunctie niet ingevuld");
+        else
+            request.setAttribute("bagGebruiksfunctieAttr",instellingen.get("bagGebruiksfunctieAttr"));
+        if(instellingen.get("bagGeomAttr")==null)
+            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Geometrie niet ingevuld");
+        else
+            request.setAttribute("bagGeomAttr",instellingen.get("bagGeomAttr"));
+        
         return mapping.findForward(SUCCESS);
     }
 }
