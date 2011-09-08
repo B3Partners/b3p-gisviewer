@@ -47,6 +47,7 @@ import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
+import nl.b3p.gis.viewer.db.UserKaartgroep;
 import nl.b3p.gis.viewer.db.UserKaartlaag;
 import nl.b3p.gis.viewer.db.UserLayer;
 import nl.b3p.gis.viewer.db.UserService;
@@ -663,11 +664,28 @@ public class ViewerAction extends BaseGisAction {
         if (subclusterMaps == null) {
             return clusterArray;
         }
+
+        /* ophalen user kaartgroepen om eventueel cluster aan te zetten. */
+        List<UserKaartgroep> groepen = SpatialUtil.getUserKaartGroepen(user.getCode());
+
         Iterator it = subclusterMaps.iterator();
         while (it.hasNext()) {
             Map clMap = (Map) it.next();
 
             Clusters cluster = (Clusters) clMap.get("cluster");
+
+            /* controleren of cluster default aan staat in user kaartgroepen */
+            boolean defaultOn = false;
+            if (groepen != null && groepen.size() > 0) {
+                for (UserKaartgroep groep: groepen) {
+                    if (groep.getClusterid() == cluster.getId()) {
+                        if (groep.getDefault_on()) {
+                            defaultOn = true;
+                        }
+                    }
+                }
+            }
+
             JSONObject jsonCluster = new JSONObject();
             if (cluster.getId() != null) {
                 jsonCluster.put("id", "c" + cluster.getId().intValue());
@@ -702,6 +720,11 @@ public class ViewerAction extends BaseGisAction {
             } else {
                 jsonCluster.put("metadatalink", "#");
             }
+
+            if (defaultOn) {
+                jsonCluster.put("visible", true);
+            }
+
             List childrenList = (List) clMap.get("children");
 
             JSONArray childrenArray = new JSONArray();
@@ -775,16 +798,6 @@ public class ViewerAction extends BaseGisAction {
 
             order++;
             jsonCluster.put("order", order);
-
-            /* indien log op DEBUG level staat dan volgordenummer achter de naam weergeven
-             * in de boom. */
-            if (log.isDebugEnabled()) {
-                String title = jsonCluster.getString("title");
-                if (title == null || title.equals(""))
-                    title = "(geen naam opgegeven)";
-
-                jsonCluster.put("title", title + "(" + order + ")");
-            }
 
             if (th.getOrganizationcodekey() != null && th.getOrganizationcodekey().length() > 0) {
                 jsonCluster.put("organizationcodekey", th.getOrganizationcodekey().toUpperCase());
