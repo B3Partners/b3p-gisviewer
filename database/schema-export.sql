@@ -1,4 +1,14 @@
 
+    create table applicatie (
+        id  serial not null,
+        naam varchar(255),
+        code varchar(255),
+        gebruikers_code varchar(255),
+        parent int4,
+        datum_gebruikt timestamp not null,
+        primary key (id)
+    );
+
     create table bron (
         id  serial not null,
         naam varchar(255),
@@ -121,6 +131,7 @@
         maptipstring varchar(255),
         sldattribuut varchar(255),
         layoutadmindata varchar(255),
+        style varchar(255),
         gegevensbron int4,
         primary key (id)
     );
@@ -202,6 +213,11 @@
         inputzoekconfiguratie int4,
         primary key (id)
     );
+
+    alter table applicatie 
+        add constraint FKEA36D6D428C540EE 
+        foreign key (parent) 
+        references applicatie;
 
     alter table clusters 
         add constraint FK4B672DB9213F33D3 
