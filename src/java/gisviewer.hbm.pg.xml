@@ -212,4 +212,18 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <many-to-one lazy="false" name="layerid"/>
         <property name="name" type="string"/>
     </class>
+    <class name="nl.b3p.gis.viewer.db.Applicatie">
+        <id name="id" type="int">
+            <generator class="identity"/>
+        </id>
+        <property name="naam"/>
+        <property name="code"/>
+        <property name="gebruikersCode"/>
+        <many-to-one column="parent" name="parent"/>
+        <set cascade="all-delete-orphan" inverse="true" name="children">
+            <key column="parent"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.Applicatie"/>
+        </set>
+        <property name="datum_gebruikt" not-null="true" type="timestamp"/>
+    </class>
 </hibernate-mapping>
