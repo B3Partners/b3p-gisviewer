@@ -1,7 +1,14 @@
 package nl.b3p.gis.viewer.db;
 
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.Locale;
+import java.util.Random;
 import java.util.Set;
+import nl.b3p.commons.services.FormUtils;
+import org.apache.commons.codec.binary.Hex;
 
 /**
  *
@@ -85,5 +92,21 @@ public class Applicatie {
 
     public void setChildren(Set children) {
         this.children = children;
+    }
+
+    public static String createApplicatieCode()
+            throws NoSuchAlgorithmException, UnsupportedEncodingException {
+
+        Random rd = new Random();
+
+        StringBuilder toBeHashedString = new StringBuilder();
+        toBeHashedString.append(FormUtils.DateToFormString(new Date(), new Locale("NL")));
+        toBeHashedString.append(rd.nextLong());
+
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        md.update(toBeHashedString.toString().getBytes("UTF-8"));
+
+        byte[] md5hash = md.digest();
+        return new String(Hex.encodeHex(md5hash));
     }
 }
