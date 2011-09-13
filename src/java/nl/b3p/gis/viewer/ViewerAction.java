@@ -212,10 +212,10 @@ public class ViewerAction extends BaseGisAction {
 
         if (app != null) {
             app.setDatum_gebruikt(new Date());
-        }
 
-        sess.save(app);
-        sess.flush();
+            sess.save(app);
+            sess.flush();
+        }
 
         Map rootClusterMap = getClusterMap(themalist, ctl, null, userCode);
         List actieveThemas = null;

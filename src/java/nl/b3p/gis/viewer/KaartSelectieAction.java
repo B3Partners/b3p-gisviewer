@@ -293,19 +293,12 @@ public class KaartSelectieAction extends BaseGisAction {
 
         for (int i=0; i < servicesAan.length; i++) {
             Integer serviceId = new Integer(servicesAan[i]);
-            removeService(code, serviceId);
+            KaartSelectieUtil.removeService(serviceId);
         }
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
         
         return mapping.findForward(SUCCESS);
-    }
-
-    private void removeService(String code, Integer serviceId) {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-        UserService service = (UserService) sess.get(UserService.class, serviceId);
-        sess.delete(service);
     }
 
     private List<org.geotools.data.ows.Layer> getParentLayers(org.geotools.data.ows.Layer[] layers) {

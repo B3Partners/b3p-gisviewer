@@ -25,6 +25,7 @@ import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.wms.capabilities.Layer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geotools.data.ows.StyleImpl;
 import org.hibernate.Session;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -893,5 +894,102 @@ public class KaartSelectieUtil {
                 .list();
 
         return services;
+    }
+
+    public static void removeExistingUserServices(String appCode) {
+        List<UserService> services = getUserServices(appCode);
+
+        for (UserService service : services) {
+            removeService(service.getId());
+        }
+    }
+
+    public static void removeService(Integer serviceId) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        UserService service = (UserService) sess.get(UserService.class, serviceId);
+        sess.delete(service);
+    }
+
+    public static List<org.geotools.data.ows.Layer> getParentLayers(org.geotools.data.ows.Layer[] layers) {
+        List<org.geotools.data.ows.Layer> parents = new ArrayList();
+
+        for (int i = 0; i < layers.length; i++) {
+            if (layers[i].getChildren().length > 0 || layers[i].getParent() == null) {
+                parents.add(layers[i]);
+            }
+        }
+
+        return parents;
+    }
+
+    public static UserLayer createUserLayers(UserService us, org.geotools.data.ows.Layer layer, UserLayer parent) {
+        String layerTitle = layer.getTitle();
+        String layerName = layer.getName();
+        boolean queryable = layer.isQueryable();
+        double scaleMin = layer.getScaleDenominatorMin();
+        double scaleMax = layer.getScaleDenominatorMax();
+
+        UserLayer ul = new UserLayer();
+
+        ul.setServiceid(us);
+
+        if (layerName != null && !layerName.isEmpty()) {
+            ul.setName(layerName);
+        }
+
+        if (layerTitle != null && !layerTitle.isEmpty()) {
+            ul.setTitle(layerTitle);
+        }
+
+        ul.setQueryable(queryable);
+
+        if (scaleMin > 0) {
+            ul.setScalehint_min(Double.toString(scaleMin));
+        }
+
+        if (scaleMax > 0) {
+            ul.setScalehint_max(Double.toString(scaleMax));
+        }
+
+        List<StyleImpl> styles = layer.getStyles();
+
+        for (StyleImpl style : styles) {
+            String styleName = style.getName();
+
+            if (styleName != null && !styleName.isEmpty()) {
+                UserLayerStyle uls = new UserLayerStyle(ul, styleName);
+                ul.addStyle(uls);
+            }
+        }
+
+        if (parent != null) {
+            ul.setParent(parent);
+        }
+
+        org.geotools.data.ows.Layer[] childs = layer.getChildren();
+        for (int i = 0; i < childs.length; i++) {
+            UserLayer child = createUserLayers(us, childs[i], ul);
+            us.addLayer(child);
+        }
+
+        return ul;
+    }
+
+    public static boolean userAlreadyHasThisService(String code, String url) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserService> services = sess.createQuery("from UserService where"
+                + " code = :code and url = :url")
+                .setParameter("code", code)
+                .setParameter("url", url)
+                .setMaxResults(1)
+                .list();
+
+        if (services != null && services.size() == 1) {
+            return true;
+        }
+
+        return false;
     }
 }
