@@ -5,5 +5,6 @@ create table applicatie (
     gebruikers_code varchar(255),
     parent int4,
     datum_gebruikt timestamp not null,
+	read_only boolean NOT NULL DEFAULT true,
     primary key (id)
 );

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
+import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
@@ -200,6 +201,22 @@ public class KaartSelectieUtil {
                 sess.merge(ul);
             }
         }
+    }
+
+    public static Applicatie getApplicatie(String appCode) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        Applicatie app = null;
+
+        List<Applicatie> applicaties = sess.createQuery("from Applicatie where code = :appcode")
+                .setParameter("appcode", appCode)
+                .setMaxResults(1).list();
+
+        if (applicaties != null && applicaties.size() == 1) {
+            return (Applicatie) applicaties.get(0);
+        }
+
+        return app;
     }
 
     private static void setKaartlagenTree(HttpServletRequest request) throws JSONException, Exception {

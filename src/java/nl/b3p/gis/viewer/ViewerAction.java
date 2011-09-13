@@ -32,6 +32,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -43,6 +44,8 @@ import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
+import nl.b3p.gis.utils.KaartSelectieUtil;
+import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
@@ -199,6 +202,21 @@ public class ViewerAction extends BaseGisAction {
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         String userCode = user.getCode();
 
+        /* Applicatie instellingen ophalen */
+        String appCode = request.getParameter(APPCODE);
+        request.setAttribute("appCode", appCode);
+
+        /* Applicatie ophalen */
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+
+        if (app != null) {
+            app.setDatum_gebruikt(new Date());
+        }
+
+        sess.save(app);
+        sess.flush();
+
         Map rootClusterMap = getClusterMap(themalist, ctl, null, userCode);
         List actieveThemas = null;
         if (FormUtils.nullIfEmpty(request.getParameter(ID)) != null) {
@@ -239,9 +257,6 @@ public class ViewerAction extends BaseGisAction {
             }
         }
 
-        /* Applicatie instellingen ophalen */
-        String appCode = request.getParameter(APPCODE);
-
         ConfigKeeper configKeeper = new ConfigKeeper();        
         Map map = configKeeper.getConfigMap(appCode);
 
@@ -264,7 +279,7 @@ public class ViewerAction extends BaseGisAction {
         }
 
         /* Klaarzetten UserLayers uit eigen toegevoegde WMS Services */
-        setUserviceTrees(request);
+        setUserviceTrees(appCode, request);
 
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(PrecisionModel.FLOATING), 28992);
         Polygon extentBbox = null;
@@ -403,8 +418,7 @@ public class ViewerAction extends BaseGisAction {
             zoekConfigId = new Integer(temp);
         }
 
-        //zoekconfiguraties inlezen.
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        //zoekconfiguraties inlezen.        
         List zoekconfiguraties = Zoeker.getZoekConfiguraties();
         List zoekconfiguratiesJson = new ArrayList();
         if (zoekconfiguraties != null) {
@@ -920,14 +934,10 @@ public class ViewerAction extends BaseGisAction {
         }
     }
 
-    private void setUserviceTrees(HttpServletRequest request) throws JSONException, Exception {
+    private void setUserviceTrees(String appCode, HttpServletRequest request) throws JSONException, Exception {
         List<JSONObject> servicesTrees = new ArrayList();
 
-        /* user services ophalen */
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        String code = user.getCode();
-
-        List<UserService> services = SpatialUtil.getValidUserServices(code);
+        List<UserService> services = SpatialUtil.getValidUserServices(appCode);
         
         /* per service een tree maken */
         for (UserService service : services) {

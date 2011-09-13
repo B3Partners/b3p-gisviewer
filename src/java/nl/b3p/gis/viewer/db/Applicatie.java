@@ -22,7 +22,9 @@ public class Applicatie {
     private String gebruikersCode;
     private Applicatie parent;
     private Date datum_gebruikt;
+    private Boolean read_only;
     private Set children;
+
 
     public Applicatie() {
     }
@@ -94,6 +96,14 @@ public class Applicatie {
         this.children = children;
     }
 
+    public Boolean getRead_only() {
+        return read_only;
+    }
+
+    public void setRead_only(Boolean read_only) {
+        this.read_only = read_only;
+    }
+    
     public static String createApplicatieCode()
             throws NoSuchAlgorithmException, UnsupportedEncodingException {
 

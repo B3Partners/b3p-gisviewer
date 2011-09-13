@@ -13,6 +13,7 @@ import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
+import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
@@ -52,6 +53,8 @@ public class KaartSelectieAction extends BaseGisAction {
     protected static final String ERROR_SAVE_WMS = "error.save.wms";
     protected static final String ERROR_DUPLICATE_WMS = "error.duplicate.wms";
 
+    protected static final String PARAM_APPCODE = "appCode";
+
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
 
@@ -90,7 +93,10 @@ public class KaartSelectieAction extends BaseGisAction {
             HttpServletRequest request, HttpServletResponse response)
             throws JSONException, Exception {
 
-        reloadFormData(request);
+        String appCode = request.getParameter(PARAM_APPCODE);
+        dynaForm.set("appCode", appCode);
+
+        KaartSelectieUtil.populateKaartSelectieForm(appCode, request);
 
         return mapping.findForward(SUCCESS);
     }
@@ -117,8 +123,7 @@ public class KaartSelectieAction extends BaseGisAction {
         kaartlagenAan = addDefaultOnValues(kaartlagenDefaultAan, kaartlagenAan);
         layersAan = addDefaultOnValues(layersDefaultAan, layersAan);
 
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        String code = user.getCode();
+        String code = dynaForm.getString("appCode");
 
         /* Eerst alle huidige records verwijderen. Dan hoeven we geen
          * onoverzichtelijke if meuk toe te voegen om te kijken of er vinkjes
@@ -214,7 +219,8 @@ public class KaartSelectieAction extends BaseGisAction {
             }
         }
 
-        reloadFormData(request);
+        //reloadFormData(request);
+        KaartSelectieUtil.populateKaartSelectieForm(code, request);
 
         return mapping.findForward(SUCCESS);
     }
@@ -226,9 +232,8 @@ public class KaartSelectieAction extends BaseGisAction {
         String serviceUrl = (String) dynaForm.get("serviceUrl");
         String sldUrl = (String) dynaForm.get("sldUrl");
 
-        /* controleren of serviceUrl al voorkomt bij gebruiker */
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        String code = user.getCode();
+        /* controleren of serviceUrl al voorkomt bij applicatie */
+        String code = dynaForm.getString("appCode");
 
         if (userAlreadyHasThisService(code, serviceUrl)) {
             reloadFormData(request);
@@ -275,7 +280,8 @@ public class KaartSelectieAction extends BaseGisAction {
 
         sess.save(us);
 
-        reloadFormData(request);
+        KaartSelectieUtil.populateKaartSelectieForm(code, request);
+
         return mapping.findForward(SUCCESS);
     }
 
@@ -283,16 +289,15 @@ public class KaartSelectieAction extends BaseGisAction {
             HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         String[] servicesAan = (String[]) dynaForm.get("servicesAan");
-
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        String code = user.getCode();
+        String code = dynaForm.getString("appCode");
 
         for (int i=0; i < servicesAan.length; i++) {
             Integer serviceId = new Integer(servicesAan[i]);
             removeService(code, serviceId);
         }
 
-        reloadFormData(request);
+        KaartSelectieUtil.populateKaartSelectieForm(code, request);
+        
         return mapping.findForward(SUCCESS);
     }
 

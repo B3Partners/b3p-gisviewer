@@ -225,5 +225,6 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
             <one-to-many class="nl.b3p.gis.viewer.db.Applicatie"/>
         </set>
         <property name="datum_gebruikt" not-null="true" type="timestamp"/>
+        <property name="read_only" not-null="true" type="boolean"/>
     </class>
 </hibernate-mapping>
