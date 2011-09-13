@@ -44,7 +44,6 @@ import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Clusters;
-import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.db.UserKaartgroep;
@@ -113,6 +112,8 @@ public class ViewerAction extends BaseGisAction {
     public static final String ZOEKCONFIGURATIES = "zoekconfiguraties";
     
     public static final double squareRootOf2=Math.sqrt(2);
+
+    public static final String APPCODE = "appCode";
 
     /**
      * Return een hashmap die een property koppelt aan een Action.
@@ -238,77 +239,20 @@ public class ViewerAction extends BaseGisAction {
             }
         }
 
-        /* Ophalen toegekende kaartenbalie rollen van ingelogde gebruiker */
-        Set roles = user.getRoles();
+        /* Applicatie instellingen ophalen */
+        String appCode = request.getParameter(APPCODE);
 
-        /* Ophalen rollen in configuratie database */
-        ConfigKeeper configKeeper = new ConfigKeeper();
-        Configuratie rollenPrio = null;
+        ConfigKeeper configKeeper = new ConfigKeeper();        
+        Map map = configKeeper.getConfigMap(appCode);
 
-        try {
-            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
-        } catch (Exception ex) {
-            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
+        /* Indien niet aanwezig dan defaults laden */
+        if ((map == null) || (map.size() < 1)) {
+            map = configKeeper.getDefaultInstellingen();
         }
 
-        /* alleen doen als configuratie tabel bestaat */
-        Map map = null;
-        if (rollenPrio != null && rollenPrio.getPropval() != null) {
-            String[] configRollen = rollenPrio.getPropval().split(",");
+        request.setAttribute("configMap", map);
 
-            String rolnaam = "";
-            String inlogRol = "";
-
-            Boolean foundRole = false;
-
-            /* Zoeken of gebruiker een rol heeft die in de rollen
-             * configuratie voorkomt. Hoogste rol wordt geladen */
-            for (int i = 0; i < configRollen.length; i++) {
-
-                if (foundRole) {
-                    break;
-                }
-
-                rolnaam = configRollen[i];
-
-                /* per rol uit config database loopen door
-                 * toegekende rollen */
-                Iterator iter = roles.iterator();
-
-                while (iter.hasNext()) {
-                    inlogRol = iter.next().toString();
-
-                    if (rolnaam.equals(inlogRol)) {
-                        map = configKeeper.getConfigMap(rolnaam);
-                        foundRole = true;
-
-                        break;
-                    }
-                }
-            }
-
-            /* als gevonden rol geen configuratie records heeft dan defaults laden */
-            if ((map == null) || (map.size() < 1)) {
-                map = configKeeper.getConfigMap("default");
-            }
-
-            request.setAttribute("configMap", map);
-        }
-
-        /* opstart kaartlagen meegeven aan opbouwen jsonObject. Indien opstartKaart
-         * instellingen aanwezig zijn. */
-        String opstartKaarten = null;
-
-        if (map != null) {
-            opstartKaarten = (String) map.get("opstartKaarten");
-        }
-
-        String[] arrKaarten = null;
-        if (opstartKaarten != null) {
-            arrKaarten = opstartKaarten.split(",");
-        }
-
-        JSONObject treeObject = createJasonObject(rootClusterMap, actieveThemas, actieveClusters, user, arrKaarten);
+        JSONObject treeObject = createJasonObject(rootClusterMap, actieveThemas, actieveClusters, user, appCode);
         request.setAttribute("tree", treeObject);
 
         /* tree op alfabet zetten voor bepaalde klanten */
@@ -646,7 +590,7 @@ public class ViewerAction extends BaseGisAction {
         return;
     }
 
-    protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas, List actieveClusters, GisPrincipal user, String[] opstartKaarten) throws JSONException {
+    protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas, List actieveClusters, GisPrincipal user, String appCode) throws JSONException {
         JSONObject root = new JSONObject().put("id", "root").put("type", "root").put("title", "root");
         if (rootClusterMap == null || rootClusterMap.isEmpty()) {
             return root;
@@ -655,24 +599,44 @@ public class ViewerAction extends BaseGisAction {
         if (clusterMaps == null || clusterMaps.isEmpty()) {
             return root;
         }
-        root.put("children", getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0, opstartKaarten));
+        root.put("children", getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0, appCode));
 
         return root;
     }
 
-    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas, List actieveClusters, GisPrincipal user, int order, String[] opstartKaarten) throws JSONException {
+    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas, List actieveClusters, GisPrincipal user, int order, String appCode) throws JSONException {
         if (subclusterMaps == null) {
             return clusterArray;
         }
 
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
         /* ophalen user kaartgroepen om eventueel cluster aan te zetten. */
-        List<UserKaartgroep> groepen = SpatialUtil.getUserKaartGroepen(user.getCode());
+        List<UserKaartgroep> groepen = SpatialUtil.getUserKaartGroepen(appCode);
+        List<UserKaartlaag> userlagen = SpatialUtil.getUserKaartLagen(appCode);
 
         Iterator it = subclusterMaps.iterator();
         while (it.hasNext()) {
             Map clMap = (Map) it.next();
 
             Clusters cluster = (Clusters) clMap.get("cluster");
+
+            /* Cluster hoeft niet getoond te worden als er eigen kaartlagen
+             aangezet zijn maar hier hoort het cluster niet bij */
+            boolean showCluster = false;
+            for (UserKaartlaag laag : userlagen) {
+                Integer themaId = laag.getThemaid();
+
+                Themas thema = (Themas)sess.get(Themas.class, themaId);
+                Integer clusterId = thema.getCluster().getId();
+
+                if (clusterId == cluster.getId())
+                    showCluster = true;
+            }
+
+            if (userlagen != null && userlagen.size() > 0 && !showCluster) {
+                continue;
+            }
 
             /* controleren of cluster default aan staat in user kaartgroepen */
             boolean defaultOn = false;
@@ -728,9 +692,9 @@ public class ViewerAction extends BaseGisAction {
             List childrenList = (List) clMap.get("children");
 
             JSONArray childrenArray = new JSONArray();
-            order = getChildren(childrenArray, childrenList, actieveThemas, user, order, opstartKaarten);
+            order = getChildren(childrenArray, childrenList, actieveThemas, user, order, appCode);
             List subsubclusterMaps = (List) clMap.get("subclusters");
-            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order, opstartKaarten);
+            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order, appCode);
             jsonCluster.put("children", childrenArray);
 
             if (clusterArray == null) {
@@ -742,13 +706,13 @@ public class ViewerAction extends BaseGisAction {
         return clusterArray;
     }
 
-    private int getChildren(JSONArray childrenArray, List children, List actieveThemas, GisPrincipal user, int order, String[] opstartKaarten) throws JSONException {
+    private int getChildren(JSONArray childrenArray, List children, List actieveThemas, GisPrincipal user, int order, String appCode) throws JSONException {
         if (children == null || childrenArray == null) {
             return order;
         }
 
         /* ophalen user kaartlagen om custom boom op te bouwen */
-        List<UserKaartlaag> lagen = SpatialUtil.getUserKaartLagen(user.getCode());
+        List<UserKaartlaag> lagen = SpatialUtil.getUserKaartLagen(appCode);
 
         Iterator it = children.iterator();
         while (it.hasNext()) {
@@ -817,23 +781,11 @@ public class ViewerAction extends BaseGisAction {
                     jsonCluster.put("analyse", "off");
                 }
             } else if (actieveThemas == null || actieveThemas.isEmpty()){
-                if (th.isVisible() && opstartKaarten == null) {
+                if (th.isVisible()) {
                     jsonCluster.put("visible", "on");
                 } else {
                     jsonCluster.put("visible", "off");
-                }
-
-                /* indien in opstartlaag array dan aanvinken */
-                String wmsLayerReal = th.getWms_layers_real();
-
-                if (wmsLayerReal != null && opstartKaarten != null && opstartKaarten.length > 0) {
-                    for (int i=0; i<opstartKaarten.length; i++) {
-
-                        if (wmsLayerReal.equalsIgnoreCase(opstartKaarten[i])) {
-                            jsonCluster.put("visible", "on");
-                        }
-                    }
-                }
+                }                
 
                 if (th.isAnalyse_thema() && validAdmindataSource) {
                     jsonCluster.put("analyse", "on");
