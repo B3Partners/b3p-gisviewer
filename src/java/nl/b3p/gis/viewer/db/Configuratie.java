@@ -55,4 +55,27 @@ public class Configuratie {
     public void setType(String type) {
         this.type = type;
     }
+
+    @Override
+    public Object clone() {
+        Configuratie cloneObj = new Configuratie();
+
+        if (this.property != null) {
+            cloneObj.property = this.property;
+        }
+
+        if (this.propval != null) {
+            cloneObj.propval = this.propval;
+        }
+
+        if (this.setting != null) {
+            cloneObj.setting = this.setting;
+        }
+
+        if (this.type != null) {
+            cloneObj.type = this.type;
+        }
+
+        return cloneObj;
+    }
 }

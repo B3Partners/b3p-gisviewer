@@ -56,4 +56,23 @@ public class UserKaartlaag {
     public void setThemaid(Integer themaid) {
         this.themaid = themaid;
     }
+
+    @Override
+    public Object clone() {
+        UserKaartlaag cloneObj = new UserKaartlaag();
+
+        if (this.code != null) {
+            cloneObj.code = this.code;
+        }
+
+        if (this.themaid != null) {
+            cloneObj.themaid = new Integer(this.themaid);
+        }
+
+        if (this.default_on != null) {
+            cloneObj.default_on = this.default_on;
+        }
+
+        return cloneObj;
+    }
 }

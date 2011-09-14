@@ -4,6 +4,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Clusters;
+import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.db.UserKaartgroep;
@@ -83,6 +85,18 @@ public class KaartSelectieUtil {
 
         for (UserKaartlaag laag : lagen) {
             sess.delete(laag);
+        }
+    }
+
+    public static void removeExistingConfigKeeperSettings(String appCode) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<Configuratie> configItems = sess.createQuery("from Configuratie where setting = :code")
+            .setParameter("code", appCode)
+            .list();
+
+        for (Configuratie item : configItems) {
+            sess.delete(item);
         }
     }
 
@@ -991,5 +1005,93 @@ public class KaartSelectieUtil {
         }
 
         return false;
+    }
+
+    public static Applicatie copyApplicatie(Applicatie sourceApp) {
+        /* Maak kopie Applicatie */
+        Applicatie app = new Applicatie();
+
+        String newCode = null;
+        try {
+            newCode = Applicatie.createApplicatieCode();
+        } catch (Exception ex) {
+            log.error("Fout tijdens maken Applicatie code:", ex);
+        }
+
+        app.setNaam(sourceApp.getNaam() + " kopie");
+        app.setCode(newCode);
+        app.setGebruikersCode(sourceApp.getGebruikersCode());
+        app.setParent(sourceApp);
+        app.setDatum_gebruikt(new Date());
+        app.setRead_only(sourceApp.getRead_only());
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        sess.save(app);
+        sess.flush();
+
+        /* Maak kopie configkeeper instellingen */
+        copyConfigKeeperSettings(sourceApp.getCode(), newCode);
+
+        /* Maak kopie User kaartgroepen */
+        copyUserKaartgroepen(sourceApp.getCode(), newCode);
+
+        /* Maak kopie User kaartlagen */
+        copyUserKaartlagen(sourceApp.getCode(), newCode);
+
+        /* TODO: User services niet kopieeren ? */
+
+        return app;
+    }
+
+    private static void copyConfigKeeperSettings(String oldCode, String newCode) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<Configuratie> configItems = sess.createQuery("from Configuratie where"
+                + " setting = :appcode")
+                .setParameter("appcode", oldCode)
+                .list();
+
+        for (Configuratie item : configItems) {
+            Configuratie clone = (Configuratie) item.clone();
+            clone.setSetting(newCode);
+
+            sess.save(clone);
+            sess.flush();
+        }
+    }
+
+    private static void copyUserKaartgroepen(String oldCode, String newCode) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserKaartgroep> groepen = sess.createQuery("from UserKaartgroep where"
+                + " code = :appcode")
+                .setParameter("appcode", oldCode)
+                .list();
+
+        for (UserKaartgroep groep : groepen) {
+            UserKaartgroep clone = (UserKaartgroep) groep.clone();
+            clone.setCode(newCode);
+
+            sess.save(clone);
+            sess.flush();
+        }
+    }
+
+    private static void copyUserKaartlagen(String oldCode, String newCode) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<UserKaartlaag> lagen = sess.createQuery("from UserKaartlaag where"
+                + " code = :appcode")
+                .setParameter("appcode", oldCode)
+                .list();
+
+        for (UserKaartlaag laag : lagen) {
+            UserKaartlaag clone = (UserKaartlaag) laag.clone();
+            clone.setCode(newCode);
+
+            sess.save(clone);
+            sess.flush();
+        }
     }
 }

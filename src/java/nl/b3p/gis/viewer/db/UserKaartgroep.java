@@ -50,4 +50,23 @@ public class UserKaartgroep {
     public void setId(Integer id) {
         this.id = id;
     }
+
+    @Override
+    public Object clone() {
+        UserKaartgroep cloneObj = new UserKaartgroep();
+        
+        if (this.code != null) {
+            cloneObj.code = this.code;
+        }
+
+        if (this.clusterid != null) {
+            cloneObj.clusterid = new Integer(this.clusterid);
+        }
+
+        if (this.default_on != null) {
+            cloneObj.default_on = this.default_on;
+        }
+
+        return cloneObj;
+    }
 }
