@@ -1007,7 +1007,7 @@ public class KaartSelectieUtil {
         return false;
     }
 
-    public static Applicatie copyApplicatie(Applicatie sourceApp) {
+    public static Applicatie copyApplicatie(Applicatie sourceApp, boolean readOnly) {
         /* Maak kopie Applicatie */
         Applicatie app = new Applicatie();
 
@@ -1023,7 +1023,7 @@ public class KaartSelectieUtil {
         app.setGebruikersCode(sourceApp.getGebruikersCode());
         app.setParent(sourceApp);
         app.setDatum_gebruikt(new Date());
-        app.setRead_only(sourceApp.getRead_only());
+        app.setRead_only(readOnly);
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 

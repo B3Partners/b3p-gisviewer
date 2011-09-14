@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.KaartSelectieUtil;
+import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
@@ -98,6 +99,12 @@ public class KaartSelectieAction extends BaseGisAction {
 
         KaartSelectieUtil.populateKaartSelectieForm(appCode, request);
 
+        /* Applicatie ophalen om te zien of deze read-only is */
+        Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+
+        if (app != null)
+            dynaForm.set("appReadOnly", app.getRead_only());
+
         return mapping.findForward(SUCCESS);
     }
 
@@ -124,14 +131,30 @@ public class KaartSelectieAction extends BaseGisAction {
         layersAan = addDefaultOnValues(layersDefaultAan, layersAan);
 
         String code = dynaForm.getString("appCode");
+        Boolean readOnly = (Boolean) dynaForm.get("appReadOnly");
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        if (readOnly) {
+            Applicatie oldApp = KaartSelectieUtil.getApplicatie(code);
+
+            if (oldApp != null) {
+
+                Applicatie app = KaartSelectieUtil.copyApplicatie(oldApp, false);
+                app.setNaam(oldApp.getNaam() + " user kopie");
+
+                sess.save(app);
+                sess.flush();
+
+                code = app.getCode();
+            }
+        }
 
         /* Eerst alle huidige records verwijderen. Dan hoeven we geen
          * onoverzichtelijke if meuk toe te voegen om te kijken of er vinkjes
          * ergens wel of niet aan staan en dan wissen */
         removeExistingUserKaartgroepAndUserKaartlagen(code);
         resetExistingUserLayers(code);
-
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         /* Opslaan user kaartgroepen */
         for (int i = 0; i < kaartgroepenAan.length; i++) {
