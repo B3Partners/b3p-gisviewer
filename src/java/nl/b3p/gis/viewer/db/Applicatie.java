@@ -23,6 +23,8 @@ public class Applicatie {
     private Applicatie parent;
     private Date datum_gebruikt;
     private Boolean read_only;
+    private Boolean user_copy;
+    private Integer versie;
     private Set children;
 
 
@@ -102,6 +104,22 @@ public class Applicatie {
 
     public void setRead_only(Boolean read_only) {
         this.read_only = read_only;
+    }
+
+    public Boolean getUser_copy() {
+        return user_copy;
+    }
+
+    public void setUser_copy(Boolean user_copy) {
+        this.user_copy = user_copy;
+    }
+
+    public Integer getVersie() {
+        return versie;
+    }
+
+    public void setVersie(Integer versie) {
+        this.versie = versie;
     }
     
     public static String createApplicatieCode()

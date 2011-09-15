@@ -1007,7 +1007,7 @@ public class KaartSelectieUtil {
         return false;
     }
 
-    public static Applicatie copyApplicatie(Applicatie sourceApp, boolean readOnly) {
+    public static Applicatie copyApplicatie(Applicatie sourceApp, boolean readOnly, boolean userCopy) {
         /* Maak kopie Applicatie */
         Applicatie app = new Applicatie();
 
@@ -1018,12 +1018,16 @@ public class KaartSelectieUtil {
             log.error("Fout tijdens maken Applicatie code:", ex);
         }
 
-        app.setNaam(sourceApp.getNaam() + " kopie");
+        Integer versie = sourceApp.getVersie() + 1;
+
+        app.setNaam(sourceApp.getNaam());
         app.setCode(newCode);
         app.setGebruikersCode(sourceApp.getGebruikersCode());
         app.setParent(sourceApp);
         app.setDatum_gebruikt(new Date());
         app.setRead_only(readOnly);
+        app.setUser_copy(userCopy);
+        app.setVersie(versie);
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 

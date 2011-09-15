@@ -11,7 +11,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
+import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.BaseGisAction;
+import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Themas;
 import org.apache.commons.logging.Log;
@@ -94,8 +96,6 @@ public class IndexAction extends BaseGisAction {
         return mapping.findForward(SUCCESS);
     }
 
-    
-
     private String findCodeinUrl(String url) throws MalformedURLException {
 
         if (url == null) {
@@ -118,6 +118,30 @@ public class IndexAction extends BaseGisAction {
         return code;
     }
 
+    private String findAppCodeinUrl(String url) throws MalformedURLException {
+
+        if (url == null) {
+            return null;
+        }
+
+        String appCode = null;
+        URL ourl = new URL(url);
+
+        String qparams = ourl.getQuery();
+        if (qparams != null && qparams.length() != 0) {
+            int pos = qparams.indexOf(APP_AUTH);
+            if (pos >= 0 && qparams.length() > pos + APP_AUTH.length() + 1) {
+                appCode = qparams.substring(pos + APP_AUTH.length() + 1);
+                pos = appCode.indexOf('&');
+                if (pos >= 0) {
+                    appCode = appCode.substring(0, pos);
+                }
+            }
+        }
+
+        return appCode;
+    }
+
     public ActionForward login(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         if (request instanceof SecurityRequestWrapper) {
@@ -127,6 +151,20 @@ public class IndexAction extends BaseGisAction {
             logger.debug("savedURL: " + savedURL);
             String code = findCodeinUrl(savedURL);
             logger.debug("code: " + code);
+
+            /* Kijken of er een gebruikerscode in de Applicatie zit */
+            String appCode = findAppCodeinUrl(savedURL);
+
+            if (appCode != null && appCode.length() > 0) {
+                Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+                if (app != null) {
+                    String gebruikersCode = app.getGebruikersCode();
+
+                    if (gebruikersCode != null) {
+                        code = gebruikersCode;
+                    }
+                }
+            }
 
             Principal user = null;
             // Eventueel fake Principal aanmaken

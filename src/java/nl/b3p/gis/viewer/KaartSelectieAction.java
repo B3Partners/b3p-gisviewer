@@ -102,8 +102,15 @@ public class KaartSelectieAction extends BaseGisAction {
         /* Applicatie ophalen om te zien of deze read-only is */
         Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
 
-        if (app != null)
-            dynaForm.set("appReadOnly", app.getRead_only());
+        if (app != null) {
+            Boolean readOnly = app.getRead_only();
+
+            if (readOnly) {
+                dynaForm.set("currentAppReadOnly", "1");
+            } else {
+                dynaForm.set("currentAppReadOnly", "0");
+            }
+        }
 
         return mapping.findForward(SUCCESS);
     }
@@ -131,23 +138,40 @@ public class KaartSelectieAction extends BaseGisAction {
         layersAan = addDefaultOnValues(layersDefaultAan, layersAan);
 
         String code = dynaForm.getString("appCode");
-        Boolean readOnly = (Boolean) dynaForm.get("appReadOnly");
+        String currentAppReadOnly = dynaForm.getString("currentAppReadOnly");
+        Boolean makeAppReadOnly = (Boolean) dynaForm.get("makeAppReadOnly");
+
+        Boolean isReadOnly = false;
+        if (currentAppReadOnly != null && currentAppReadOnly.equals("1")) {
+            isReadOnly = true;
+        }
+
+        Boolean makeReadOnly = false;
+        if (makeAppReadOnly != null && makeAppReadOnly) {
+            makeReadOnly = true;
+        }
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
-        if (readOnly) {
-            Applicatie oldApp = KaartSelectieUtil.getApplicatie(code);
+        /* Als huidige Applicatie alleen lezen is kopie maken. Anders huidige applicatie
+         opslaan met alleen-lezen keuze van gebruiker. */
+        Applicatie currentApp = KaartSelectieUtil.getApplicatie(code);
+        if (isReadOnly) {
+            if (currentApp != null) {
 
-            if (oldApp != null) {
-
-                Applicatie app = KaartSelectieUtil.copyApplicatie(oldApp, false);
-                app.setNaam(oldApp.getNaam() + " user kopie");
+                Applicatie app = KaartSelectieUtil.copyApplicatie(currentApp, makeReadOnly, true);
+                app.setNaam(currentApp.getNaam());
 
                 sess.save(app);
                 sess.flush();
 
                 code = app.getCode();
             }
+        } else if (!isReadOnly && makeReadOnly) {
+            currentApp.setRead_only(makeReadOnly);
+
+            sess.save(currentApp);
+            sess.flush();
         }
 
         /* Eerst alle huidige records verwijderen. Dan hoeven we geen
@@ -245,7 +269,9 @@ public class KaartSelectieAction extends BaseGisAction {
         //reloadFormData(request);
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
 
-        return mapping.findForward(SUCCESS);
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
+
+        return getDefaultForward(mapping, request);
     }
 
     public ActionForward saveWMSService(ActionMapping mapping, DynaValidatorForm dynaForm,
@@ -305,7 +331,8 @@ public class KaartSelectieAction extends BaseGisAction {
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
 
-        return mapping.findForward(SUCCESS);
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
+        return getDefaultForward(mapping, request);
     }
 
     public ActionForward deleteWMSServices(ActionMapping mapping, DynaValidatorForm dynaForm,
@@ -321,7 +348,8 @@ public class KaartSelectieAction extends BaseGisAction {
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
         
-        return mapping.findForward(SUCCESS);
+        addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
+        return getDefaultForward(mapping, request);
     }
 
     private List<org.geotools.data.ows.Layer> getParentLayers(org.geotools.data.ows.Layer[] layers) {

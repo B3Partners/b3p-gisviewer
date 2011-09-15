@@ -196,6 +196,7 @@ public class ViewerAction extends BaseGisAction {
     @Override
     protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         super.createLists(dynaForm, request);
+
         List ctl = SpatialUtil.getValidClusters();
         List themalist = getValidUserThemas(false, ctl, request);
 

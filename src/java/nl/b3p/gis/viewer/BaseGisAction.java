@@ -25,6 +25,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
     private static final Log logger = LogFactory.getLog(BaseGisAction.class);
     public static final String URL_AUTH = "code";
+    public static final String APP_AUTH = "appCode";
     protected static final double DEFAULTTOLERANCE = 5.0;
     protected static final String ACKNOWLEDGE_MESSAGES = "acknowledgeMessages";
 
