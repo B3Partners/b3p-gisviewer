@@ -273,6 +273,8 @@ public class KaartSelectieAction extends BaseGisAction {
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
 
+        request.setAttribute("appCodeSaved", code);
+
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
 
         return getDefaultForward(mapping, request);
