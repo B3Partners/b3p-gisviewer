@@ -330,9 +330,20 @@ public class ViewerAction extends BaseGisAction {
                 extent = null;
             }
         }
+
+        /* Als extent niet aan url is meegegeven kijken of er een is ingesteld voor
+         * de Applicatie */
+        if (map != null) {
+            String cfgExtent = (String) map.get("extent");
+            if (cfgExtent != null && cfgExtent.split(",").length == 4) {
+                extent = cfgExtent;
+            }
+        }
+
         if (FormUtils.nullIfEmpty(request.getParameter(RESOLUTION))!=null){
             request.setAttribute(RESOLUTION,request.getParameter(RESOLUTION));
         }
+
         //als er geen juiste extent is gevonden en er is een actiefthemaid meegegeven gebruik de bbox van die layer
         if (extent == null && actiefThema != null) {
             Layer layer = user.getLayer(actiefThema.getWms_layers_real());
