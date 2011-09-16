@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.db.Applicatie;
@@ -94,8 +95,8 @@ public class KaartSelectieAction extends BaseGisAction {
             HttpServletRequest request, HttpServletResponse response)
             throws JSONException, Exception {
 
-        String appCode = request.getParameter(PARAM_APPCODE);
-        dynaForm.set("appCode", appCode);
+        HttpSession session = request.getSession(true);
+        String appCode = (String) session.getAttribute("appCode");
 
         KaartSelectieUtil.populateKaartSelectieForm(appCode, request);
 
@@ -137,7 +138,9 @@ public class KaartSelectieAction extends BaseGisAction {
         kaartlagenAan = addDefaultOnValues(kaartlagenDefaultAan, kaartlagenAan);
         layersAan = addDefaultOnValues(layersDefaultAan, layersAan);
 
-        String code = dynaForm.getString("appCode");
+        HttpSession session = request.getSession(true);
+        String code = (String) session.getAttribute("appCode");
+
         String currentAppReadOnly = dynaForm.getString("currentAppReadOnly");
         Boolean makeAppReadOnly = (Boolean) dynaForm.get("makeAppReadOnly");
 
@@ -265,8 +268,9 @@ public class KaartSelectieAction extends BaseGisAction {
                 sess.merge(ul);
             }
         }
+        
+        session.setAttribute("appCode", code);
 
-        //reloadFormData(request);
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
@@ -282,7 +286,8 @@ public class KaartSelectieAction extends BaseGisAction {
         String sldUrl = (String) dynaForm.get("sldUrl");
 
         /* controleren of serviceUrl al voorkomt bij applicatie */
-        String code = dynaForm.getString("appCode");
+        HttpSession session = request.getSession(true);
+        String code = (String) session.getAttribute("appCode");
 
         if (userAlreadyHasThisService(code, serviceUrl)) {
             reloadFormData(request);
@@ -339,7 +344,9 @@ public class KaartSelectieAction extends BaseGisAction {
             HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         String[] servicesAan = (String[]) dynaForm.get("servicesAan");
-        String code = dynaForm.getString("appCode");
+
+        HttpSession session = request.getSession(true);
+        String code = (String) session.getAttribute("appCode");
 
         for (int i=0; i < servicesAan.length; i++) {
             Integer serviceId = new Integer(servicesAan[i]);

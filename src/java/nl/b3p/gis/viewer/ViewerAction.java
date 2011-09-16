@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
@@ -205,7 +206,9 @@ public class ViewerAction extends BaseGisAction {
 
         /* Applicatie instellingen ophalen */
         String appCode = request.getParameter(APPCODE);
-        request.setAttribute("appCode", appCode);
+
+        HttpSession session = request.getSession(true);
+        session.setAttribute("appCode", appCode);
 
         /* Applicatie ophalen */
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
