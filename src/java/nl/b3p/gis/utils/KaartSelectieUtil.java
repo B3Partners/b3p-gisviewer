@@ -234,6 +234,23 @@ public class KaartSelectieUtil {
         return app;
     }
 
+    public static Applicatie getDefaultApplicatie() {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        Applicatie app = null;
+
+        List<Applicatie> applicaties = sess.createQuery("from Applicatie"
+                + " where default_app = :value")
+                .setParameter("value", true)
+                .setMaxResults(1).list();
+
+        if (applicaties != null && applicaties.size() == 1) {
+            return (Applicatie) applicaties.get(0);
+        }
+
+        return app;
+    }
+
     private static void setKaartlagenTree(HttpServletRequest request) throws JSONException, Exception {
 
         List ctl = SpatialUtil.getValidClusters();
@@ -1028,6 +1045,7 @@ public class KaartSelectieUtil {
         app.setRead_only(readOnly);
         app.setUser_copy(userCopy);
         app.setVersie(versie);
+        app.setDefault_app(false);
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 

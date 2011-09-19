@@ -207,14 +207,23 @@ public class ViewerAction extends BaseGisAction {
         /* Applicatie instellingen ophalen */
         String appCode = request.getParameter(APPCODE);
 
-        HttpSession session = request.getSession(true);
-        session.setAttribute("appCode", appCode);
-
-        /* Applicatie ophalen */
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
 
+        /* Kijken of er een default Applicatie is ? */
+        if (app == null) {
+            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
+
+            if (defaultApp != null)
+                app = defaultApp;
+        }
+
         if (app != null) {
+            /* Appcode klaarzetten voor kaartselectie form */
+            HttpSession session = request.getSession(true);
+            session.setAttribute("appCode", app.getCode());
+
+            appCode = app.getCode();
             app.setDatum_gebruikt(new Date());
 
             sess.save(app);

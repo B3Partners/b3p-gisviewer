@@ -157,6 +157,15 @@ public class IndexAction extends BaseGisAction {
 
             if (appCode != null && appCode.length() > 0) {
                 Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+
+                /* Kijken of er een default Applicatie is ? */
+                if (app == null) {
+                    Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
+
+                    if (defaultApp != null)
+                        app = defaultApp;
+                }
+
                 if (app != null) {
                     String gebruikersCode = app.getGebruikersCode();
 

@@ -8,5 +8,6 @@ create table applicatie (
 	read_only boolean NOT NULL DEFAULT true,
 	user_copy boolean NOT NULL DEFAULT false,
 	versie integer NOT NULL DEFAULT 1,
+	default_app boolean NOT NULL DEFAULT false,
     primary key (id)
 );

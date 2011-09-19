@@ -25,6 +25,7 @@ public class Applicatie {
     private Boolean read_only;
     private Boolean user_copy;
     private Integer versie;
+    private Boolean default_app;
     private Set children;
 
 
@@ -120,6 +121,14 @@ public class Applicatie {
 
     public void setVersie(Integer versie) {
         this.versie = versie;
+    }
+
+    public Boolean getDefault_app() {
+        return default_app;
+    }
+
+    public void setDefault_app(Boolean default_app) {
+        this.default_app = default_app;
     }
     
     public static String createApplicatieCode()
