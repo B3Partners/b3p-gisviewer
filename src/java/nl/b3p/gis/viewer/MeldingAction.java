@@ -4,11 +4,9 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.servlet.http.HttpServletRequest;
@@ -18,9 +16,7 @@ import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Meldingen;
 import nl.b3p.gis.viewer.db.Gegevensbron;
-import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.services.HibernateUtil;
-import nl.b3p.gis.viewer.services.GisPrincipal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionErrors;
@@ -29,6 +25,8 @@ import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.hibernate.Session;
 import nl.b3p.gis.geotools.DataStoreUtil;
+import nl.b3p.gis.utils.KaartSelectieUtil;
+import nl.b3p.gis.viewer.db.Applicatie;
 import org.apache.commons.mail.SimpleEmail;
 import org.apache.struts.action.ActionMessage;
 import org.geotools.data.DataStore;
@@ -100,7 +98,24 @@ public class MeldingAction extends ViewerCrudAction {
     }
 
     private void useInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
-        Map instellingen = getInstellingenMap(request);
+        /* Applicatie instellingen ophalen */
+        String appCode = request.getParameter(ViewerAction.APPCODE);
+        Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+
+        if (app == null) {
+            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
+
+            if (defaultApp != null)
+                app = defaultApp;
+        }
+
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Map instellingen = configKeeper.getConfigMap(app.getCode());
+
+        /* Indien niet aanwezig dan defaults laden */
+        if ((instellingen == null) || (instellingen.size() < 1)) {
+            instellingen = configKeeper.getDefaultInstellingen();
+        }
 
         if (instellingen != null) {
 
@@ -178,7 +193,25 @@ public class MeldingAction extends ViewerCrudAction {
         String from = "";
         String subject = "";
 
-        Map instellingen = getInstellingenMap(request);
+        /* Applicatie instellingen ophalen */
+        String appCode = request.getParameter(ViewerAction.APPCODE);
+        Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+
+        if (app == null) {
+            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
+
+            if (defaultApp != null)
+                app = defaultApp;
+        }
+
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Map instellingen = configKeeper.getConfigMap(app.getCode());
+
+        /* Indien niet aanwezig dan defaults laden */
+        if ((instellingen == null) || (instellingen.size() < 1)) {
+            instellingen = configKeeper.getDefaultInstellingen();
+        }
+
         if (instellingen != null) {
             if (instellingen.get("smtpHost") != null) {
                 host = (String) instellingen.get("smtpHost");

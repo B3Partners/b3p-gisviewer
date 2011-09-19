@@ -8,19 +8,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Gegevensbron;
-import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.services.HibernateUtil;
-import nl.b3p.gis.viewer.services.GisPrincipal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionErrors;
@@ -30,6 +26,8 @@ import org.apache.struts.validator.DynaValidatorForm;
 import org.geotools.filter.text.cql2.CQLException;
 import org.hibernate.Session;
 import nl.b3p.gis.geotools.DataStoreUtil;
+import nl.b3p.gis.utils.KaartSelectieUtil;
+import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Redlining;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.geotools.data.DataStore;
@@ -90,7 +88,24 @@ public class RedliningAction extends ViewerCrudAction {
     }
 
     private void useInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
-        Map instellingen = getInstellingenMap(request);        
+        /* Applicatie instellingen ophalen */
+        String appCode = request.getParameter(ViewerAction.APPCODE);
+        Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+
+        if (app == null) {
+            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
+
+            if (defaultApp != null)
+                app = defaultApp;
+        }
+
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Map instellingen = configKeeper.getConfigMap(app.getCode());
+
+        /* Indien niet aanwezig dan defaults laden */
+        if ((instellingen == null) || (instellingen.size() < 1)) {
+            instellingen = configKeeper.getDefaultInstellingen();
+        }
 
         populateFromInstellingen(instellingen, dynaForm, request);
     }

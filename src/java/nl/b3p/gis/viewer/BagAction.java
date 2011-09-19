@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import nl.b3p.gis.utils.ConfigKeeper;
+import nl.b3p.gis.utils.KaartSelectieUtil;
+import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.HibernateUtil;
@@ -28,17 +31,34 @@ public class BagAction extends ViewerCrudAction{
     
     @Override
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        Map instellingen=getInstellingenMap(request);
-        if(instellingen.get("bagkaartlaagid")==null){
-            addAlternateMessage(mapping, request, "Er is geen BAG kaartlaag geconfigureerd in het viewerontwerp.");
-            return mapping.findForward(FAILURE);  
+        /* Applicatie instellingen ophalen */
+        String appCode = request.getParameter(ViewerAction.APPCODE);
+        Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+
+        if (app == null) {
+            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
+
+            if (defaultApp != null)
+                app = defaultApp;
         }
-        /**********************************************
-         * get het kaartlaag id en gegevensbron ids          
-         */
-        Integer bagkaartlaagid= (Integer)instellingen.get("bagkaartlaagid");
+
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Map instellingen = configKeeper.getConfigMap(app.getCode());
+
+        /* Indien niet aanwezig dan defaults laden */
+        if ((instellingen == null) || (instellingen.size() < 1)) {
+            instellingen = configKeeper.getDefaultInstellingen();
+        }
+
+        Integer bagkaartlaagid = (Integer) instellingen.get("bagkaartlaagid");
+
+        if (bagkaartlaagid == null || bagkaartlaagid < 1) {
+            addAlternateMessage(mapping, request, "Er is nog geen BAG Kaartlaag geconfigureerd door de beheerder.");
+            return mapping.findForward(FAILURE);
+        }
         
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
         Themas bagKaartLaag = (Themas) sess.get(Themas.class,bagkaartlaagid);
         //panden
         Gegevensbron pandengb= bagKaartLaag.getGegevensbron();

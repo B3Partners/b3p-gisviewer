@@ -23,14 +23,9 @@
 package nl.b3p.gis.viewer;
 
 import java.sql.SQLException;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.struts.CrudAction;
-import nl.b3p.gis.utils.ConfigKeeper;
-import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.wms.capabilities.ServiceProvider;
@@ -53,62 +48,7 @@ public class ViewerCrudAction extends CrudAction {
     protected ActionForward getUnspecifiedAlternateForward(ActionMapping mapping, HttpServletRequest request) {
         return mapping.findForward(FAILURE);
     }
-    /*
-     * Get instellingen map met settings voor de viewer die bij de rol van de gebruiker hoort.
-     */
-    protected Map getInstellingenMap(HttpServletRequest request) throws Exception {
-
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        ConfigKeeper configKeeper = new ConfigKeeper();
-
-        if (user==null) {
-            //TODO waarom komt dit soms voor?
-            return configKeeper.getConfigMap("default");
-        }
-        
-        Set roles = user.getRoles();
-
-        Configuratie rollenPrio = null;
-        try {
-            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
-        } catch (Exception ex) {
-            log.debug("Fout bij ophalen configKeeper configuratie: " + ex);
-        }
-
-        String[] configRollen = null;
-        if (rollenPrio != null && rollenPrio.getPropval() != null) {
-            configRollen = rollenPrio.getPropval().split(",");
-        }
-
-        String echteRol = null;
-
-        Boolean foundRole = false;
-        for (int i = 0; i < configRollen.length; i++) {
-            if (foundRole) {
-                break;
-            }
-            String rolnaam = configRollen[i];
-            if (roles!=null){
-                Iterator iter = roles.iterator();
-                while (iter.hasNext()) {
-                    String inlogRol = iter.next().toString();
-                    if (rolnaam.equals(inlogRol)) {
-                        echteRol = rolnaam;
-                        foundRole = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        Map map = configKeeper.getConfigMap(echteRol);
-        if ((map == null) || (map.isEmpty())) {
-            map = configKeeper.getConfigMap("default");
-        }
-        return map;
-    }
-
-
+    
     protected String getOrganizationCode(HttpServletRequest request) {
         GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
         if (gp != null) {
