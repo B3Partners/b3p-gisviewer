@@ -103,6 +103,12 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         WMSCapabilitiesReader wmscr = new WMSCapabilitiesReader();
         ServiceProvider sp = null;
 
+        /* TODO: Wat te doen als de Applicatie een gebruikerscode heeft die ongeldig is
+        Bijvoorbeeld ABC ? Ik denk dat je dan gewoon niet kunt inloggen. Misschien aan gisviewerconfig
+        kant controleren of ingevulde gebruikerscode bij opslaan van een Applicatie wel
+        geldig is ?
+        */
+
         /* Indien via code ingelogd cachen met code */
         String key = "";
 
@@ -114,6 +120,10 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             key = username;
         } else if (username != null && password != null) {
             key = username;
+        }
+
+        if (key == null) {
+            return null;
         }
 
         String ip = null;

@@ -32,7 +32,10 @@ import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import nl.b3p.gis.utils.ConfigListsUtil;
+import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.BaseGisAction;
+import nl.b3p.gis.viewer.ViewerAction;
+import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.wms.capabilities.Layer;
 import nl.b3p.wms.capabilities.Roles;
 import nl.b3p.wms.capabilities.ServiceProvider;
@@ -271,6 +274,7 @@ public class GisPrincipal implements Principal {
         String gpCode = null;
         String gpUsername = HibernateUtil.ANONYMOUS_USER;
         String gpPassword = null;
+
         GisPrincipal gp = (GisPrincipal) user;
         if (gp != null) {
             gpCode = gp.getCode();
@@ -279,6 +283,34 @@ public class GisPrincipal implements Principal {
         }
 
         String code = request.getParameter(BaseGisAction.URL_AUTH);
+
+        /* Indien al ingelogd als iemand anders en de gebruikerscode komt niet overeen
+         * met die van de applicatie dan uitloggen !? */
+        Applicatie app = null;
+        String appCode = request.getParameter(ViewerAction.APPCODE);
+        if (appCode != null && appCode.length() > 0) {
+            app = KaartSelectieUtil.getApplicatie(appCode);
+        }
+
+        if (app != null && gpCode != null) {
+            String appUserCode = app.getGebruikersCode();
+
+            if (appUserCode != null && !appUserCode.equals(gpCode)) {
+
+                // user is using different code, so invalidate session and login again
+                HttpSession session = request.getSession();
+                session.invalidate();
+
+                log.debug("Sessie ongeldig gemaakt. Applicatie heeft niet dezelfde gebruikerscode"
+                        + " als huidig ingelogde gebruiker. Opnieuw inloggen. Applicatieid is " + app.getId());
+
+                gp = null;
+                gpCode = appUserCode;
+                gpUsername = HibernateUtil.ANONYMOUS_USER;
+                gpPassword = null;
+            }
+        }
+
         if (code != null && code.length() != 0) {
             if (gpCode != null && !code.equals(gpCode)) {
                 // user is using different code, so invalidate session and login again

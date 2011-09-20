@@ -180,7 +180,7 @@ public class ViewerAction extends BaseGisAction {
         if (user == null) {
             log.info("Geen user beschikbaar, ook geen anoniem. Forward naar login om te proberen een user te maken met login gegevens.");
             return mapping.findForward(LOGIN);
-        }        
+        }
 
         createLists(dynaForm, request);
 
@@ -191,6 +191,7 @@ public class ViewerAction extends BaseGisAction {
                 return mapping.findForward(SIMPLE_VIEWER_FW);
             }
         }
+
         return mapping.findForward(SUCCESS);
     }
 
@@ -205,18 +206,20 @@ public class ViewerAction extends BaseGisAction {
         String userCode = user.getCode();
 
         /* Applicatie instellingen ophalen */
-        String appCode = request.getParameter(APPCODE);
+        Applicatie app = null;
+        String appCode = request.getParameter(ViewerAction.APPCODE);
+        if (appCode != null && appCode.length() > 0) {
+            app = KaartSelectieUtil.getApplicatie(appCode);
+        }
 
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
-
-        /* Kijken of er een default Applicatie is ? */
         if (app == null) {
             Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
 
             if (defaultApp != null)
                 app = defaultApp;
         }
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         if (app != null) {
             /* Appcode klaarzetten voor kaartselectie form */

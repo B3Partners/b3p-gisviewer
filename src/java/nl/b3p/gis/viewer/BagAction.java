@@ -32,8 +32,11 @@ public class BagAction extends ViewerCrudAction{
     @Override
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         /* Applicatie instellingen ophalen */
+        Applicatie app = null;
         String appCode = request.getParameter(ViewerAction.APPCODE);
-        Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+        if (appCode != null && appCode.length() > 0) {
+            app = KaartSelectieUtil.getApplicatie(appCode);
+        }
 
         if (app == null) {
             Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();

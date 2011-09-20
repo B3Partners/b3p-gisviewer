@@ -89,8 +89,11 @@ public class RedliningAction extends ViewerCrudAction {
 
     private void useInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         /* Applicatie instellingen ophalen */
+        Applicatie app = null;
         String appCode = request.getParameter(ViewerAction.APPCODE);
-        Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
+        if (appCode != null && appCode.length() > 0) {
+            app = KaartSelectieUtil.getApplicatie(appCode);
+        }
 
         if (app == null) {
             Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();

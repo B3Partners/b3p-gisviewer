@@ -118,14 +118,19 @@ public class IndexAction extends BaseGisAction {
         return code;
     }
 
-    private String findAppCodeinUrl(String url) throws MalformedURLException {
-
+    private static String findAppCodeinUrl(String url) {
         if (url == null) {
             return null;
         }
 
         String appCode = null;
-        URL ourl = new URL(url);
+
+        URL ourl = null;
+        try {
+            ourl = new URL(url);
+        } catch (MalformedURLException ex) {
+            logger.error("Fout tijdens omzetten url voor ophalen applicatiecode.", ex);
+        }
 
         String qparams = ourl.getQuery();
         if (qparams != null && qparams.length() != 0) {
