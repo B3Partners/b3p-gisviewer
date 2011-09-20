@@ -225,6 +225,7 @@ public class ViewerAction extends BaseGisAction {
             /* Appcode klaarzetten voor kaartselectie form */
             HttpSession session = request.getSession(true);
             session.setAttribute("appCode", app.getCode());
+            request.setAttribute("bookmarkAppcode", app.getCode());
 
             appCode = app.getCode();
             app.setDatum_gebruikt(new Date());
