@@ -735,7 +735,7 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("visible", true);
             }
 
-            if (userlagen != null && userlagen.size() > 0 && !showCluster) {
+            if (userlagen != null && userlagen.size() > 0 && !showCluster && !defaultOn) {
                 jsonCluster.put("hide_tree", true);
                 jsonCluster.put("callable", false);
                 jsonCluster.put("background", false);
