@@ -633,15 +633,22 @@ public class ViewerAction extends BaseGisAction {
     }
 
     protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas, List actieveClusters, GisPrincipal user, String appCode) throws JSONException {
-        JSONObject root = new JSONObject().put("id", "root").put("type", "root").put("title", "root");
+        JSONObject root = new JSONObject()
+                .put("id", "root")
+                .put("type", "root")
+                .put("title", "root");
+
         if (rootClusterMap == null || rootClusterMap.isEmpty()) {
             return root;
         }
+        
         List clusterMaps = (List) rootClusterMap.get("subclusters");
         if (clusterMaps == null || clusterMaps.isEmpty()) {
             return root;
         }
-        root.put("children", getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0, appCode));
+
+        JSONArray children = getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0, appCode);
+        root.put("children", children);
 
         return root;
     }
@@ -672,12 +679,9 @@ public class ViewerAction extends BaseGisAction {
                 Themas thema = (Themas)sess.get(Themas.class, themaId);
                 Integer clusterId = thema.getCluster().getId();
 
-                if (clusterId == cluster.getId())
+                if (clusterId.intValue() == cluster.getId().intValue()) {
                     showCluster = true;
-            }
-
-            if (userlagen != null && userlagen.size() > 0 && !showCluster) {
-                continue;
+                }
             }
 
             /* controleren of cluster default aan staat in user kaartgroepen */
@@ -731,20 +735,28 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("visible", true);
             }
 
+            if (userlagen != null && userlagen.size() > 0 && !showCluster) {
+                jsonCluster.put("hide_tree", true);
+                jsonCluster.put("visible", false);
+            }
+
             List childrenList = (List) clMap.get("children");
 
             JSONArray childrenArray = new JSONArray();
             order = getChildren(childrenArray, childrenList, actieveThemas, user, order, appCode);
+
             List subsubclusterMaps = (List) clMap.get("subclusters");
             childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order, appCode);
+
             jsonCluster.put("children", childrenArray);
 
             if (clusterArray == null) {
                 clusterArray = new JSONArray();
             }
-            clusterArray.put(jsonCluster);
 
+            clusterArray.put(jsonCluster);
         }
+
         return clusterArray;
     }
 
