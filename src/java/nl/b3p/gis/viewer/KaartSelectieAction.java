@@ -653,18 +653,7 @@ public class KaartSelectieAction extends BaseGisAction {
             JSONObject jsonCluster = new JSONObject().put("id", themaId).put("type", "child").put("title", ttitel).put("cluster", false);
 
             order++;
-            jsonCluster.put("order", order);
-
-            /* indien log op DEBUG level staat dan volgordenummer achter de naam weergeven
-             * in de boom. */
-            if (log.isDebugEnabled()) {
-                String title = jsonCluster.getString("title");
-                if (title == null || title.equals("")) {
-                    title = "(geen naam opgegeven)";
-                }
-
-                jsonCluster.put("title", title + "(" + order + ")");
-            }
+            jsonCluster.put("order", order);            
 
             if (th.getOrganizationcodekey() != null && th.getOrganizationcodekey().length() > 0) {
                 jsonCluster.put("organizationcodekey", th.getOrganizationcodekey().toUpperCase());
