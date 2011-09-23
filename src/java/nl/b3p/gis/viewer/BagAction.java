@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.db.Applicatie;
@@ -33,7 +34,8 @@ public class BagAction extends ViewerCrudAction{
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         /* Applicatie instellingen ophalen */
         Applicatie app = null;
-        String appCode = request.getParameter(ViewerAction.APPCODE);
+        HttpSession session = request.getSession(true);
+        String appCode = (String) session.getAttribute("appCode");
         if (appCode != null && appCode.length() > 0) {
             app = KaartSelectieUtil.getApplicatie(appCode);
         }

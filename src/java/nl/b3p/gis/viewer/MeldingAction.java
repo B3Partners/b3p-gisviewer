@@ -11,6 +11,7 @@ import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
@@ -100,7 +101,10 @@ public class MeldingAction extends ViewerCrudAction {
     private void useInstellingen(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         /* Applicatie instellingen ophalen */
         Applicatie app = null;
-        String appCode = request.getParameter(ViewerAction.APPCODE);
+
+        HttpSession session = request.getSession(true);
+        String appCode = (String) session.getAttribute("appCode");
+        
         if (appCode != null && appCode.length() > 0) {
             app = KaartSelectieUtil.getApplicatie(appCode);
         }
@@ -198,7 +202,8 @@ public class MeldingAction extends ViewerCrudAction {
 
         /* Applicatie instellingen ophalen */
         Applicatie app = null;
-        String appCode = request.getParameter(ViewerAction.APPCODE);
+        HttpSession session = request.getSession(true);
+        String appCode = (String) session.getAttribute("appCode");
         if (appCode != null && appCode.length() > 0) {
             app = KaartSelectieUtil.getApplicatie(appCode);
         }
