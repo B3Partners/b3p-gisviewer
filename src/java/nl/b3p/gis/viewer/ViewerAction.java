@@ -780,7 +780,7 @@ public class ViewerAction extends BaseGisAction {
             if (lagen != null && lagen.size() > 0) {
                 boolean isInList = false;
                 for (UserKaartlaag laag: lagen) {
-                    if (laag.getThemaid() == th.getId()) {
+                    if (laag.getThemaid().equals(th.getId())) {
                         isInList = true;
 
                         if (laag.getDefault_on()) {
@@ -789,8 +789,9 @@ public class ViewerAction extends BaseGisAction {
                     }
                 }
 
-                if (!isInList)
-                    continue;
+                if (!isInList){
+                   continue;
+                }
             }
             
             /* TODO: validAdmindataSource ging eerst via th.hasValidAdmindataSource(user)

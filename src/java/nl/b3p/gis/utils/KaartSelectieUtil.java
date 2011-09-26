@@ -218,7 +218,7 @@ public class KaartSelectieUtil {
         }
     }
 
-    public static Applicatie getApplicatie(String appCode) {
+    public static Applicatie getApplicatie(String appCode){
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         Applicatie app = null;
@@ -229,8 +229,9 @@ public class KaartSelectieUtil {
 
         if (applicaties != null && applicaties.size() == 1) {
             return (Applicatie) applicaties.get(0);
+        }else{ 
+            log.error("Applicatie not found or more then 1 found. Appcode: "+appCode);
         }
-
         return app;
     }
 
