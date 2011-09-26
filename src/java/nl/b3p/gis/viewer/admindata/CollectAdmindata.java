@@ -301,7 +301,7 @@ public class CollectAdmindata {
                 tx.rollback();
             }
         } catch (Exception e) {
-            logger.error("Fout tijdens ophalen objectdata: ",e);
+            logger.error("Fout tijdens ophalen objectdata: ", e);
 
             if (tx != null && tx.isActive()) {
                 tx.rollback();

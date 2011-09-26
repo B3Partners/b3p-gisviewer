@@ -90,6 +90,7 @@ public class PrintAction extends BaseHibernateAction {
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         CombineImageSettings settings = getCombineImageSettings(request);
+        
         String imageId = CombineImagesServlet.uniqueName("");
         request.getSession().setAttribute(imageId, settings);
         dynaForm.set("imageId", imageId);
@@ -100,6 +101,7 @@ public class PrintAction extends BaseHibernateAction {
     public ActionForward image(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         String username = null;
         String password = null;
+
         GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
         if (gp != null) {
             username = gp.getName();
@@ -108,9 +110,12 @@ public class PrintAction extends BaseHibernateAction {
 
         CombineImageSettings settings = null;
         String imageId = request.getParameter("imageId");
+
         if (imageId != null && request.getSession().getAttribute(imageId) != null) {
             settings = (CombineImageSettings) request.getSession().getAttribute(imageId);
+
             response.setContentType(settings.getMimeType());
+            response.setHeader("Content-Disposition", "attachment; filename=\"printvoorbeeld.png\";");
             response.setDateHeader("Expires", System.currentTimeMillis() + (1000 * 60 * 60 * 24));
 
             String keepAlive = request.getParameter("keepAlive");
@@ -118,6 +123,7 @@ public class PrintAction extends BaseHibernateAction {
                 request.getSession().removeAttribute(imageId);
             }
         }
+
         if (settings == null) {
             logFile.error("No settings for image found");
             this.addAlternateMessage(mapping, request, null, "No settings for image found");
@@ -133,6 +139,7 @@ public class PrintAction extends BaseHibernateAction {
         } finally {
             os.close();
         }
+
         return null;
     }
 

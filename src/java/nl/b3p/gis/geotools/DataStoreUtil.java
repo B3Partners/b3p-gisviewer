@@ -69,7 +69,6 @@ import org.opengis.feature.type.GeometryType;
 import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
-import org.opengis.filter.expression.Expression;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
@@ -81,7 +80,9 @@ public class DataStoreUtil {
 
     private static final FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
     private static final Log log = LogFactory.getLog(GetViewerDataAction.class);
+    
     public static final int maxFeatures = 1000;
+    public static final int MAX_COORDS_WKT = 250;
 
     static {
         Logging.ALL.setLoggerFactory(Log4JLoggerFactory.getInstance());
@@ -106,10 +107,10 @@ public class DataStoreUtil {
      */
     public static ArrayList<Feature> getFeatures(Bron b, Gegevensbron gb, Geometry geom, Filter extraFilter, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
         DataStore ds = b.toDatastore();
-        
+
         try {
             Filter geomFilter = createIntersectFilter(gb, ds, geom);
-            
+
             ArrayList<Filter> filters = new ArrayList();
             if (geomFilter != null) {
                 filters.add(geomFilter);
@@ -135,7 +136,7 @@ public class DataStoreUtil {
      * Het adminfilter wordt automatisch toegevoegd.
      */
     public static ArrayList<Feature> getFeatures(DataStore ds, Gegevensbron gb, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
-        FeatureCollection fc = getFeatureCollection(ds,gb,f,propNames,maximum,collectGeom);
+        FeatureCollection fc = getFeatureCollection(ds, gb, f, propNames, maximum, collectGeom);
         FeatureIterator fi = fc.features();
         ArrayList<Feature> features = new ArrayList();
         try {
@@ -143,11 +144,12 @@ public class DataStoreUtil {
                 features.add(fi.next());
             }
         } finally {
-            if (fc != null)
+            if (fc != null) {
                 fc.close(fi);
+            }
         }
         return features;
-     }
+    }
 
     public static FeatureCollection getFeatureCollection(DataStore ds, Gegevensbron gb, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
         ArrayList<Filter> filters = new ArrayList();
@@ -161,7 +163,7 @@ public class DataStoreUtil {
         } catch (CQLException cqle) {
             if (filters.isEmpty()) {
                 String msg = cqle.getLocalizedMessage();
-                throw new Exception ("Error creating filter: " + msg, cqle);
+                throw new Exception("Error creating filter: " + msg, cqle);
             }
             log.debug("error creating filter: ", cqle);
         }
@@ -176,10 +178,10 @@ public class DataStoreUtil {
             filter = ff.and(filters);
         } else {
             log.info("No filter found. Using the Filter.INCLUDE (all)");
-            filter= Filter.INCLUDE;
-        } 
+            filter = Filter.INCLUDE;
+        }
 
-        if (log.isDebugEnabled() && filter!=null) {
+        if (log.isDebugEnabled() && filter != null) {
             try {
                 FilterTransformer ft = new FilterTransformer();
                 String s = ft.transform(filter);
@@ -229,7 +231,7 @@ public class DataStoreUtil {
             if (tmpAdminPk != null) {
                 adminPk = DataStoreUtil.convertFullnameToQName(tmpAdminPk).getLocalPart();
             }
-            
+
             if (adminPk != null && adminPk.length() > 0 && !propNames.contains(adminPk)) {
                 propNames.add(adminPk);
             }
@@ -279,27 +281,30 @@ public class DataStoreUtil {
                 }
             }
             if (propNames.size() > 0) {
+                /* TODO: Als er een spatie in een Oracle column voorkomt dan gaat
+                 * getFeatures fout. */
                 query.setPropertyNames(propNames);
             }
         }
-        FeatureCollection fc=null;
-        try{
+        FeatureCollection fc = null;
+        try {
             fc = fs.getFeatures(query);
-        }catch(Exception e){
+        } catch (Exception e) {
             //create a helpfull message.
-            String message = "FeatureType: "+query.getTypeName()+"\n";
-            message+="PropertyNames: ";
-            for (int i=0; i < propNames.size(); i++){
-                if (i!=0){
-                    message+=",";
+            String message = "FeatureType: " + query.getTypeName() + "\n";
+            message += "PropertyNames: ";
+            for (int i = 0; i < propNames.size(); i++) {
+                if (i != 0) {
+                    message += ",";
                 }
-                message+=propNames.get(i);
+                message += propNames.get(i);
             }
             log.error(message);
             throw e;
         }
         return fc;
     }
+
     @Deprecated
     public static Filter createIntersectFilter(Themas t, DataStore ds, Geometry geom) throws Exception {
         String geomAttributeName = getGeometryAttributeName(ds, t);
@@ -310,6 +315,7 @@ public class DataStoreUtil {
         CoordinateReferenceSystem crs = getSchema(ds, t).getGeometryDescriptor().getCoordinateReferenceSystem();
         return createIntersectFilter(geomAttributeName, crs, ds, geom);
     }
+
     public static Filter createIntersectFilter(Gegevensbron gb, DataStore ds, Geometry geom) throws Exception {
         String geomAttributeName = getGeometryAttributeName(ds, gb);
         if (geomAttributeName == null) {
@@ -319,6 +325,7 @@ public class DataStoreUtil {
         CoordinateReferenceSystem crs = getSchema(ds, gb).getGeometryDescriptor().getCoordinateReferenceSystem();
         return createIntersectFilter(geomAttributeName, crs, ds, geom);
     }
+
     public static Filter createIntersectFilter(String geomAttributeName, CoordinateReferenceSystem crs, DataStore ds, Geometry geom) throws Exception {
         if (geom == null) {
             return null;
@@ -328,11 +335,11 @@ public class DataStoreUtil {
             WFS_1_0_0_DataStore wfsDs = (WFS_1_0_0_DataStore) ds;
             //als filter intersect niet wordt ondersteund, probeer het dan met een disjoint.
             if (!wfsDs.getCapabilities().getFilterCapabilities().fullySupports(filter)) {
-                Filter notFilter=ff.not(ff.disjoint(ff.property(geomAttributeName), ff.literal(geom)));
+                Filter notFilter = ff.not(ff.disjoint(ff.property(geomAttributeName), ff.literal(geom)));
                 Envelope env = geom.getEnvelopeInternal();
                 ReferencedEnvelope bbox = new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
-                Filter bboxFilter= ff.bbox(ff.property(geomAttributeName),bbox);
-                filter=ff.and(bboxFilter, notFilter);
+                Filter bboxFilter = ff.bbox(ff.property(geomAttributeName), bbox);
+                filter = ff.and(bboxFilter, notFilter);
             }
             if (!wfsDs.getCapabilities().getFilterCapabilities().fullySupports(filter)) {
                 if (!(geom instanceof Point)) {
@@ -381,7 +388,7 @@ public class DataStoreUtil {
 
         /* TODO
          * spatial tabel indien null check ?
-        */
+         */
         return getSchema(ds, t.getGegevensbron().getAdmin_tabel());
     }
 
@@ -397,7 +404,7 @@ public class DataStoreUtil {
             }
             return ds.getSchema(ftName.getLocalPart());
         } catch (Exception e) {
-            
+
             // NPE indien schema niet opgehaald kan worden,
             // wij maken er een leeg schema van
             FeatureTypeBuilder ftb = FeatureTypeBuilder.newInstance(ftName.getLocalPart());
@@ -405,7 +412,7 @@ public class DataStoreUtil {
             return ftb.getFeatureType();
             //  throw e;
         }
-    }    
+    }
 
     public static boolean isFilterSupported(WFS_1_0_0_DataStore ds, Filter filter) throws IOException {
         return ds.getCapabilities().getFilterCapabilities().fullySupports(filter);
@@ -441,7 +448,7 @@ public class DataStoreUtil {
 
         /* TODO
          * spatial tabel indien null check ?
-        */
+         */
         return getSchema(ds, gb.getAdmin_tabel());
     }
 
@@ -563,7 +570,7 @@ public class DataStoreUtil {
             return null;
         }
         QName n = DataStoreUtil.convertFullnameToQName(gb.getAdmin_tabel());
-        
+
         if (n == null || n.getLocalPart() == null) {
             return null;
         }
@@ -583,15 +590,15 @@ public class DataStoreUtil {
     static public String getThemaGeomType(Themas t, GisPrincipal user) throws IOException, Exception {
         Gegevensbron gb = t.getGegevensbron();
         Bron b = null;
-        
+
         if (gb != null) {
             b = gb.getBron(user);
         }
-        
+
         if (b == null) {
             return null;
         }
-        
+
         QName n = DataStoreUtil.convertFullnameToQName(gb.getAdmin_tabel());
         if (n == null || n.getLocalPart() == null) {
             return null;
@@ -699,7 +706,7 @@ public class DataStoreUtil {
                 Envelope env = geom.getEnvelopeInternal();
                 CoordinateReferenceSystem crs = f.getDefaultGeometryProperty().getDescriptor().getCoordinateReferenceSystem();
                 return new ReferencedEnvelope(env.getMinX(), env.getMaxX(), env.getMinY(), env.getMaxY(), crs);
-            }else if((geom instanceof Point)){
+            } else if ((geom instanceof Point)) {
                 Envelope env = geom.getEnvelopeInternal();
                 Double minX = env.getMinX() - 10;
                 Double minY = env.getMinY() + 10;
@@ -711,9 +718,7 @@ public class DataStoreUtil {
             }
         }
         return null;
-    }
-
-    public static final int MAX_COORDS_WKT = 250;
+    }    
 
     public static String convertFeature2WKT(Feature f, boolean fallback) {
         if (f == null || f.getDefaultGeometryProperty() == null) {
@@ -721,7 +726,7 @@ public class DataStoreUtil {
         }
         Geometry geom = (Geometry) f.getDefaultGeometryProperty().getValue();
         if (geom != null && geom.isSimple() && geom.isValid()) {
-            if (geom.getCoordinates()!=null && geom.getCoordinates().length>MAX_COORDS_WKT && fallback) {
+            if (geom.getCoordinates() != null && geom.getCoordinates().length > MAX_COORDS_WKT && fallback) {
                 geom = geom.getEnvelope();
             }
             WKTWriter wktw = new WKTWriter();
@@ -860,52 +865,52 @@ public class DataStoreUtil {
     }
 
     public static void main2(String[] args) throws Exception {
-         GeometryFactory gf = new GeometryFactory(new PrecisionModel(), 28992);
-         Polygon poly = (Polygon)new WKTReader(gf).read("    POLYGON((202557 384630, 202523 384611, 202581 384507, 202637 384503, 202707 384674, 202698 384709, 202557 384630))");
+        GeometryFactory gf = new GeometryFactory(new PrecisionModel(), 28992);
+        Polygon poly = (Polygon) new WKTReader(gf).read("    POLYGON((202557 384630, 202523 384611, 202581 384507, 202637 384503, 202707 384674, 202698 384709, 202557 384630))");
 
-         WFSDataStore wfsDatastore = null;
-         try {
-             Map params = new HashMap();
-             String url =
-"http://acceptatie.prvlimburg.nl/geoservices/wion";
-             if(!url.endsWith("&") && !url.endsWith("?")){
-                 url += url.indexOf("?") >= 0 ? "&" : "?";
-             }
+        WFSDataStore wfsDatastore = null;
+        try {
+            Map params = new HashMap();
+            String url =
+                    "http://acceptatie.prvlimburg.nl/geoservices/wion";
+            if (!url.endsWith("&") && !url.endsWith("?")) {
+                url += url.indexOf("?") >= 0 ? "&" : "?";
+            }
 
-             params.put(WFSDataStoreFactory.TIMEOUT.key, 30000);
-             params.put(WFSDataStoreFactory.URL.key, url +
-"Request=GetCapabilities&Service=WFS&Version=1.0.0");
-             wfsDatastore =
-(WFSDataStore)DataStoreFinder.getDataStore(params);
-             FilterFactory2 ff =
-CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
+            params.put(WFSDataStoreFactory.TIMEOUT.key, 30000);
+            params.put(WFSDataStoreFactory.URL.key, url
+                    + "Request=GetCapabilities&Service=WFS&Version=1.0.0");
+            wfsDatastore =
+                    (WFSDataStore) DataStoreFinder.getDataStore(params);
+            FilterFactory2 ff =
+                    CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
 
-             String typeName = "BUIS_DUIKERS";
-             String property = "msGeometry";
+            String typeName = "BUIS_DUIKERS";
+            String property = "msGeometry";
 
-             Filter filter = ff.intersects(ff.property(property),
-ff.literal(poly));
-             System.out.println("supports:" +
-((WFS_1_0_0_DataStore)wfsDatastore).getCapabilities().getFilterCapabilities().fullySupports(filter));
-             DefaultQuery query = new DefaultQuery(typeName, filter);
-             query.setMaxFeatures(10);
-             FeatureSource fs = wfsDatastore.getFeatureSource(typeName);
+            Filter filter = ff.intersects(ff.property(property),
+                    ff.literal(poly));
+            System.out.println("supports:"
+                    + ((WFS_1_0_0_DataStore) wfsDatastore).getCapabilities().getFilterCapabilities().fullySupports(filter));
+            DefaultQuery query = new DefaultQuery(typeName, filter);
+            query.setMaxFeatures(10);
+            FeatureSource fs = wfsDatastore.getFeatureSource(typeName);
 
-             FeatureCollection fc = fs.getFeatures(query);
+            FeatureCollection fc = fs.getFeatures(query);
 
-             int count;
-             if(fc instanceof DataFeatureCollection) {
-                 count = ((DataFeatureCollection)fc).getCount();
-             } else {
-                 /* DataFeatureCollection.size() swallowt exception */
-                 count = fc.size();
-             }
+            int count;
+            if (fc instanceof DataFeatureCollection) {
+                count = ((DataFeatureCollection) fc).getCount();
+            } else {
+                /* DataFeatureCollection.size() swallowt exception */
+                count = fc.size();
+            }
 
-             System.out.println("Aantal features: " + count);
-         } finally {
-             if(wfsDatastore != null){
-                 wfsDatastore.dispose();
-             }
-         }
-     }
+            System.out.println("Aantal features: " + count);
+        } finally {
+            if (wfsDatastore != null) {
+                wfsDatastore.dispose();
+            }
+        }
+    }
 }

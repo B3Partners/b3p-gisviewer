@@ -366,7 +366,7 @@ public class ConfigKeeper {
 
             cfg = new Configuratie();
             cfg.setProperty("tabWidth");
-            cfg.setPropval("288");
+            cfg.setPropval("300");
             cfg.setSetting(appCode);
             cfg.setType("java.lang.Integer");
             sess.save(cfg);
@@ -713,7 +713,7 @@ public class ConfigKeeper {
 
         cfg = new Configuratie();
         cfg.setProperty("tabWidth");
-        cfg.setPropval("288");
+        cfg.setPropval("300");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Integer");
         sess.save(cfg);

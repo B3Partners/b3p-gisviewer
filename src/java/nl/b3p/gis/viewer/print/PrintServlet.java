@@ -152,7 +152,7 @@ public class PrintServlet extends HttpServlet {
             response.setContentType(mimeType);
             response.setContentLength(out.size());
 			
-			/* Set filename and extension */
+            /* Set filename and extension */
             String filename = "Kaart_" + info.getDatum();
 
             if (mimeType.equals(MimeConstants.MIME_PDF)) {

@@ -149,6 +149,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             if (isInSPCache(key)) {
                 sp = getFromSPCache(key);
 
+                log.debug("Retrieved from cache user " + sp.getUserName() + " using key " + key);
+
                 /* Wachtwoord controleren. Anders kun je nadat de serviceprovider
                  * de eerste gecached is inloggen met de username zonder een geldig
                  * wachtwoord in te vullen. Dus bekijken we of het wachtwoord voor
@@ -184,6 +186,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                     }
 
                     putInSPCache(key, sp);
+
+                    log.debug("Login new in cache for user " + sp.getUserName() + " using key " + key);
                 }
             }
 
@@ -217,7 +221,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
              username = HibernateUtil.ANONYMOUS_USER;
         }
 
-        log.debug("login: " + username);
+        log.debug("Login for user: " + username);
+        
         return new GisPrincipal(username, password, code, sp);
     }
 
