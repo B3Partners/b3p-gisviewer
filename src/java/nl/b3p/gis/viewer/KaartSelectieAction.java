@@ -502,15 +502,18 @@ public class KaartSelectieAction extends BaseGisAction {
         if (clusterMaps == null || clusterMaps.isEmpty()) {
             return root;
         }
-        root.put("children", getSubClusters(clusterMaps, null, user, 0));
+
+        List<UserKaartgroep> groepen = SpatialUtil.getUserKaartGroepen(user.getCode());
+        List<UserKaartlaag> lagen = SpatialUtil.getUserKaartLagen(user.getCode());
+
+        root.put("children", getSubClusters(clusterMaps, null, user, 0, groepen, lagen));
 
         return root;
     }
 
-    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, GisPrincipal user, int order) throws JSONException {
-
-        /* ophalen user kaartgroepen voor aanzetten vinkjes */
-        List<UserKaartgroep> groepen = SpatialUtil.getUserKaartGroepen(user.getCode());
+    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray,
+            GisPrincipal user, int order, List<UserKaartgroep> groepen, List<UserKaartlaag> lagen)
+            throws JSONException {
 
         if (subclusterMaps == null) {
             return clusterArray;
@@ -569,9 +572,9 @@ public class KaartSelectieAction extends BaseGisAction {
             List childrenList = (List) clMap.get("children");
 
             JSONArray childrenArray = new JSONArray();
-            order = getChildren(childrenArray, childrenList, user, order);
+            order = getChildren(childrenArray, childrenList, user, order, lagen);
             List subsubclusterMaps = (List) clMap.get("subclusters");
-            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, user, order);
+            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, user, order, groepen, lagen);
             jsonCluster.put("children", childrenArray);
 
             if (clusterArray == null) {
@@ -616,13 +619,12 @@ public class KaartSelectieAction extends BaseGisAction {
         }
     }
 
-    private int getChildren(JSONArray childrenArray, List children, GisPrincipal user, int order) throws JSONException {
+    private int getChildren(JSONArray childrenArray, List children, GisPrincipal user,
+            int order, List<UserKaartlaag> lagen) throws JSONException {
+
         if (children == null || childrenArray == null) {
             return order;
-        }
-
-        /* ophalen user kaartgroepen voor aanzetten vinkjes */
-        List<UserKaartlaag> lagen = SpatialUtil.getUserKaartLagen(user.getCode());
+        }        
 
         Iterator it = children.iterator();
         while (it.hasNext()) {

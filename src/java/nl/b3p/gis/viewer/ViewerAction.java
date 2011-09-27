@@ -647,22 +647,26 @@ public class ViewerAction extends BaseGisAction {
             return root;
         }
 
-        JSONArray children = getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0, appCode);
+        /* ophalen user kaartgroepen om eventueel cluster aan te zetten. */
+        List<UserKaartgroep> groepen = SpatialUtil.getUserKaartGroepen(appCode);
+        List<UserKaartlaag> userlagen = SpatialUtil.getUserKaartLagen(appCode);
+
+        JSONArray children = getSubClusters(clusterMaps, null, actieveThemas, actieveClusters, user, 0, appCode, groepen, userlagen);
         root.put("children", children);
 
         return root;
     }
 
-    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray, List actieveThemas, List actieveClusters, GisPrincipal user, int order, String appCode) throws JSONException {
+    private JSONArray getSubClusters(List subclusterMaps, JSONArray clusterArray,
+            List actieveThemas, List actieveClusters, GisPrincipal user, int order,
+            String appCode, List<UserKaartgroep> groepen, List<UserKaartlaag> userlagen)
+            throws JSONException {
+
         if (subclusterMaps == null) {
             return clusterArray;
         }
 
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-        /* ophalen user kaartgroepen om eventueel cluster aan te zetten. */
-        List<UserKaartgroep> groepen = SpatialUtil.getUserKaartGroepen(appCode);
-        List<UserKaartlaag> userlagen = SpatialUtil.getUserKaartLagen(appCode);
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();        
 
         Iterator it = subclusterMaps.iterator();
         while (it.hasNext()) {
@@ -747,10 +751,10 @@ public class ViewerAction extends BaseGisAction {
             List childrenList = (List) clMap.get("children");
 
             JSONArray childrenArray = new JSONArray();
-            order = getChildren(childrenArray, childrenList, actieveThemas, user, order, appCode);
+            order = getChildren(childrenArray, childrenList, actieveThemas, user, order, appCode, userlagen);
 
             List subsubclusterMaps = (List) clMap.get("subclusters");
-            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order, appCode);
+            childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order, appCode, groepen, userlagen);
 
             jsonCluster.put("children", childrenArray);
 
@@ -764,13 +768,13 @@ public class ViewerAction extends BaseGisAction {
         return clusterArray;
     }
 
-    private int getChildren(JSONArray childrenArray, List children, List actieveThemas, GisPrincipal user, int order, String appCode) throws JSONException {
+    private int getChildren(JSONArray childrenArray, List children, List actieveThemas,
+            GisPrincipal user, int order, String appCode, List<UserKaartlaag> lagen)
+            throws JSONException {
+
         if (children == null || childrenArray == null) {
             return order;
         }
-
-        /* ophalen user kaartlagen om custom boom op te bouwen */
-        List<UserKaartlaag> lagen = SpatialUtil.getUserKaartLagen(appCode);
 
         Iterator it = children.iterator();
         while (it.hasNext()) {
