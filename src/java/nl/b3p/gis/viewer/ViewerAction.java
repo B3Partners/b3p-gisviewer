@@ -673,14 +673,15 @@ public class ViewerAction extends BaseGisAction {
             /* Cluster hoeft niet getoond te worden als er eigen kaartlagen
              aangezet zijn maar hier hoort het cluster niet bij */
             boolean showCluster = false;
-            for (int i=0; i < userlagen.size() && !showCluster; i++){
-                UserKaartlaag laag =userlagen.get(i);
+            for (UserKaartlaag laag : userlagen){
+                
                 Integer themaId = laag.getThemaid();
                 
                 Themas thema = (Themas)sess.get(Themas.class, themaId);
                 
                 if(isInCluster(thema,cluster)){
                     showCluster=true;
+                    break;
                 }                
             }
 
@@ -779,17 +780,16 @@ public class ViewerAction extends BaseGisAction {
             boolean defaultOn = false;
             if (lagen != null && lagen.size() > 0) {
                 boolean isInList = false;
-                for (int i=0; i < lagen.size() && !isInList; i++){
-                    UserKaartlaag laag= lagen.get(i);                    
+                for (UserKaartlaag laag : lagen){                   
                     if (laag.getThemaid().equals(th.getId())) {
                         isInList = true;
 
                         if (laag.getDefault_on()) {
                             defaultOn = true;
                         }
+                        break;
                     }
                 }
-
                 if (!isInList){
                    continue;
                 }
