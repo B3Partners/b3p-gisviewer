@@ -190,8 +190,7 @@ public class ViewerAction extends BaseGisAction {
             if (viewerTemplate != null && viewerTemplate.equals("embedded")) {
                 return mapping.findForward(SIMPLE_VIEWER_FW);
             }
-        }
-
+        }        
         return mapping.findForward(SUCCESS);
     }
 
@@ -755,14 +754,17 @@ public class ViewerAction extends BaseGisAction {
 
             List subsubclusterMaps = (List) clMap.get("subclusters");
             childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order, appCode, groepen, userlagen);
+            
+            if (childrenArray.length()>0){
+                jsonCluster.put("children", childrenArray);
 
-            jsonCluster.put("children", childrenArray);
-
-            if (clusterArray == null) {
-                clusterArray = new JSONArray();
+                if (clusterArray == null) {
+                    clusterArray = new JSONArray();
+                }
+                clusterArray.put(jsonCluster);
             }
 
-            clusterArray.put(jsonCluster);
+            
         }
 
         return clusterArray;
