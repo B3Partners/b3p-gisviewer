@@ -745,6 +745,7 @@ public class ViewerAction extends BaseGisAction {
                 jsonCluster.put("background", false);
                 jsonCluster.put("hide_legend", true);
                 jsonCluster.put("visible", false);
+                jsonCluster.put("active", false);
             }
 
             List childrenList = (List) clMap.get("children");
