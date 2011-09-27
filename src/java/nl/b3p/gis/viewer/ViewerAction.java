@@ -673,15 +673,15 @@ public class ViewerAction extends BaseGisAction {
             /* Cluster hoeft niet getoond te worden als er eigen kaartlagen
              aangezet zijn maar hier hoort het cluster niet bij */
             boolean showCluster = false;
-            for (UserKaartlaag laag : userlagen) {
+            for (int i=0; i < userlagen.size() && !showCluster; i++){
+                UserKaartlaag laag =userlagen.get(i);
                 Integer themaId = laag.getThemaid();
-
+                
                 Themas thema = (Themas)sess.get(Themas.class, themaId);
-                Integer clusterId = thema.getCluster().getId();
-
-                if (clusterId.intValue() == cluster.getId().intValue()) {
-                    showCluster = true;
-                }
+                
+                if(isInCluster(thema,cluster)){
+                    showCluster=true;
+                }                
             }
 
             /* controleren of cluster default aan staat in user kaartgroepen */
@@ -779,7 +779,8 @@ public class ViewerAction extends BaseGisAction {
             boolean defaultOn = false;
             if (lagen != null && lagen.size() > 0) {
                 boolean isInList = false;
-                for (UserKaartlaag laag: lagen) {
+                for (int i=0; i < lagen.size() && !isInList; i++){
+                    UserKaartlaag laag= lagen.get(i);                    
                     if (laag.getThemaid().equals(th.getId())) {
                         isInList = true;
 
@@ -1087,5 +1088,22 @@ public class ViewerAction extends BaseGisAction {
         }
 
         return layersArray;
+    }
+
+    private boolean isInCluster(Themas thema, Clusters inCluster) {
+        if (thema.getCluster()==null)
+            return false;              
+        else
+            return isInCluster(thema.getCluster(),inCluster);
+    }
+
+    private boolean isInCluster(Clusters cluster, Clusters inCluster) {
+        if (cluster.getId().equals(inCluster.getId()))
+            return true;  
+        if (cluster.getParent()==null)
+            return false;
+        else
+            return isInCluster(cluster.getParent(), inCluster);
+        
     }
 }
