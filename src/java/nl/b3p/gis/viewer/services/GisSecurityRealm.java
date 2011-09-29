@@ -192,7 +192,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             }
 
         } catch (Exception ex) {
-            log.error("Error reading GetCapabilities: " + ex.getLocalizedMessage());
+            log.error("Error reading GetCapabilities ", ex);
             return null;
         }
 
