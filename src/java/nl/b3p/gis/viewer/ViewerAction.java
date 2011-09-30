@@ -218,6 +218,10 @@ public class ViewerAction extends BaseGisAction {
                 app = defaultApp;
         }
 
+        if (app != null && !app.getNaam().equals("")) {
+            request.setAttribute("appName", app.getNaam());
+        }
+
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         if (app != null) {
