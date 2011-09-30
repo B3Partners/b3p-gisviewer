@@ -213,16 +213,27 @@ public class ViewerAction extends BaseGisAction {
 
         if (app == null) {
             Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
+            app = defaultApp;
+        }
 
-            if (defaultApp != null)
-                app = defaultApp;
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        /* Als app nog steeds null is dan is er geen default app en is er geen geldige
+         appcode meegegeven. Dan een default app maken en opslaan */
+        if (app == null) {
+            app = KaartSelectieUtil.getNewApplicatie();
+            app.setDefault_app(true);
+            app.setNaam("standaard");
+
+            sess.save(app);
+            sess.flush();
+            
+            ConfigKeeper.writeDefaultApplicatie(app.getCode());
         }
 
         if (app != null && !app.getNaam().equals("")) {
             request.setAttribute("appName", app.getNaam());
         }
-
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         if (app != null) {
             /* Appcode klaarzetten voor kaartselectie form */

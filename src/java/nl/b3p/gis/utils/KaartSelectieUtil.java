@@ -218,6 +218,29 @@ public class KaartSelectieUtil {
         }
     }
 
+    public static Applicatie getNewApplicatie() {
+        Applicatie app = null;
+        app = new Applicatie();
+
+        String appCode = null;
+        try {
+            appCode = Applicatie.createApplicatieCode();
+        } catch (Exception ex) {
+            log.error("Fout tijdens maken Applicatie code:", ex);
+        }
+
+        app.setCode(appCode);
+
+        /* Applicaties door de beheerder gemaakt zijn standaard read-only */
+        app.setRead_only(true);
+        app.setUser_copy(false);
+        app.setDefault_app(false);
+        app.setVersie(1);
+        app.setDatum_gebruikt(new Date());
+
+        return app;
+    }
+
     public static Applicatie getApplicatie(String appCode){
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
