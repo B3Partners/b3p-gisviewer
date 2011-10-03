@@ -263,7 +263,7 @@ public class DataStoreUtil {
                 if (td.getDataType() != null && td.getDataType().getId() == DataTypen.QUERY) {
                     String commando = td.getCommando();
                     //als er in het commando [replaceme] voorkomt
-                    while (commando.indexOf("[") != -1 && commando.indexOf("]") != -1) {
+                    while (commando != null && commando.indexOf("[") != -1 && commando.indexOf("]") != -1) {
                         //haal alle properties er uit.en stuur deze mee in de query
                         int beginIndex = commando.indexOf("[") + 1;
                         int endIndex = commando.indexOf("]");
