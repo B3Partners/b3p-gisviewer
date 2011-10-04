@@ -15,6 +15,7 @@ INSERT INTO APPLICATIE (
 SELECT SETTING, SETTING, '', 0, now(),true,false,1,false
 FROM CONFIGURATIE c GROUP BY SETTING;
 
+-- Werkt niet op PG 8.1 !!
 -- Insert gebruikers_codes in applicatie.
 update APPLICATIE a set GEBRUIKERS_CODE =
 (SELECT PERSONALURL FROM USERS u, USERS_ROLES ur, ROLES r
@@ -30,7 +31,8 @@ SELECT a.CODE, t.ID , t.VISIBLE FROM APPLICATIE a, THEMAS t, ORGANIZATION_LAYERS
 WHERE u.MAIN_ORGANIZATION = ol.ORGANIZATION 
 AND ol.LAYER = l.ID 
 AND t.WMS_LAYERS_REAL = s.ABBR || '_' || l.NAME 
-AND u.PERSONALURL = a.GEBRUIKERS_CODE;
+AND u.PERSONALURL = a.GEBRUIKERS_CODE
+AND a.code != '';
 
 -- User kaartlagen vullen o.b.v. rechten organizations uit users_orgs
 INSERT INTO USER_KAARTLAAG (
@@ -44,11 +46,12 @@ AND us.ORGANIZATION  = ol.ORGANIZATION
 AND ol.LAYER = l.ID 
 AND t.WMS_LAYERS_REAL = s.ABBR || '_' || l.NAME 
 AND u.PERSONALURL = a.GEBRUIKERS_CODE
-AND u.MAIN_ORGANIZATION != us.ORGANIZATION;
+AND u.MAIN_ORGANIZATION != us.ORGANIZATION
+AND a.code != '';
 
 -- hulptabellen droppen
-drop table users;
 drop table users_roles;
+drop table users;
 drop table roles;
 drop table organization_layers;
 drop table layer;
