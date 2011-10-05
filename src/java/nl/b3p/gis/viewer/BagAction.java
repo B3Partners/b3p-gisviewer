@@ -76,23 +76,25 @@ public class BagAction extends ViewerCrudAction{
         if (childs.size()>1){
             addAlternateMessage(mapping, request, "De Gegevensbron van de  BAG Kaartlaag die voor de BAG module is geconfigureerd heeft meerdere childs, de eerste is gekozen.");
         }
-        if (childs.size()==0){
+        if (childs.isEmpty()){
             addAlternateMessage(mapping, request, "De Gegevensbron van de  BAG Kaartlaag die voor de BAG module is geconfigureerd heeft geen childs");
             return mapping.findForward(FAILURE);  
         }
-        Gegevensbron verblijfsObjectengb = childs.get(0);             
-        //set de attributen
+        Gegevensbron verblijfsObjectengb = childs.get(0);
         request.setAttribute(BAGTHEMAID, bagkaartlaagid);
         request.setAttribute(PANDENGEGEVENSBRONID, pandengb.getId());
         request.setAttribute(VERBIJFSOBJECTENGEGEVENSBRONID, verblijfsObjectengb.getId());  
         
-        /************************************************
-         * Set de max/min slider waarden
-         */
+        /* Set values for jsp */
         Integer maxBouwJaar = new Integer("1");
         Integer minBouwJaar = new Integer("0");
         Integer maxOpp = new Integer("1");
         Integer minOpp = new Integer("0");
+        String bagBouwjaarAttr = null;
+        String bagOppAttr = null;
+        String bagGebruiksfunctieAttr = null;
+        String bagGeomAttr = null;
+
         if(instellingen.get("bagMaxBouwjaar")==null)
             addAlternateMessage(mapping,request,"Geen maximaal bouwjaar ingesteld in de BAG module configuratie");
         else
@@ -109,29 +111,37 @@ public class BagAction extends ViewerCrudAction{
             addAlternateMessage(mapping,request,"Geen minimaal oppervlakte ingesteld in de BAG module configuratie");
         else
             minOpp = (Integer) instellingen.get("bagMinOpp");
+
+        if (instellingen.get("bagBouwjaarAttr") == null)
+            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Bouwjaar niet ingevuld");
+        else
+            bagBouwjaarAttr = (String) instellingen.get("bagBouwjaarAttr");
+
+        if (instellingen.get("bagOppAttr") == null)
+            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Oppervlakte niet ingevuld");
+        else
+            bagOppAttr = (String) instellingen.get("bagOppAttr");
+
+        if (instellingen.get("bagGebruiksfunctieAttr") == null)
+            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Gebruiksfunctie niet ingevuld");
+        else
+            bagGebruiksfunctieAttr = (String) instellingen.get("bagGebruiksfunctieAttr");
+
+        if (instellingen.get("bagGeomAttr") == null)
+            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Geometrie niet ingevuld");
+        else
+            bagGeomAttr = (String) instellingen.get("bagGeomAttr");
         
         request.setAttribute("bagMaxBouwjaar", maxBouwJaar);
         request.setAttribute("bagMinBouwjaar", minBouwJaar);
         request.setAttribute("bagMaxOpp", maxOpp);
         request.setAttribute("bagMinOpp", minOpp);
-        
-        if(instellingen.get("bagBouwjaarAttr")==null)
-            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Bouwjaar niet ingevuld");
-        else
-            request.setAttribute("bagBouwjaarAttr",instellingen.get("bagBouwjaarAttr"));
-        if(instellingen.get("bagOppAttr")==null)
-            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Oppervlakte niet ingevuld");
-        else
-            request.setAttribute("bagOppAttr",instellingen.get("bagOppAttr"));
-        if(instellingen.get("bagGebruiksfunctieAttr")==null)
-            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Gebruiksfunctie niet ingevuld");
-        else
-            request.setAttribute("bagGebruiksfunctieAttr",instellingen.get("bagGebruiksfunctieAttr"));
-        if(instellingen.get("bagGeomAttr")==null)
-            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Geometrie niet ingevuld");
-        else
-            request.setAttribute("bagGeomAttr",instellingen.get("bagGeomAttr"));
-        
+
+        request.setAttribute("bagBouwjaarAttr", bagBouwjaarAttr);
+        request.setAttribute("bagOppAttr", bagOppAttr);
+        request.setAttribute("bagGebruiksfunctieAttr", bagGebruiksfunctieAttr);
+        request.setAttribute("bagGeomAttr", bagGeomAttr);
+
         return mapping.findForward(SUCCESS);
     }
 }
