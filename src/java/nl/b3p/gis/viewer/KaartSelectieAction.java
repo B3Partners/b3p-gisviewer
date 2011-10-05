@@ -384,11 +384,11 @@ public class KaartSelectieAction extends BaseGisAction {
 
         ul.setServiceid(us);
 
-        if (layerName != null && !layerName.isEmpty()) {
+        if (layerName != null && !layerName.equals("")) {
             ul.setName(layerName);
         }
 
-        if (layerTitle != null && !layerTitle.isEmpty()) {
+        if (layerTitle != null && !layerTitle.equals("")) {
             ul.setTitle(layerTitle);
         }
 
@@ -407,7 +407,7 @@ public class KaartSelectieAction extends BaseGisAction {
         for (StyleImpl style : styles) {
             String styleName = style.getName();
 
-            if (styleName != null && !styleName.isEmpty()) {
+            if (styleName != null && !styleName.equals("")) {
                 UserLayerStyle uls = new UserLayerStyle(ul, styleName);
                 ul.addStyle(uls);
             }

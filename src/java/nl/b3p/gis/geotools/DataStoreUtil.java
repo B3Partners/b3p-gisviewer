@@ -859,7 +859,7 @@ public class DataStoreUtil {
             try {
                 parsed = DocumentFactory.getInstance(capabilitiesReader, hints, null);
             } catch (Exception e) {
-                throw new IOException("Error parsing WFS 1.0.0 capabilities", e);
+                throw new IOException("Error parsing WFS 1.0.0 capabilities");
             }
         }
     }
