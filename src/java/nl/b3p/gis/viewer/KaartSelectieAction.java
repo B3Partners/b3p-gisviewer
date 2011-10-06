@@ -1,6 +1,8 @@
 package nl.b3p.gis.viewer;
 
-import java.net.URI;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -27,6 +29,9 @@ import nl.b3p.gis.viewer.db.UserService;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
+import nl.b3p.ogc.utils.KBConfiguration;
+import nl.b3p.ogc.utils.OGCConstants;
+import nl.b3p.ogc.utils.OGCRequest;
 import nl.b3p.wms.capabilities.Layer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,10 +41,12 @@ import org.apache.struts.validator.DynaValidatorForm;
 import org.geotools.data.ows.StyleImpl;
 import org.geotools.data.wms.WMSUtils;
 import org.geotools.data.wms.WebMapServer;
+import org.geotools.ows.ServiceException;
 import org.hibernate.Session;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.xml.sax.SAXException;
 
 /**
  * @author Boy de Wit
@@ -47,15 +54,16 @@ import org.json.JSONObject;
 public class KaartSelectieAction extends BaseGisAction {
 
     private static final Log log = LogFactory.getLog(KaartSelectieAction.class);
-
     protected static final String SAVE = "save";
     protected static final String SAVE_WMS_SERVICE = "saveWMSService";
-    protected static final String DELETE_WMS_SERVICES = "deleteWMSServices";
+    protected static final String DELETE_WMS_SERVICES = "deleteWMSServices";    
+    protected static final String ERROR_DUPLICATE_WMS = "error.duplicate.wms";
+    protected static final String PARAM_APPCODE = "appCode";
 
     protected static final String ERROR_SAVE_WMS = "error.save.wms";
-    protected static final String ERROR_DUPLICATE_WMS = "error.duplicate.wms";
-
-    protected static final String PARAM_APPCODE = "appCode";
+    protected static final String ERROR_SAVE_WMS_IO = "error.save.wms.io";
+    protected static final String ERROR_SAVE_WMS_SERVICE = "error.save.wms.service";
+    protected static final String ERROR_SAVE_WMS_SAX = "error.save.wms.sax";
 
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
@@ -157,7 +165,7 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         /* Als huidige Applicatie alleen lezen is kopie maken. Anders huidige applicatie
-         opslaan met alleen-lezen keuze van gebruiker. */
+        opslaan met alleen-lezen keuze van gebruiker. */
         Applicatie currentApp = KaartSelectieUtil.getApplicatie(code);
         if (isReadOnly) {
             if (currentApp != null) {
@@ -213,14 +221,14 @@ public class KaartSelectieAction extends BaseGisAction {
                 UserKaartlaag newLaag = new UserKaartlaag(code, themaId, defaultOn);
                 sess.save(newLaag);
             }
-        }        
+        }
 
         /* Opslaan Service layers */
         for (int k = 0; k < layersAan.length; k++) {
             Integer id = new Integer(layersAan[k]);
             boolean defaultOn = isKaartlaagDefaultOn(layersDefaultAan, id);
 
-            UserLayer userLayer = (UserLayer)sess.get(UserLayer.class, id);
+            UserLayer userLayer = (UserLayer) sess.get(UserLayer.class, id);
             if (userLayer != null) {
                 userLayer.setDefault_on(defaultOn);
                 userLayer.setShow(true);
@@ -230,7 +238,7 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         /* Opslaan gekozen Layer Styles */
-        for (int m=0; m < useLayerStyles.length; m++) {
+        for (int m = 0; m < useLayerStyles.length; m++) {
             String[] useStyle = useLayerStyles[m].split("@");
 
             Integer layerId = new Integer(useStyle[0]);
@@ -250,12 +258,12 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         /* Opslaan ingevulde sld parts
-         String[] userLayerIds is een hidden input met daarin een even grote
-         array met de layer ids. */
-        for (int n=0; n < useLayerSldParts.length; n++) {
+        String[] userLayerIds is een hidden input met daarin een even grote
+        array met de layer ids. */
+        for (int n = 0; n < useLayerSldParts.length; n++) {
             String sldPart = useLayerSldParts[n];
             Integer layerId = new Integer(userLayerIds[n]);
-            
+
             if (sldPart != null && layerId != null && layerId > 0) {
                 UserLayer ul = (UserLayer) sess.get(UserLayer.class, layerId);
 
@@ -268,7 +276,7 @@ public class KaartSelectieAction extends BaseGisAction {
                 sess.merge(ul);
             }
         }
-        
+
         session.setAttribute("appCode", code);
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
@@ -299,16 +307,43 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         /* WMS Service layers ophalen met Geotools */
-        URI uri = new URI(serviceUrl);
+        String wmsUrl = checkWmsUrl(serviceUrl.trim());
+
+        URL url = null;
+        try {
+            url = new URL(wmsUrl);
+        } catch (MalformedURLException mfex) {
+            //will not happen
+        }
+
+        WebMapServer wms = null;
         org.geotools.data.ows.Layer[] layers = null;
         try {
-            WebMapServer wms = new WebMapServer(uri.toURL(), 30000);
+            wms = new WebMapServer(url);
             layers = WMSUtils.getNamedLayers(wms.getCapabilities());
-        } catch (Exception ex) {
-            log.error("Fout tijdens opslaan WMS. ", ex);
-            
+        } catch (IOException ioex) {
+            log.error("Kan geen verbinding maken naar de WMS Service.", ioex);
+
             reloadFormData(request);
-            addMessage(request, ERROR_SAVE_WMS, uri.toString());
+            addMessage(request, ERROR_SAVE_WMS_IO, url.toString());
+            return getAlternateForward(mapping, request);
+        } catch (ServiceException se) {
+            log.error("De WMS Service geeft een fout status terug.", se);
+
+            reloadFormData(request);
+            addMessage(request, ERROR_SAVE_WMS_SERVICE, url.toString());
+            return getAlternateForward(mapping, request);
+        } catch (SAXException saxe) {
+            log.error("De WMS Service geeft een ongeldig document terug.", saxe);
+
+            reloadFormData(request);
+            addMessage(request, ERROR_SAVE_WMS_SAX, url.toString());
+            return getAlternateForward(mapping, request);
+        } catch (Exception ex) {
+            log.error("Fout tijdens opslaan WMS Service: ", ex);
+
+            reloadFormData(request);
+            addMessage(request, ERROR_SAVE_WMS, url.toString());
             return getAlternateForward(mapping, request);
         }
 
@@ -350,13 +385,13 @@ public class KaartSelectieAction extends BaseGisAction {
         HttpSession session = request.getSession(true);
         String code = (String) session.getAttribute("appCode");
 
-        for (int i=0; i < servicesAan.length; i++) {
+        for (int i = 0; i < servicesAan.length; i++) {
             Integer serviceId = new Integer(servicesAan[i]);
             KaartSelectieUtil.removeService(serviceId);
         }
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
-        
+
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
@@ -624,7 +659,7 @@ public class KaartSelectieAction extends BaseGisAction {
 
         if (children == null || childrenArray == null) {
             return order;
-        }        
+        }
 
         Iterator it = children.iterator();
         while (it.hasNext()) {
@@ -655,7 +690,7 @@ public class KaartSelectieAction extends BaseGisAction {
             JSONObject jsonCluster = new JSONObject().put("id", themaId).put("type", "child").put("title", ttitel).put("cluster", false);
 
             order++;
-            jsonCluster.put("order", order);            
+            jsonCluster.put("order", order);
 
             if (th.getOrganizationcodekey() != null && th.getOrganizationcodekey().length() > 0) {
                 jsonCluster.put("organizationcodekey", th.getOrganizationcodekey().toUpperCase());
@@ -765,10 +800,7 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         List groepen = sess.createQuery("from UserKaartgroep where code = :code and"
-                + " clusterid = :clusterid").setParameter("code", code)
-                .setParameter("clusterid", clusterId)
-                .setMaxResults(1)
-                .list();
+                + " clusterid = :clusterid").setParameter("code", code).setParameter("clusterid", clusterId).setMaxResults(1).list();
 
         if (groepen != null && groepen.size() == 1) {
             return (UserKaartgroep) groepen.get(0);
@@ -781,10 +813,7 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         List groepen = sess.createQuery("from UserKaartlaag where code = :code and"
-                + " themaid = :themaid").setParameter("code", code)
-                .setParameter("themaid", themaId)
-                .setMaxResults(1)
-                .list();
+                + " themaid = :themaid").setParameter("code", code).setParameter("themaid", themaId).setMaxResults(1).list();
 
         if (groepen != null && groepen.size() == 1) {
             return (UserKaartlaag) groepen.get(0);
@@ -796,10 +825,7 @@ public class KaartSelectieAction extends BaseGisAction {
     private UserLayer getUserLayerById(Integer layerId) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
-        List layers = sess.createQuery("from UserLayer where id = :id")
-                .setParameter("id", layerId)
-                .setMaxResults(1)
-                .list();
+        List layers = sess.createQuery("from UserLayer where id = :id").setParameter("id", layerId).setMaxResults(1).list();
 
         if (layers != null && layers.size() == 1) {
             return (UserLayer) layers.get(0);
@@ -841,15 +867,11 @@ public class KaartSelectieAction extends BaseGisAction {
     }
 
     private void removeExistingUserKaartgroepAndUserKaartlagen(String code) {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();        
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
-        List<UserKaartgroep> groepen = sess.createQuery("from UserKaartgroep where code = :code")
-            .setParameter("code", code)
-            .list();
+        List<UserKaartgroep> groepen = sess.createQuery("from UserKaartgroep where code = :code").setParameter("code", code).list();
 
-        List<UserKaartlaag> lagen = sess.createQuery("from UserKaartlaag where code = :code")
-            .setParameter("code", code)
-            .list();
+        List<UserKaartlaag> lagen = sess.createQuery("from UserKaartlaag where code = :code").setParameter("code", code).list();
 
         for (UserKaartgroep groep : groepen) {
             sess.delete(groep);
@@ -892,22 +914,22 @@ public class KaartSelectieAction extends BaseGisAction {
 
         return (String[]) col2.toArray(new String[0]);
     }
-    
+
     private void setUserviceTrees(HttpServletRequest request) throws JSONException, Exception {
         List<JSONObject> servicesTrees = new ArrayList();
-        
+
         /* user services ophalen */
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         String code = user.getCode();
-        
+
         List<UserService> services = SpatialUtil.getUserServices(code);
-        
+
         /* per service een tree maken */
         for (UserService service : services) {
             JSONObject tree = createUserServiceTree(service);
             servicesTrees.add(tree);
         }
-        
+
         /* lijst van tree's klaarzetten */
         request.setAttribute("servicesTrees", servicesTrees);
     }
@@ -922,9 +944,7 @@ public class KaartSelectieAction extends BaseGisAction {
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List ctl = sess.createQuery("from UserLayer where serviceid = :service"
-                + " order by name, title, id")
-                .setParameter("service", service)
-                .list();
+                + " order by name, title, id").setParameter("service", service).list();
 
         Map rootLayerMap = getUserLayersMap(ctl, null);
         List lMaps = (List) rootLayerMap.get("sublayers");
@@ -1014,9 +1034,7 @@ public class KaartSelectieAction extends BaseGisAction {
     private JSONArray getLayerStyles(UserLayer layer) throws JSONException {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List<UserLayerStyle> styles = sess.createQuery("from UserLayerStyle where"
-                + " layerid = :layer")
-                .setParameter("layer", layer)
-                .list();
+                + " layerid = :layer").setParameter("layer", layer).list();
 
         JSONArray arr = new JSONArray();
         for (UserLayerStyle uls : styles) {
@@ -1030,16 +1048,42 @@ public class KaartSelectieAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         List<UserService> services = sess.createQuery("from UserService where"
-                + " code = :code and url = :url")
-                .setParameter("code", code)
-                .setParameter("url", url)
-                .setMaxResults(1)
-                .list();
+                + " code = :code and url = :url").setParameter("code", code).setParameter("url", url).setMaxResults(1).list();
 
         if (services != null && services.size() == 1) {
             return true;
         }
 
         return false;
+    }
+
+    private String checkWmsUrl(String url) throws Exception {
+        OGCRequest ogcrequest = new OGCRequest(url);
+
+        if (ogcrequest.containsParameter(OGCConstants.WMS_REQUEST)
+                && !OGCConstants.WMS_REQUEST_GetCapabilities.equalsIgnoreCase(ogcrequest.getParameter(OGCConstants.WMS_REQUEST))) {
+            log.error(KBConfiguration.UNSUPPORTED_REQUEST);
+            throw new Exception(KBConfiguration.UNSUPPORTED_REQUEST);
+        } else {
+            ogcrequest.addOrReplaceParameter(OGCConstants.WMS_REQUEST, OGCConstants.WMS_REQUEST_GetCapabilities);
+        }
+
+        if (ogcrequest.containsParameter(OGCConstants.WMS_SERVICE)
+                && !OGCConstants.WMS_SERVICE_WMS.equalsIgnoreCase(ogcrequest.getParameter(OGCConstants.WMS_SERVICE))) {
+            log.error(KBConfiguration.UNSUPPORTED_SERVICE);
+            throw new Exception(KBConfiguration.UNSUPPORTED_SERVICE);
+        } else {
+            ogcrequest.addOrReplaceParameter(OGCConstants.WMS_SERVICE, OGCConstants.WMS_SERVICE_WMS);
+        }
+
+        if (ogcrequest.containsParameter(OGCConstants.WMS_VERSION)
+        && !OGCConstants.WMS_VERSION_111.equalsIgnoreCase(ogcrequest.getParameter(OGCConstants.WMS_VERSION))) {
+        log.error(KBConfiguration.UNSUPPORTED_VERSION);
+        throw new Exception(KBConfiguration.UNSUPPORTED_VERSION);
+        } else {
+        ogcrequest.addOrReplaceParameter(OGCConstants.WMS_VERSION, OGCConstants.WMS_VERSION_111);
+        }
+
+        return ogcrequest.getUrl();
     }
 }
