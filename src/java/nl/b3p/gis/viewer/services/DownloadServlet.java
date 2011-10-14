@@ -134,7 +134,7 @@ public class DownloadServlet extends HttpServlet {
         String val2 = Long.toString(rnum, Character.MAX_RADIX).toUpperCase();
         String thePath = "";
         
-        return downloadPath + val1 + val2 + extension;
+        return val1 + val2 + extension;
     }
 
     public static String getDownloadPath() {

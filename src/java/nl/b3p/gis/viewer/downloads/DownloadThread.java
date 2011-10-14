@@ -10,12 +10,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.mail.Address;
@@ -26,6 +29,7 @@ import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.services.DownloadServlet;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.writers.StreamingShapeWriter;
@@ -41,16 +45,25 @@ import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geotools.data.DataStore;
+import org.geotools.data.FeatureStore;
 import org.geotools.data.ows.OperationType;
+import org.geotools.data.shapefile.ShapefileDataStore;
+import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.geotools.data.wfs.WFSDataStore;
 import org.geotools.data.wfs.v1_0_0.WFS_1_0_0_DataStore;
 import org.geotools.data.wfs.v1_1_0.WFS_1_1_0_DataStore;
+import org.geotools.feature.FeatureCollection;
+import org.geotools.feature.FeatureIterator;
 import org.geotools.referencing.CRS;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.util.logging.Logging;
 import org.geotools.xml.StreamingParser;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeature;
+import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
@@ -188,7 +201,58 @@ public class DownloadThread extends Thread {
         }
     }
 
-    private void writeZipfileToWorkingDir(String zipfilename, File workingDir, String formaat) throws Exception {
+    private void writeZipfileToWorkingDir(String zipfilename, File workingDir, String formaat)
+            throws Exception {
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, new Integer(4));
+        DataStore datastore = gb.getBron().toDatastore();
+
+        FeatureCollection fc = null;
+        FeatureIterator it = null;
+
+        try {
+            FeatureStore fs = (FeatureStore) datastore.getFeatureSource(gb.getAdmin_tabel());
+            fc = fs.getFeatures();
+            it = fc.features();
+
+            /*
+             * Get an output file name and create the new shapefile
+             */
+            File newFile = new File(zipfilename);
+
+            ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
+
+            Map<String, Serializable> params = new HashMap<String, Serializable>();
+            params.put("url", newFile.toURI().toURL());
+            params.put("create spatial index", Boolean.TRUE);
+
+            String typename = gb.getAdmin_tabel();
+            SimpleFeatureType ft = datastore.getSchema(typename);
+
+            ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
+            newDataStore.createSchema(ft);
+
+            /*
+             * You can comment out this line if you are using the createFeatureType
+             * method (at end of class file) rather than DataUtilities.createType
+             */
+            CoordinateReferenceSystem crs = CRS.decode("EPSG:28992");
+            newDataStore.forceSchemaCRS(crs);
+        } finally {
+            datastore.dispose();
+
+            if (fc != null) {
+                fc.close(it);
+            }
+        }
+
+        if (formaat.equalsIgnoreCase(SHP)) {
+
+        }
+    }
+
+    private void writeZipfileToWorkingDirOld(String zipfilename, File workingDir, String formaat) throws Exception {
         //schrijf metadata in zip file.
         log.debug("Schrijven van Dataset naar directory voor uuid: " + zipfilename + " STARTED");
 
