@@ -5,6 +5,7 @@ import javax.servlet.http.HttpServletResponse;
 import nl.b3p.gis.viewer.downloads.Dispatcher;
 import nl.b3p.gis.viewer.services.DispatcherServlet;
 import nl.b3p.gis.viewer.downloads.DownloadThread;
+import nl.b3p.gis.viewer.downloads.TestDownloads;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionMapping;
@@ -40,6 +41,7 @@ public class DownloadAction extends ViewerCrudAction {
     public ActionForward save(ActionMapping mapping, DynaValidatorForm dynaForm,
             HttpServletRequest request, HttpServletResponse response) throws Exception {
 
+        /*
         String[] uuids = dynaForm.getString(UUIDS).split(",");
 
         if (uuids != null && uuids.length > 0) {
@@ -54,6 +56,10 @@ public class DownloadAction extends ViewerCrudAction {
         }else{
             addAlternateMessage(mapping, request, GENERAL_ERROR_KEY, "Er zijn geen kaarten geselecteerd");
         }
+        */
+
+        TestDownloads testKlasse = new TestDownloads();
+        testKlasse.test();
 
         return mapping.findForward(SUCCESS);
     }

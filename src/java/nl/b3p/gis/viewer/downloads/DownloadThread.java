@@ -46,6 +46,8 @@ import org.apache.commons.httpclient.methods.StringRequestEntity;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geotools.data.DataStore;
+import org.geotools.data.DefaultTransaction;
+import org.geotools.data.FeatureSource;
 import org.geotools.data.FeatureStore;
 import org.geotools.data.ows.OperationType;
 import org.geotools.data.shapefile.ShapefileDataStore;
@@ -111,35 +113,30 @@ public class DownloadThread extends Thread {
             //start hibernate session
             Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
             tx = sess.beginTransaction();
-            //create unique working dir
-            File workingDir = createUniqueFile(DownloadServlet.uniqueName(EXTENSION));
+
+            /* Create a unique name for the zipfile */
+            String zipfileName = DownloadServlet.uniqueName(EXTENSION);
+
+            /* Create subfolder to put zipfile in */
+            File workingDir = createUniqueFile("uuid_4", 0);
             if (!workingDir.mkdir()) {
                 throw new IOException("Can't create directory: " + workingDir.getAbsolutePath());
             }
 
-            //create zipfile
-            String zipfilename = workingDir.getPath() + File.separator + ZIPNAME;
-            log.debug("Zipfilename: " + zipfilename);
+            String workingPathDataset = workingDir.getAbsolutePath() + File.separator + zipfileName + File.separator;
             
             //try to load the data in a zip for all the uuid
             ArrayList<String> erroredTitles = new ArrayList<String>();
             ArrayList<String> successTitles = new ArrayList<String>();
-            for (String uuid : uuids) {                
+            for (String uuid : uuids) {             
                 
                 String error = null;
-                
                 String fileName = "uuid_" + uuid;
-                fileName = createValidFileName(fileName);
-                String workingPathDataset = workingDir.getAbsolutePath() + File.separator + fileName + File.separator;
 
-                File filePathDataset = createUniqueFile(workingPathDataset);
-                if (!filePathDataset.mkdir()) {
-                    throw new IOException("Can't create directory: " + filePathDataset.getAbsolutePath());
-                }
-                
                 if (error == null) {
+
                     try {
-                        writeZipfileToWorkingDir(fileName, filePathDataset, formaat);
+                        writeZipfileToWorkingDir(zipfileName, workingDir, formaat);
                     } catch (Exception e) {
                         log.debug("Dataset opgehaald met fouten: ", e);
                         error = "Dataset opgehaald met fouten: \n" + e.toString();
@@ -165,7 +162,7 @@ public class DownloadThread extends Thread {
                 ZipOutputStream zip = null;
                 FileOutputStream fos = null;
                 try {
-                    fos = new FileOutputStream(zipfilename);
+                    fos = new FileOutputStream(zipfileName);
                     zip = new ZipOutputStream(fos);
                     putDirInZip(zip, new File(workingDir.getAbsolutePath()), "");
                 } catch (Exception ex) {
@@ -184,7 +181,7 @@ public class DownloadThread extends Thread {
                 }
             }
 
-            sendEmail(zipfilename, erroredTitles, successTitles);
+            sendEmail(zipfileName, erroredTitles, successTitles);
             threadStatus = STATUS_FINISHED;
         } catch (Exception e) {
             threadStatus = STATUS_ERROR;
@@ -210,11 +207,11 @@ public class DownloadThread extends Thread {
 
         FeatureCollection fc = null;
         FeatureIterator it = null;
+        org.geotools.data.Transaction transaction = null;
 
         try {
             FeatureStore fs = (FeatureStore) datastore.getFeatureSource(gb.getAdmin_tabel());
             fc = fs.getFeatures();
-            it = fc.features();
 
             /*
              * Get an output file name and create the new shapefile
@@ -227,28 +224,34 @@ public class DownloadThread extends Thread {
             params.put("url", newFile.toURI().toURL());
             params.put("create spatial index", Boolean.TRUE);
 
-            String typename = gb.getAdmin_tabel();
-            SimpleFeatureType ft = datastore.getSchema(typename);
+            String typeName = gb.getAdmin_tabel();
+            SimpleFeatureType ft = datastore.getSchema(typeName);
 
             ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
             newDataStore.createSchema(ft);
 
-            /*
-             * You can comment out this line if you are using the createFeatureType
-             * method (at end of class file) rather than DataUtilities.createType
-             */
             CoordinateReferenceSystem crs = CRS.decode("EPSG:28992");
             newDataStore.forceSchemaCRS(crs);
+
+            transaction = new DefaultTransaction("create");
+            FeatureStore<SimpleFeatureType, SimpleFeature> featureStore;
+            featureStore = (FeatureStore<SimpleFeatureType, SimpleFeature>) newDataStore.getFeatureSource(typeName);
+
+            featureStore.setTransaction(transaction);
+
+            featureStore.addFeatures(fc);
+            transaction.commit();
+
+        } catch (Exception ex) {
+            log.error("Fout bij schrijven van features naar datastore... Doe rollback", ex);
+            transaction.rollback();
+
         } finally {
             datastore.dispose();
 
             if (fc != null) {
                 fc.close(it);
             }
-        }
-
-        if (formaat.equalsIgnoreCase(SHP)) {
-
         }
     }
 
