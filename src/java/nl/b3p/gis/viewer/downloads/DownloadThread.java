@@ -10,15 +10,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.mail.Address;
@@ -46,24 +43,18 @@ import org.apache.commons.httpclient.methods.StringRequestEntity;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geotools.data.DataStore;
-import org.geotools.data.DefaultTransaction;
-import org.geotools.data.FeatureSource;
 import org.geotools.data.FeatureStore;
 import org.geotools.data.ows.OperationType;
-import org.geotools.data.shapefile.ShapefileDataStore;
-import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.geotools.data.wfs.WFSDataStore;
 import org.geotools.data.wfs.v1_0_0.WFS_1_0_0_DataStore;
 import org.geotools.data.wfs.v1_1_0.WFS_1_1_0_DataStore;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.referencing.CRS;
-import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.util.logging.Logging;
 import org.geotools.xml.StreamingParser;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
@@ -113,46 +104,45 @@ public class DownloadThread extends Thread {
             //start hibernate session
             Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
             tx = sess.beginTransaction();
+            
+            String downloadPath = DownloadServlet.getDownloadPath() + File.separator;
 
-            /* Create a unique name for the zipfile */
-            String zipfileName = DownloadServlet.uniqueName(EXTENSION);
-
-            /* Create subfolder to put zipfile in */
-            File workingDir = createUniqueFile("uuid_4", 0);
-            if (!workingDir.mkdir()) {
-                throw new IOException("Can't create directory: " + workingDir.getAbsolutePath());
+            /* Create unique folder */
+            String folderName = downloadPath + DownloadServlet.uniqueName("");            
+            File workingDir = new File(folderName);
+            if (!workingDir.mkdirs()) {
+                throw new IOException("Cannot create folder: " + workingDir.getAbsolutePath());
             }
 
-            String workingPathDataset = workingDir.getAbsolutePath() + File.separator + zipfileName + File.separator;
-            
-            //try to load the data in a zip for all the uuid
+            /* Pad naar zipfile */
+            String zipFile = downloadPath + DownloadServlet.uniqueName(EXTENSION);
+
             ArrayList<String> erroredTitles = new ArrayList<String>();
             ArrayList<String> successTitles = new ArrayList<String>();
-            for (String uuid : uuids) {             
-                
+
+            for (String uuid : uuids) { 
                 String error = null;
-                String fileName = "uuid_" + uuid;
 
-                if (error == null) {
+                Integer gegevensbronId = new Integer(uuid);
+                Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensbronId);
 
-                    try {
-                        writeZipfileToWorkingDir(zipfileName, workingDir, formaat);
-                    } catch (Exception e) {
-                        log.debug("Dataset opgehaald met fouten: ", e);
-                        error = "Dataset opgehaald met fouten: \n" + e.toString();
-                        if (e.getCause()!=null){
-                            error+="\nReden:\n"+e.getCause().toString();
-                        }
+                String title = gb.getNaam();
 
+                try {                    
+                    writeShapesToWorkingDir(workingDir, gb);
+                } catch (Exception e) {
+                    log.debug("Dataset opgehaald met fouten: ", e);
+                    error = "Dataset opgehaald met fouten: \n" + e.toString();
+                    if (e.getCause()!=null){
+                        error+="\nReden:\n"+e.getCause().toString();
                     }
                 }
 
-                if (error != null) {
-                    
+                if (error != null) {                    
                     log.debug("error while getting data for uuid "+uuid+": "+error);
-                    erroredTitles.add(fileName);
+                    erroredTitles.add(title);
                 } else {                    
-                    successTitles.add(fileName);
+                    successTitles.add(title);
                 }
 
             }            
@@ -162,7 +152,7 @@ public class DownloadThread extends Thread {
                 ZipOutputStream zip = null;
                 FileOutputStream fos = null;
                 try {
-                    fos = new FileOutputStream(zipfileName);
+                    fos = new FileOutputStream(zipFile);
                     zip = new ZipOutputStream(fos);
                     putDirInZip(zip, new File(workingDir.getAbsolutePath()), "");
                 } catch (Exception ex) {
@@ -181,7 +171,7 @@ public class DownloadThread extends Thread {
                 }
             }
 
-            sendEmail(zipfileName, erroredTitles, successTitles);
+            sendEmail(zipFile, erroredTitles, successTitles);
             threadStatus = STATUS_FINISHED;
         } catch (Exception e) {
             threadStatus = STATUS_ERROR;
@@ -198,59 +188,42 @@ public class DownloadThread extends Thread {
         }
     }
 
-    private void writeZipfileToWorkingDir(String zipfilename, File workingDir, String formaat)
+    private void writeShapesToWorkingDir(File workingDir, Gegevensbron gb)
             throws Exception {
-
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, new Integer(4));
-        DataStore datastore = gb.getBron().toDatastore();
+        
+        DataStore datastore = datastore = gb.getBron().toDatastore();
 
         FeatureCollection fc = null;
         FeatureIterator it = null;
-        org.geotools.data.Transaction transaction = null;
+        StreamingShapeWriter ssw = null;
+        FileOutputStream fos = null;
 
         try {
-            FeatureStore fs = (FeatureStore) datastore.getFeatureSource(gb.getAdmin_tabel());
-            fc = fs.getFeatures();
-
-            /*
-             * Get an output file name and create the new shapefile
-             */
-            File newFile = new File(zipfilename);
-
-            ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
-
-            Map<String, Serializable> params = new HashMap<String, Serializable>();
-            params.put("url", newFile.toURI().toURL());
-            params.put("create spatial index", Boolean.TRUE);
-
+            FeatureStore<SimpleFeatureType, SimpleFeature> fs;
             String typeName = gb.getAdmin_tabel();
-            SimpleFeatureType ft = datastore.getSchema(typeName);
 
-            ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
-            newDataStore.createSchema(ft);
+            fs = (FeatureStore<SimpleFeatureType, SimpleFeature>) datastore.getFeatureSource(typeName);
+            fc = fs.getFeatures();
+            it = fc.features();
 
-            CoordinateReferenceSystem crs = CRS.decode("EPSG:28992");
-            newDataStore.forceSchemaCRS(crs);
+            if (fc != null && fc.size() > 0) {
+                ssw = new StreamingShapeWriter(workingDir.getAbsolutePath() + File.separator, CRS.decode("EPSG:28992"));
 
-            transaction = new DefaultTransaction("create");
-            FeatureStore<SimpleFeatureType, SimpleFeature> featureStore;
-            featureStore = (FeatureStore<SimpleFeatureType, SimpleFeature>) newDataStore.getFeatureSource(typeName);
-
-            featureStore.setTransaction(transaction);
-
-            featureStore.addFeatures(fc);
-            transaction.commit();
+                while (it.hasNext()) {
+                    SimpleFeature feature = (SimpleFeature) it.next();
+                    ssw.write((SimpleFeature) feature);
+                }
+            }
 
         } catch (Exception ex) {
-            log.error("Fout bij schrijven van features naar datastore... Doe rollback", ex);
-            transaction.rollback();
-
+            log.error("Fout tijdens schrijven shape: ", ex);
         } finally {
-            datastore.dispose();
+            if (datastore != null) {
+                datastore.dispose();
+            }
 
-            if (fc != null) {
-                fc.close(it);
+            if (ssw != null) {
+                ssw.close();
             }
         }
     }
