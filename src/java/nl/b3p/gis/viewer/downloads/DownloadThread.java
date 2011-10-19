@@ -1,6 +1,5 @@
 package nl.b3p.gis.viewer.downloads;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,38 +25,27 @@ import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.services.DownloadServlet;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.writers.StreamingShapeWriter;
 import nl.b3p.ogc.utils.OGCConstants;
-import nl.b3p.ogc.utils.OGCRequest;
-import nl.b3p.ogc.utils.geotools.Util;
-import nl.b3p.xml.ows.v100.OnlineResource;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpMethod;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.methods.PostMethod;
-import org.apache.commons.httpclient.methods.StringRequestEntity;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geotools.data.DataStore;
 import org.geotools.data.FeatureStore;
-import org.geotools.data.ows.OperationType;
 import org.geotools.data.wfs.WFSDataStore;
 import org.geotools.data.wfs.v1_0_0.WFS_1_0_0_DataStore;
 import org.geotools.data.wfs.v1_1_0.WFS_1_1_0_DataStore;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
-import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
-import org.geotools.xml.StreamingParser;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * @author Boy
@@ -66,12 +54,13 @@ public class DownloadThread extends Thread {
     
     private static final Log log = LogFactory.getLog(DownloadThread.class);
 
-    private static final String GML = "GML";
-    private static final String SHP = "SHP";
+    private static final String FORMAAT_GML = "GML";
+    private static final String FORMAAT_SHP = "SHP";
 
     private static final int maxFileNameLength = 50;
-    private static final String ZIPNAME = "dataset.zip";
+    private static String ZIPNAME;
     private static final String EXTENSION = ".zip";
+    private static final String GML_EXTENSION = ".gml";
 
     public static final int STATUS_NEW = 0;
     public static final int STATUS_STARTED = 1;
@@ -86,6 +75,9 @@ public class DownloadThread extends Thread {
     private Integer threadStatus;
     private boolean running = false;
     static final Logging logging = Logging.ALL;
+
+    private String applicationPath;
+    private Bron kaartenbalieBron = null;
 
     /**
      * Creates a new instance of DownloadThread
@@ -108,14 +100,18 @@ public class DownloadThread extends Thread {
             String downloadPath = DownloadServlet.getDownloadPath() + File.separator;
 
             /* Create unique folder */
-            String folderName = downloadPath + DownloadServlet.uniqueName("");            
+            String folder = DownloadServlet.uniqueName("");
+            String folderName = downloadPath + folder;
             File workingDir = new File(folderName);
             if (!workingDir.mkdirs()) {
                 throw new IOException("Cannot create folder: " + workingDir.getAbsolutePath());
             }
 
             /* Pad naar zipfile */
-            String zipFile = downloadPath + DownloadServlet.uniqueName(EXTENSION);
+            String zipFileName = folder + EXTENSION;
+            ZIPNAME = zipFileName;
+
+            String zipFile = folderName + File.separator + zipFileName;
 
             ArrayList<String> erroredTitles = new ArrayList<String>();
             ArrayList<String> successTitles = new ArrayList<String>();
@@ -128,8 +124,13 @@ public class DownloadThread extends Thread {
 
                 String title = gb.getNaam();
 
-                try {                    
-                    writeShapesToWorkingDir(workingDir, gb);
+                try {
+                    if (getFormaat().equals(FORMAAT_SHP))
+                        writeShapesToWorkingDir(workingDir, gb);
+
+                    if (getFormaat().equals(FORMAAT_GML))
+                        writeGMLToWorkingDir(workingDir, title, gb);
+                    
                 } catch (Exception e) {
                     log.debug("Dataset opgehaald met fouten: ", e);
                     error = "Dataset opgehaald met fouten: \n" + e.toString();
@@ -164,14 +165,16 @@ public class DownloadThread extends Thread {
                         }
                         if (fos != null) {
                             fos.close();
-                        }
+                        }                        
                     } catch (Exception e) {
                         log.error("Can't close zip.", e);
                     }
                 }
             }
 
-            sendEmail(zipFile, erroredTitles, successTitles);
+            String downloadLink = folder + File.separator + zipFileName;
+
+            sendEmail(zipFile, downloadLink, erroredTitles, successTitles);
             threadStatus = STATUS_FINISHED;
         } catch (Exception e) {
             threadStatus = STATUS_ERROR;
@@ -190,183 +193,116 @@ public class DownloadThread extends Thread {
 
     private void writeShapesToWorkingDir(File workingDir, Gegevensbron gb)
             throws Exception {
-        
-        DataStore datastore = datastore = gb.getBron().toDatastore();
 
-        FeatureCollection fc = null;
-        FeatureIterator it = null;
-        StreamingShapeWriter ssw = null;
-        FileOutputStream fos = null;
+        Bron bron = getCorrectBron(gb);
 
-        try {
-            FeatureStore<SimpleFeatureType, SimpleFeature> fs;
-            String typeName = gb.getAdmin_tabel();
+        if (bron != null) {
+            DataStore datastore = datastore = bron.toDatastore();
 
-            fs = (FeatureStore<SimpleFeatureType, SimpleFeature>) datastore.getFeatureSource(typeName);
-            fc = fs.getFeatures();
-            it = fc.features();
+            FeatureCollection fc = null;
+            FeatureIterator it = null;
+            StreamingShapeWriter ssw = null;
 
-            if (fc != null && fc.size() > 0) {
-                ssw = new StreamingShapeWriter(workingDir.getAbsolutePath() + File.separator, CRS.decode("EPSG:28992"));
-
-                while (it.hasNext()) {
-                    SimpleFeature feature = (SimpleFeature) it.next();
-                    ssw.write((SimpleFeature) feature);
-                }
-            }
-
-        } catch (Exception ex) {
-            log.error("Fout tijdens schrijven shape: ", ex);
-        } finally {
-            if (datastore != null) {
-                datastore.dispose();
-            }
-
-            if (ssw != null) {
-                ssw.close();
-            }
-        }
-    }
-
-    private void writeZipfileToWorkingDirOld(String zipfilename, File workingDir, String formaat) throws Exception {
-        //schrijf metadata in zip file.
-        log.debug("Schrijven van Dataset naar directory voor uuid: " + zipfilename + " STARTED");
-
-        List<OnlineResource> onlineResources = new ArrayList<OnlineResource>();
-        byte[] buffer = new byte[8192];
-        String title = zipfilename;
-        for (OnlineResource or : onlineResources) {
-            WFSDataStore datastore = null; //createDatastore(or);
-            InputStream is = null;
-            FileOutputStream fos = null;
-            BufferedInputStream bis = null;
             try {
-                if (datastore == null) {
-                    throw new Exception("Can not connect with online resource: ");
-                }
-                is = getInputStream(datastore, zipfilename);
-                if (formaat.equalsIgnoreCase(GML)) {
-                    //create output gml file.
-                    String gmlFileName = createValidFileName(title + "_" + zipfilename);
-                    File gmlFile = new File(workingDir.getAbsolutePath()+ File.separator + gmlFileName + ".gml");
-                    fos = new FileOutputStream(gmlFile);
-                    bis = new BufferedInputStream(is);
+                fc = getFeatureCollection(datastore, gb);
 
-                    int i = -1;
-                    while (true) {
-                        i = bis.read(buffer, 0, buffer.length);
-                        if (i == -1) {
-                            break;
-                        }
-                        fos.write(buffer, 0, i);
-                    }
-                    fos.close();
-                    String serviceException= getServiceException(gmlFile);
-                    if (serviceException!=null){
-                        throw new Exception("ServiceExceptionReport returned by service: (first "+SERVICE_EXCEPTION_TEST_LENGTH+" bytes)"+serviceException);
-                    }
+                if (fc != null && fc.size() > 0) {
+                    it = fc.features();
 
-                } else if (formaat.equalsIgnoreCase(SHP)) {
-                    org.geotools.xml.Configuration configuration = getCorrectConfiguration(datastore, null);
+                    ssw = new StreamingShapeWriter(workingDir.getAbsolutePath() + File.separator);
 
-                    CoordinateReferenceSystem crs=CRS.decode("EPSG:28992");
-
-                    StreamingShapeWriter ssw = new StreamingShapeWriter(workingDir.getAbsolutePath()+File.separator, crs);
-
-                    StreamingParser parser = new StreamingParser(configuration, is, SimpleFeature.class);
-                    List<String> removeAttrNames = new ArrayList<String>();
-                    removeAttrNames.add("boundedBy");
-                    removeAttrNames.add("name");
-                    removeAttrNames.add("description");
-                    removeAttrNames.add("shape.area");
-                    removeAttrNames.add("shape.len");
-                    try {
-                        SimpleFeature f = null;
-                            while ((f = (SimpleFeature) parser.parse()) != null) {
-                                f = Util.rebuildFeature(f, removeAttrNames);
-                                ssw.write(f);
-                            }
-                        if (ssw.getFeaturesWritten() == 0) {
-                            throw new Exception("Geen data gevonden dat kon worden geschreven naar de shape file.");
-                        }
-                    } finally {
-                        log.info(ssw.getFeaturesWritten() + "/" + ssw.getFeaturesGiven() + " features written");
-                        ssw.close();
+                    while (it.hasNext()) {
+                        SimpleFeature feature = (SimpleFeature) it.next();
+                        ssw.write((SimpleFeature) feature);
                     }
                 }
-            }catch(Exception e){
-                String errorString="Fout bij laden van onlineResource: "+ zipfilename +"\nname: " + zipfilename;
-                log.debug(errorString,e);
-                throw new Exception(errorString,e);
+
+            } catch (Exception ex) {
+                log.error("Fout tijdens schrijven shape: ", ex);
+
             } finally {
+                if (fc != null) {
+                    fc.close(it);
+                }
                 if (datastore != null) {
                     datastore.dispose();
                 }
-                if (is != null) {
-                    is.close();
-                }
-                if (bis != null) {
-                    bis.close();
-                }
-                if (fos != null) {
-                    fos.close();
+                if (ssw != null) {
+                    ssw.close();
                 }
             }
-           //overwritePrjFiles(workingDir.getAbsolutePath()+File.separator);
         }
-        log.debug("Schrijven van DATASET naar directory voor uuid: " + zipfilename + " DONE");
     }
 
-    private InputStream getInputStream(WFSDataStore datastore, String typeName) throws IOException, Exception {
-        //WFSDataStore datastore =createDatastore(or);
-        OperationType getFeatureOt = null;
-        String version="1.0.0";
-        if (datastore == null) {
-            throw new Exception("DataStore is null");
-        } else if (datastore instanceof WFS_1_0_0_DataStore) {
-            getFeatureOt = ((WFS_1_0_0_DataStore) datastore).getCapabilities().getGetFeature();
-        } else if (datastore instanceof WFS_1_1_0_DataStore) {
-            getFeatureOt = ((WFS_1_0_0_DataStore) datastore).getCapabilities().getGetFeature();
-            version="1.1.0";
+    private void writeGMLToWorkingDir(File workingDir, String fileName, Gegevensbron gb)
+            throws Exception {
+
+        Bron bron = getCorrectBron(gb);
+
+        if (bron != null) {
+            DataStore datastore = datastore = bron.toDatastore();
+
+            FeatureCollection fc = null;
+            FeatureIterator it = null;
+            FileOutputStream out = null;
+            FileOutputStream out2 = null;
+
+            try {
+                fc = getFeatureCollection(datastore, gb);
+
+                if (fc != null && fc.size() > 0) {
+                    it = fc.features();
+
+                    /* Ook xsd file maken voor gebruik als schema in gml ? */
+
+                    /*
+                    SimpleFeatureType ft = DataStoreUtil.getSchema(datastore, gb);
+
+                    String xsdFile = workingDir + File.separator + fileName + ".xsd";
+                    out2 = new FileOutputStream(xsdFile);
+
+                    org.geotools.xml.Configuration configuration1 = new org.geotools.gml3.GMLConfiguration();
+                    org.geotools.xml.Encoder encoder1 = new org.geotools.xml.Encoder(configuration1);
+
+                    //URL locationURL = locationFile.toURI().toURL();
+                    //URL baseURL = locationFile.getParentFile().toURI().toURL();
+                    //encode.setBaseURL(baseURL);
+                    //encode.setNamespace("location", locationURL.toExternalForm());
+                    
+                    encoder1.encode(ft, org.geotools.gml3.GML._FeatureCollection, out2);
+                    */
+
+                    String gmlFile = workingDir + File.separator + fileName + GML_EXTENSION;
+                    out = new FileOutputStream(gmlFile);
+
+                    org.geotools.xml.Configuration configuration = new org.geotools.gml3.GMLConfiguration();
+                    org.geotools.xml.Encoder encoder = new org.geotools.xml.Encoder(configuration);
+
+                    encoder.encode(fc, org.geotools.gml3.GML._FeatureCollection, out);
+                }
+
+            } catch (Exception ex) {
+                log.error("Fout tijdens schrijven gml: ", ex);
+
+            } finally {
+                if (fc != null) {
+                    fc.close(it);
+                }
+                if (datastore != null) {
+                    datastore.dispose();
+                }
+                if (out != null) {
+                    out.close();
+                }
+                if (out2 != null) {
+                    out2.close();
+                }
+            }
         }
+    }
 
-        HttpClient client = new HttpClient();
-        HttpMethod method = null;
-        //make request
-        OGCRequest request = null;
-        if (getFeatureOt != null && getFeatureOt.getGet() != null) {
-            request = new OGCRequest(getFeatureOt.getGet().toString());
-        } else if (getFeatureOt != null && getFeatureOt.getPost() != null) {
-            request = new OGCRequest(getFeatureOt.getPost().toString());
-        } else {
-            throw new Exception("Service doesn't support GetFeature request or doesnt support GetFeature request with Http-post or -get");
-        }
-
-        request.addOrReplaceParameter(OGCRequest.SERVICE, OGCRequest.WFS_SERVICE_WFS);
-        request.addOrReplaceParameter(OGCRequest.VERSION, version);
-        request.addOrReplaceParameter(OGCRequest.REQUEST, OGCRequest.WFS_REQUEST_GetFeature);
-        request.addOrReplaceParameter(OGCRequest.WFS_PARAM_TYPENAME, typeName);
-
-        if (getFeatureOt.getGet() != null) {
-            method = new GetMethod(request.getUrl());
-
-        } else {
-            method = new PostMethod(request.getUrlWithNonOGCparams());
-            String body = request.getXMLBody();
-            //work around voor ESRI post request. Contenttype mag geen text/xml zijn.
-            //method.setRequestEntity(new StringRequestEntity(body, "text/xml", "UTF-8"));
-            ((PostMethod) method).setRequestEntity(new StringRequestEntity(body, null, null));
-        }
-        int status = client.executeMethod(method);
-        if (status == HttpStatus.SC_OK) {
-            return method.getResponseBodyAsStream();
-        } else {
-            throw new IOException("Can not read url (" + request.toString() + "). Server returning: httpstatus: " + status);
-        }
-
-    }    
-
-    private void sendEmail(String zipFile, ArrayList<String> erroredTitles, ArrayList<String> successTitles) {
+    private void sendEmail(String zipFile, String zipFileName, ArrayList<String> erroredTitles, ArrayList<String> successTitles) {
+        //String downloadPath = DownloadServlet.getDownloadPath() + File.separator;
         File zip = new File(zipFile);
         
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -431,7 +367,7 @@ public class DownloadThread extends Thread {
             if (zip.exists()) {
                 tekst = "Download link hier: ";
 
-                String link = DownloadServlet.getDownloadServletPath() + "?download=" + zipFile;
+                String link = getApplicationPath() + DownloadServlet.getDownloadServletPath() + "?download=" + zipFileName;
                 if (!tekst.contains(":link:")) {
                     tekst += "<br><br>De link naar de download is: " + link;
                 } else {
@@ -464,7 +400,6 @@ public class DownloadThread extends Thread {
             status = "Error";
             log.error(status, e);
         }
-
     }
 
     private void putDirInZip(ZipOutputStream zip, File dirFile, String rootEntity) throws IOException, Exception {
@@ -472,14 +407,13 @@ public class DownloadThread extends Thread {
         if (rootEntity == null) {
             rootEntity = "";
         }
+
         if (rootEntity.length() > 0) {
             if (rootEntity.lastIndexOf(File.separator) != rootEntity.length() - 1) {
                 rootEntity += File.separator;
             }
-            //zip.putNextEntry(new ZipEntry(rootEntity));
         }
 
-        //zip.putNextEntry(new ZipEntry(kaart.getNaam()+"/"+xmlBestandsnaam));
         if (dirFile.exists()) {
             if (dirFile.isDirectory()) {
                 File[] files = dirFile.listFiles();
@@ -500,18 +434,21 @@ public class DownloadThread extends Thread {
                             }
                             zip.closeEntry();
                             is.close();
+
+                            /* Delete file */
                             files[i].delete();
-
                         }
-
                     }
                 }
+
+                /* Delete folder */
                 dirFile.delete();
             } else {
                 throw new Exception("File is not a directory");
             }
         }
-        zip.closeEntry();
+
+        //zip.closeEntry();
     }
 
     private static synchronized String nextThreadName() {
@@ -624,5 +561,56 @@ public class DownloadThread extends Thread {
 
     public Integer getThreadStatus() {
         return threadStatus;
+    }
+
+    public String getApplicationPath() {
+        return applicationPath;
+    }
+
+    public void setApplicationPath(String applicationPath) {
+        this.applicationPath = applicationPath;
+    }
+
+    public Bron getKaartenbalieBron() {
+        return kaartenbalieBron;
+    }
+
+    public void setKaartenbalieBron(Bron kaartenbalieBron) {
+        this.kaartenbalieBron = kaartenbalieBron;
+    }
+
+    private FeatureCollection getFeatureCollection(DataStore datastore, Gegevensbron gb) throws IOException, Exception {
+        FeatureCollection fc = null;
+
+        if (datastore instanceof WFS_1_0_0_DataStore) {
+            List<String> propnames = new ArrayList<String>();
+            propnames.add(gb.getAdmin_pk());
+
+            fc = DataStoreUtil.getFeatureCollection(datastore, gb, null, propnames, null, true);
+
+        } else if (datastore instanceof WFS_1_1_0_DataStore) {
+            List<String> propnames = new ArrayList<String>();
+            propnames.add(gb.getAdmin_pk());
+
+            fc = DataStoreUtil.getFeatureCollection(datastore, gb, null, propnames, null, true);
+
+        } else { // JDBC Bron
+            String typeName = gb.getAdmin_tabel();
+            FeatureStore<SimpleFeatureType, SimpleFeature> fs = (FeatureStore<SimpleFeatureType, SimpleFeature>) datastore.getFeatureSource(typeName);
+            fc = fs.getFeatures();
+        }
+
+        return fc;
+    }
+
+    private Bron getCorrectBron(Gegevensbron gb) {
+        Bron bron = gb.getBron();
+
+        /* Kaartenbalie bron gebruiken */
+        if (bron == null && gb.getAdmin_tabel() != null && !gb.getAdmin_tabel().equals("")) {
+            bron = getKaartenbalieBron();
+        }
+
+        return bron;
     }
 }

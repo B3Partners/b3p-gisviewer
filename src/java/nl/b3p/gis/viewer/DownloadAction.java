@@ -5,7 +5,8 @@ import javax.servlet.http.HttpServletResponse;
 import nl.b3p.gis.viewer.downloads.Dispatcher;
 import nl.b3p.gis.viewer.services.DispatcherServlet;
 import nl.b3p.gis.viewer.downloads.DownloadThread;
-import nl.b3p.gis.viewer.downloads.TestDownloads;
+import nl.b3p.gis.viewer.services.GisPrincipal;
+import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionMapping;
@@ -44,12 +45,24 @@ public class DownloadAction extends ViewerCrudAction {
         String[] uuids = dynaForm.getString(UUIDS).split(",");
 
         if (uuids != null && uuids.length > 0) {
+
+            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+            Bron kbBron = user.getKbWfsConnectie();
+
             Dispatcher dispatcher = DispatcherServlet.getDispatcher();
             DownloadThread cdt = new DownloadThread(dispatcher.getThreadGroup());
 
             cdt.setUuids(uuids);
             cdt.setEmail(dynaForm.getString(EMAIL));
             cdt.setFormaat(dynaForm.getString(FORMAAT));
+
+            if (kbBron != null) {
+                cdt.setKaartenbalieBron(kbBron);
+            }
+
+            String servletpath = request.getRequestURL().toString();
+            servletpath = servletpath.substring(0,servletpath.lastIndexOf("/"));
+            cdt.setApplicationPath(servletpath);
 
             dispatcher.addCall(cdt);
         }else{

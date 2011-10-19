@@ -28,7 +28,7 @@ public class DownloadServlet extends HttpServlet {
     private static String emailFrom = null;
     private static String emailSubject = null;
 
-    private static String downloadServletPath = "/servlet/DownloadServlet";
+    private static String downloadServletPath = "/services/DownloadServlet";
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -59,6 +59,7 @@ public class DownloadServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        String downloadPath = getDownloadPath() + File.separator;
         String downloadCode = downloadPath + request.getParameter("download");
 
         if (downloadCode != null) {
@@ -84,8 +85,9 @@ public class DownloadServlet extends HttpServlet {
                     }
                     fis.close();
                     os.flush();
+
                     //after download remove the dir and file.
-                    RemoveFilesWithDelayThread removeThread= new RemoveFilesWithDelayThread(downloadCode,zipfile.getParentFile(),60000,removeThreads);
+                    RemoveFilesWithDelayThread removeThread = new RemoveFilesWithDelayThread(downloadCode,zipfile.getParentFile(), 60000, removeThreads);
                     removeThreads.put(downloadCode, removeThread);
                     removeThread.start();
 
