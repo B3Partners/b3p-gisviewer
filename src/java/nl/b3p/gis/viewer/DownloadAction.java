@@ -21,7 +21,6 @@ public class DownloadAction extends ViewerCrudAction {
 
     private static final Log log = LogFactory.getLog(DownloadAction.class);
 
-    private final String UUIDS = "uuids";
     private final String EMAIL = "email";
     private final String FORMAAT = "formaat";
 
@@ -29,10 +28,12 @@ public class DownloadAction extends ViewerCrudAction {
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm,
             HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        String[] uuids = dynaForm.getString(UUIDS).split(",");
+        String id = (String) request.getParameter("id");
 
-        if (uuids == null || uuids.length < 1) {
-            addAlternateMessage(mapping, request, GENERAL_ERROR_KEY, "Er zijn geen kaarten geselecteerd");
+        if (id == null || id.equals("-1")) {
+            addAlternateMessage(mapping, request, GENERAL_ERROR_KEY, "Er zijn geen kaarten geselecteerd.");
+        } else {
+            dynaForm.set("uuids", id);
         }
 
         return mapping.findForward(SUCCESS);
@@ -42,16 +43,16 @@ public class DownloadAction extends ViewerCrudAction {
     public ActionForward save(ActionMapping mapping, DynaValidatorForm dynaForm,
             HttpServletRequest request, HttpServletResponse response) throws Exception {
         
-        String[] uuids = dynaForm.getString(UUIDS).split(",");
+        String id = dynaForm.getString("uuids");
 
-        if (uuids != null && uuids.length > 0) {
-
+        if (id != null && !id.equals("-1")) {
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
             Bron kbBron = user.getKbWfsConnectie();
 
             Dispatcher dispatcher = DispatcherServlet.getDispatcher();
             DownloadThread cdt = new DownloadThread(dispatcher.getThreadGroup());
 
+            String[] uuids = {id};
             cdt.setUuids(uuids);
             cdt.setEmail(dynaForm.getString(EMAIL));
             cdt.setFormaat(dynaForm.getString(FORMAAT));

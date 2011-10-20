@@ -892,6 +892,14 @@ public class ViewerAction extends BaseGisAction {
             else
                 jsonCluster.put("highlight", "off");
 
+            /* Property die gebruikt kan worden bij het downloaden van Shape en GML.
+             * Er is dan een gegevensbron nodig */
+            if (validAdmindataSource) {
+                jsonCluster.put("gegevensbronid", themaGb.getId());
+            } else {
+                jsonCluster.put("gegevensbronid", -1);
+            }
+
             /*Set some cluster properties that are used by the thema.*/
             Clusters cluster = th.getCluster();
             if (cluster.getId() != null) {

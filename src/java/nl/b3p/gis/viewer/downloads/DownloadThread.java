@@ -12,6 +12,8 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -245,40 +247,35 @@ public class DownloadThread extends Thread {
             FeatureCollection fc = null;
             FeatureIterator it = null;
             FileOutputStream out = null;
-            FileOutputStream out2 = null;
+
+            String gmlFile = workingDir + File.separator + fileName + GML_EXTENSION;
 
             try {
-                fc = getFeatureCollection(datastore, gb);
-
-                if (fc != null && fc.size() > 0) {
-                    it = fc.features();
-
-                    /* Ook xsd file maken voor gebruik als schema in gml ? */
-
-                    /*
-                    SimpleFeatureType ft = DataStoreUtil.getSchema(datastore, gb);
-
-                    String xsdFile = workingDir + File.separator + fileName + ".xsd";
-                    out2 = new FileOutputStream(xsdFile);
-
-                    org.geotools.xml.Configuration configuration1 = new org.geotools.gml3.GMLConfiguration();
-                    org.geotools.xml.Encoder encoder1 = new org.geotools.xml.Encoder(configuration1);
-
-                    //URL locationURL = locationFile.toURI().toURL();
-                    //URL baseURL = locationFile.getParentFile().toURI().toURL();
-                    //encode.setBaseURL(baseURL);
-                    //encode.setNamespace("location", locationURL.toExternalForm());
-                    
-                    encoder1.encode(ft, org.geotools.gml3.GML._FeatureCollection, out2);
-                    */
-
-                    String gmlFile = workingDir + File.separator + fileName + GML_EXTENSION;
+                if (datastore instanceof WFS_1_0_0_DataStore) {
+                    InputStream in = getInputStreamForWfs(bron, gb);
                     out = new FileOutputStream(gmlFile);
 
-                    org.geotools.xml.Configuration configuration = new org.geotools.gml3.GMLConfiguration();
-                    org.geotools.xml.Encoder encoder = new org.geotools.xml.Encoder(configuration);
+                    byte[] buffer = new byte[8192];
+                    int len;
+                    while ((len = in.read(buffer)) > 0) {
+                        out.write(buffer, 0, len);
+                    }
+                    in.close();
+                    out.flush();
 
-                    encoder.encode(fc, org.geotools.gml3.GML._FeatureCollection, out);
+                } else {
+                    fc = getFeatureCollection(datastore, gb);
+
+                    if (fc != null && fc.size() > 0) {
+                        it = fc.features();
+
+                        out = new FileOutputStream(gmlFile);
+
+                        org.geotools.xml.Configuration configuration = new org.geotools.gml3.GMLConfiguration();
+                        org.geotools.xml.Encoder encoder = new org.geotools.xml.Encoder(configuration);
+
+                        encoder.encode(fc, org.geotools.gml3.GML._FeatureCollection, out);
+                    }
                 }
 
             } catch (Exception ex) {
@@ -294,11 +291,25 @@ public class DownloadThread extends Thread {
                 if (out != null) {
                     out.close();
                 }
-                if (out2 != null) {
-                    out2.close();
-                }
             }
         }
+    }
+
+    private InputStream getInputStreamForWfs(Bron bron, Gegevensbron gb)
+            throws MalformedURLException, IOException {
+
+        InputStream in = null;
+
+        String wfsUrl = bron.getUrl();
+        String typeName = gb.getAdmin_tabel(); //fc.getSchema().getName().getLocalPart();
+        String part = "service=WFS&version=1.0.0&request=GetFeature&typename=";
+        String url = wfsUrl + part + typeName;
+
+        URL xmlUrl = new URL(url);
+
+        in = xmlUrl.openStream();
+
+        return in;
     }
 
     private void sendEmail(String zipFile, String zipFileName, ArrayList<String> erroredTitles, ArrayList<String> successTitles) {
