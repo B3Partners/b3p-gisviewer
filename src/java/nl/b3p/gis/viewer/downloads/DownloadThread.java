@@ -1,6 +1,8 @@
 package nl.b3p.gis.viewer.downloads;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -14,9 +16,11 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.mail.Address;
@@ -27,6 +31,8 @@ import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import nl.b3p.commons.services.SizeLimitedOutputStream;
+import nl.b3p.commons.services.StreamCopy;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.services.DownloadServlet;
@@ -58,8 +64,11 @@ public class DownloadThread extends Thread {
 
     private static final String FORMAAT_GML = "GML";
     private static final String FORMAAT_SHP = "SHP";
-
-    private static final int maxFileNameLength = 50;
+    
+    private static final int BUFFER_SIZE = 8192;
+    private static final String ISO_CHARSET = "ISO-8859-1";
+    private static final String UTF8_CHARSET = "UTF-8";
+    
     private static String ZIPNAME;
     private static final String EXTENSION = ".zip";
     private static final String GML_EXTENSION = ".gml";
@@ -70,7 +79,6 @@ public class DownloadThread extends Thread {
     public static final int STATUS_ERROR = 3;
 
     private static int threadCounter = 1;
-    private static int SERVICE_EXCEPTION_TEST_LENGTH = 10000;
     private String email;
     private String[] uuids;
     private String formaat;
@@ -80,6 +88,12 @@ public class DownloadThread extends Thread {
 
     private String applicationPath;
     private Bron kaartenbalieBron = null;
+    
+    private final long MAX_ZIP_FILESIZE = 1024L * 1024L * 100; // 100MB
+    
+    public static final int MAIL_TYPE_SUCCES = 1;
+    public static final int MAIL_TYPE_TOO_LARGE = 2;
+    public static final int MAIL_TYPE_ERROR = 99;
 
     /**
      * Creates a new instance of DownloadThread
@@ -94,6 +108,7 @@ public class DownloadThread extends Thread {
         threadStatus = STATUS_STARTED;
         running = true;
         Transaction tx = null;
+        
         try {
             //start hibernate session
             Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -124,7 +139,8 @@ public class DownloadThread extends Thread {
                 Integer gegevensbronId = new Integer(uuid);
                 Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensbronId);
 
-                String title = gb.getNaam();
+                String title = gb.getNaam();                
+                log.info("DownloadThread gestart voor gegevensbron: " + title);
 
                 try {
                     if (getFormaat().equals(FORMAAT_SHP))
@@ -148,39 +164,43 @@ public class DownloadThread extends Thread {
                     successTitles.add(title);
                 }
 
-            }            
+            }
             
-            //we have downloaded some datasetes. HURRAY! Zip and ship(later)
             if (uuids.length - erroredTitles.size() > 0) {
                 ZipOutputStream zip = null;
-                FileOutputStream fos = null;
+                FileOutputStream fos = null;                
+                SizeLimitedOutputStream limitOut = null;
+                
                 try {
                     fos = new FileOutputStream(zipFile);
-                    zip = new ZipOutputStream(fos);
-                    putDirInZip(zip, new File(workingDir.getAbsolutePath()), "");
-                } catch (Exception ex) {
-                    throw new Exception("Exception in creating zip: ", ex);
+                    limitOut = new SizeLimitedOutputStream(fos, MAX_ZIP_FILESIZE);                    
+                    zip = new ZipOutputStream(limitOut);
+                    
+                    putDirInZip(zip, new File(workingDir.getAbsolutePath()), "");                    
+                } catch (Exception ex) {                    
+                    throw new Exception("Error creating zip: ", ex);
                 } finally {
-                    try {
-                        if (zip != null) {
-                            zip.close();
-                        }
-                        if (fos != null) {
-                            fos.close();
-                        }                        
-                    } catch (Exception e) {
-                        log.error("Can't close zip.", e);
+                    if (zip != null) {
+                        zip.close();
                     }
+                    if (limitOut != null) {
+                        limitOut.close();
+                    }
+                    if (fos != null) {
+                        fos.close();
+                    }                    
                 }
             }
-
-            String downloadLink = folder + File.separator + zipFileName;
-
-            sendEmail(zipFile, downloadLink, erroredTitles, successTitles);
+            
+            String downloadLink = folder + File.separator + zipFileName;            
+            sendEmail(zipFile, downloadLink, erroredTitles, successTitles, MAIL_TYPE_SUCCES);
+            
             threadStatus = STATUS_FINISHED;
-        } catch (Exception e) {
+        } catch (Exception e) {            
             threadStatus = STATUS_ERROR;
-            log.error("Error downloading the data.", e);
+            log.error("Error downloading the data: ", e);
+                    
+            sendErrorEmail();
         } finally {
             try {
                 if (tx != null) {
@@ -255,7 +275,7 @@ public class DownloadThread extends Thread {
                     InputStream in = getInputStreamForWfs(bron, gb);
                     out = new FileOutputStream(gmlFile);
 
-                    byte[] buffer = new byte[8192];
+                    byte[] buffer = new byte[BUFFER_SIZE];
                     int len;
                     while ((len = in.read(buffer)) > 0) {
                         out.write(buffer, 0, len);
@@ -311,110 +331,140 @@ public class DownloadThread extends Thread {
 
         return in;
     }
-
-    private void sendEmail(String zipFile, String zipFileName, ArrayList<String> erroredTitles, ArrayList<String> successTitles) {
-        //String downloadPath = DownloadServlet.getDownloadPath() + File.separator;
+    
+    private void sendErrorEmail() {
+        sendEmail("", "", null, null, MAIL_TYPE_ERROR);
+    }
+    
+    private void sendEmail(String zipFile, String zipFileName, ArrayList<String> erroredTitles,
+            ArrayList<String> successTitles, int mailType) {
+        
         File zip = new File(zipFile);
         
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-        String status = null;
-        String smtpHost = DownloadServlet.getSmtpHost();
-        try {
-            //Create the JavaMail session
+        try {        
             java.util.Properties properties = System.getProperties();
 
+            /* Set host */
+            String smtpHost = DownloadServlet.getSmtpHost();
             properties.put("mail.smtp.host", smtpHost);
+
             javax.mail.Session mailSession = javax.mail.Session.getInstance(properties, null);
-            mailSession.setDebug(true);
+            mailSession.setDebug(false);
 
-            //Contruct the message
+            /* From */
             MimeMessage msg = new MimeMessage(mailSession);
-
-            //Instelling instelling= (Instelling) sess.get(Instelling.class,Instelling.EMAILADRESVAN);
-            String adresvan = DownloadServlet.getEmailFrom();
-            // For Setting the from address
-            if (adresvan == null) {
-                throw new Exception("Instelling " + DownloadServlet.getEmailFrom() + " is verplicht.");
+            String contactEmail = DownloadServlet.getContactEmail();
+            if (contactEmail == null) {
+                throw new Exception("Instelling contact e-mail is verplicht.");
             }
-            Address frmAddress = new InternetAddress(adresvan);
+            
+            Address frmAddress = new InternetAddress(contactEmail);
             msg.setFrom(frmAddress);
 
-            // Parse and set the recipient addresses
+            /* To */
             Address[] toAddresses = InternetAddress.parse(getEmail());
             msg.setRecipients(Message.RecipientType.TO, toAddresses);
 
-            // Set the subject and text
+            /* Subject */
             String onderwerp = null;
-            if (zip.exists()) {
-                onderwerp = DownloadServlet.getEmailSubject();
-                if (onderwerp == null) {
-                    log.error("Kan instelling " + DownloadServlet.getEmailSubject() + " niet vinden.");
-                }
-            }
 
-            if (onderwerp != null) {
-                msg.setSubject(onderwerp);
-            }
-            String tekst = "";
-            //MimeBodyPart mbp = new MimeBodyPart();
-            String klantStatus = "";
-
-            if (successTitles.size() > 0){
-                klantStatus = "De volgende kaart(en) zijn klaar gezet ("+successTitles.size()+"): ";
-                for (String title : successTitles){
-                    klantStatus+="<br/>"+title;
-                }
-            }
-            if (erroredTitles.size() > 0) {
-                if (klantStatus.length()>1){
-                    klantStatus+="<br>";
-                }
-                klantStatus += "<br>De volgende kaart(en) is/zijn tijdelijk niet compleet of beschikbaar ("+erroredTitles.size()+"): ";
-                for (String title : erroredTitles) {
-                    klantStatus+="<br/>"+title;
-                }
-            }
-            if (zip.exists()) {
-                tekst = "Download link hier: ";
-
-                String link = getApplicationPath() + DownloadServlet.getDownloadServletPath() + "?download=" + zipFileName;
-                if (!tekst.contains(":link:")) {
-                    tekst += "<br><br>De link naar de download is: " + link;
-                } else {
-                    tekst = tekst.replaceAll(":link:", link);
-                }
-            }
-            if (!tekst.contains(":status:")) {
-                tekst += "<br><br>" + klantStatus;
+            if (mailType == MAIL_TYPE_SUCCES) {
+                onderwerp = "Het downloadbestand staat klaar.";
+            } else if (mailType == MAIL_TYPE_TOO_LARGE) {
+                onderwerp = "Het downloadbestand is te groot.";
             } else {
-                tekst = tekst.replaceAll(":status:", klantStatus);
+                onderwerp = "Fout tijdens klaarzetten van het downloadbestand.";
             }
-            //tekst = tekst.replaceAll(":naampersoon:", getNaamPersoon());
+            msg.setSubject(onderwerp);
 
-            msg.setContent(tekst, "text/html");
+            /* Get mail text from file */
+            String file = null;
+            if (mailType == MAIL_TYPE_SUCCES) {
+                file = DownloadServlet.getMailDownloadSucces();
+            } else {
+                file = DownloadServlet.getMailDownloadError();
+            }
 
+            /* Object params */
+            Object[] params = null;
+            if (mailType == MAIL_TYPE_SUCCES && zip.exists()) {
+                String link = getApplicationPath() + DownloadServlet.getDownloadServletPath()
+                        + "?download=" + zipFileName;
+
+                String lagenString = getLagenString(successTitles, erroredTitles);
+
+                params = new Object[] {
+                    link, // 0 = download link
+                    lagenString, // 1 = lagen string
+                    contactEmail // 2 = contact email
+                };
+            } else if (mailType == MAIL_TYPE_TOO_LARGE) {
+                params = new Object[] {                
+                    contactEmail // 0 = contact email
+                };
+            } else {
+                params = new Object[] {                
+                    contactEmail // 0 = contact email
+                };
+            }
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();            
+            InputStream in = null;
+            in = new BufferedInputStream(new FileInputStream(file), BUFFER_SIZE);
+            StreamCopy.copy(in, out);
+            MessageFormat textMessage = new MessageFormat(out.toString(ISO_CHARSET), Locale.ENGLISH);   
+
+            /* Content */
+            String tekst = textMessage.format(params);        
+            msg.setContent(tekst, "text/plain");
+
+            /* Date */
             msg.setSentDate(new Date());
+            
+            /* Send it */
             Transport.send(msg);
-            status = "Het bericht met de code is met succes naar het volgende emailadres gestuurd: " + this.getEmail() + ".";
-            log.debug(status);
+        
         } catch (AddressException ae) {
-            status = "Er is een fout opgetreden bij het opgegeven emailadres. ";
-            log.error(status, ae);
+            log.error("Er is een fout opgetreden bij het opgegeven emailadres. ", ae);
         } catch (SendFailedException sfe) {
-            status = "Er is een fout opgetreden bij het verzenden van het bericht.";
-            log.error(status, sfe);
+            log.error("Er is een fout opgetreden bij het verzenden van het bericht.", sfe);
         } catch (MessagingException me) {
-            status = "Er is een onbekende fout opgetreden bij het verzenden van het bericht. ";
-            log.error(status, me);
+            log.error("Er is een onbekende fout opgetreden bij het verzenden van het bericht. ", me);
         } catch (Exception e) {
-            status = "Error";
-            log.error(status, e);
+            log.error("Error", e);
         }
     }
+    
+    private String getLagenString(ArrayList<String> successTitles, 
+            ArrayList<String> erroredTitles) {
+        
+        String laagStatus = "";
+        if (successTitles.size() > 0){
+            laagStatus = "De volgende kaart(en) zijn klaar gezet ("+successTitles.size()+"): \n";
+            for (String title : successTitles){
+                laagStatus += "- " + title + "\n";
+            }
+        }
+        
+        if (erroredTitles.size() > 0) {
+            if (laagStatus.length() < 1) {
+                laagStatus = "De volgende kaart(en) is/zijn tijdelijk niet compleet of beschikbaar ("+erroredTitles.size()+"): \n";
+            } else {
+                laagStatus += "\nDe volgende kaart(en) is/zijn tijdelijk niet compleet of beschikbaar ("+erroredTitles.size()+"): \n";
+            }            
+            for (String title : erroredTitles) {
+                laagStatus += "- " + title + "\n";
+            }
+        }
+        
+        return laagStatus;
+    }
 
-    private void putDirInZip(ZipOutputStream zip, File dirFile, String rootEntity) throws IOException, Exception {
-        byte[] buffer = new byte[8192];
+    private void putDirInZip(ZipOutputStream zip, File dirFile, String rootEntity)
+            throws IOException, Exception {
+        
+        byte[] buffer = new byte[BUFFER_SIZE];
+        
         if (rootEntity == null) {
             rootEntity = "";
         }
@@ -434,7 +484,7 @@ public class DownloadThread extends Thread {
                     } else {
                         //zorg dat hij zichzelf niet schrijft.
                         if (!files[i].getName().equalsIgnoreCase(ZIPNAME)) {
-                            InputStream is =null;
+                            InputStream is = null;
                             is = new FileInputStream(files[i]);
                             
                             zip.putNextEntry(new ZipEntry(rootEntity + files[i].getName()));
@@ -443,6 +493,7 @@ public class DownloadThread extends Thread {
                             while ((len = is.read(buffer)) > 0) {
                                 zip.write(buffer, 0, len);
                             }
+                            
                             zip.closeEntry();
                             is.close();
 
@@ -459,57 +510,11 @@ public class DownloadThread extends Thread {
             }
         }
 
-        //zip.closeEntry();
+        zip.closeEntry();
     }
 
     private static synchronized String nextThreadName() {
         return ("DownloadKaartThread-" + threadCounter++);
-    }
-
-    private String createValidFileName(String name) {
-        if (name == null) {
-            name = "";
-        }
-        name = name.replaceAll("[:\\\\/*?|<>\"\']", "");
-        if ("".equals(name)) {
-            name = "unknown";
-        }
-        if (name.length() > maxFileNameLength) {
-            name = name.substring(0, maxFileNameLength);
-        }
-        name=name.trim();
-        return name;
-    }
-
-    /**
-     * create a unique file
-     */
-    private File createUniqueFile(String path, int count) throws Exception {
-        if (count == 100) {
-            throw new Exception("Can not create unique File/Directory: " + path);
-        }
-        File workingDir;
-        if (count != 0) {
-            if (path.endsWith(File.separator)) {
-                String newFileString=path.substring(0, path.length() - 2) + "_" + count + File.separator;
-                workingDir = new File(newFileString);
-            }else{
-                workingDir = new File(path + "_" + count);
-            }
-        } else {
-            workingDir = new File(path);
-        }
-        if (workingDir.exists()) {
-            count++;
-            return createUniqueFile(path, count);
-        }
-        return workingDir;
-    }
-
-    /**
-     */
-    private File createUniqueFile(String path) throws Exception {
-        return createUniqueFile(path, 0);
     }
 
     public org.geotools.xml.Configuration getCorrectConfiguration(WFSDataStore ds, String outputFormat) {
@@ -530,8 +535,8 @@ public class DownloadThread extends Thread {
         Writer writer = new StringWriter();
         FileInputStream fis = new FileInputStream(gmlFile);
         try{
-            char[] buffer = new char[SERVICE_EXCEPTION_TEST_LENGTH];
-            Reader reader = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
+            char[] buffer = new char[BUFFER_SIZE];
+            Reader reader = new BufferedReader(new InputStreamReader(fis, UTF8_CHARSET));
             int n=reader.read(buffer);
             writer.write(buffer, 0, n);
         }finally{

@@ -5,9 +5,11 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.Timer;
 import javax.servlet.*;
 import javax.servlet.http.*;
 import nl.b3p.gis.viewer.downloads.RemoveFilesWithDelayThread;
+import nl.b3p.gis.viewer.downloads.RemoveOldDownloads;
 import org.apache.commons.fileupload.FileUploadBase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,10 +27,12 @@ public class DownloadServlet extends HttpServlet {
 
     private static String downloadPath = null;
     private static String smtpHost = null;
-    private static String emailFrom = null;
-    private static String emailSubject = null;
+    private static String contactEmail = null;  
 
     private static String downloadServletPath = "/services/DownloadServlet";
+    
+    private static String mailDownloadSucces = null;
+    private static String mailDownloadError = null;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -40,12 +44,18 @@ public class DownloadServlet extends HttpServlet {
             if (config.getInitParameter("smtpHost") != null) {
                 smtpHost = config.getInitParameter("smtpHost");
             }
-            if (config.getInitParameter("emailFrom") != null) {
-                emailFrom = config.getInitParameter("emailFrom");
+            if (config.getInitParameter("contactEmail") != null) {
+                contactEmail = config.getInitParameter("contactEmail");
             }
-            if (config.getInitParameter("emailSubject") != null) {
-                emailSubject = config.getInitParameter("emailSubject");
-            }
+            
+            mailDownloadSucces = getServletContext().getRealPath("/WEB-INF/txt/mail-download-succes.txt");
+            mailDownloadError = getServletContext().getRealPath("/WEB-INF/txt/mail-download-error.txt");
+            
+            /* Task voor opruimen oude downloads */
+            long delay = 60000; //86400 * 1000;  // run task each day
+            
+            Timer timer = new Timer();
+            timer.schedule(new RemoveOldDownloads(downloadPath, 20), 0, delay);            
         } catch (Exception e) {
             log.error("",e);
             throw new ServletException(e);
@@ -143,12 +153,8 @@ public class DownloadServlet extends HttpServlet {
         return downloadPath;
     }
 
-    public static String getEmailFrom() {
-        return emailFrom;
-    }
-
-    public static String getEmailSubject() {
-        return emailSubject;
+    public static String getContactEmail() {
+        return contactEmail;
     }
 
     public static String getSmtpHost() {
@@ -157,6 +163,14 @@ public class DownloadServlet extends HttpServlet {
 
     public static String getDownloadServletPath() {
         return downloadServletPath;
+    }
+
+    public static String getMailDownloadSucces() {
+        return mailDownloadSucces;
+    }
+
+    public static String getMailDownloadError() {
+        return mailDownloadError;
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
