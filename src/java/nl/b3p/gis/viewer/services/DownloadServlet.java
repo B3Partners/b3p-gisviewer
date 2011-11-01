@@ -2,8 +2,10 @@ package nl.b3p.gis.viewer.services;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Random;
 import java.util.Timer;
 import javax.servlet.*;
@@ -22,7 +24,7 @@ public class DownloadServlet extends HttpServlet {
     private static final Log log = LogFactory.getLog(DownloadServlet.class);
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-    private static HashMap<String,RemoveFilesWithDelayThread> removeThreads=new HashMap<String,RemoveFilesWithDelayThread>();
+    private static HashMap<String,RemoveFilesWithDelayThread> removeThreads = new HashMap<String,RemoveFilesWithDelayThread>();
     private static Random rg = null;
 
     private static String downloadPath = null;
@@ -36,6 +38,8 @@ public class DownloadServlet extends HttpServlet {
     
     private static final int runTaskEverySeconds = 86400;
     private static final int folderAliveSeconds = 86400;
+    
+    private Timer timer = null;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -57,8 +61,9 @@ public class DownloadServlet extends HttpServlet {
             /* Task voor opruimen oude downloads */
             long delay = runTaskEverySeconds * 1000;
             
-            Timer timer = new Timer();
-            timer.schedule(new RemoveOldDownloads(downloadPath, folderAliveSeconds), 0, delay);           
+            timer = new Timer();
+            timer.schedule(new RemoveOldDownloads(downloadPath, folderAliveSeconds), 0, delay);
+            
         } catch (Exception e) {
             log.error("",e);
             throw new ServletException(e);
@@ -116,6 +121,30 @@ public class DownloadServlet extends HttpServlet {
                 log.error("Error committing transaction, do rollback: ", e);
             }
         }
+    }
+    
+    @Override
+    public void destroy() {
+        log.debug("DESTROY DownloadServlet.");
+        
+        /* Opruimen threads */
+        if (timer != null) {            
+            timer.cancel();
+        }
+        
+        if (removeThreads != null && removeThreads.size() > 0) {            
+            Collection threads = removeThreads.values();
+            Iterator iter = threads.iterator();
+            while(iter.hasNext()) {
+                RemoveFilesWithDelayThread thread = (RemoveFilesWithDelayThread)iter.next();
+                
+                if (thread.isAlive()) {
+                    thread.stopThread();   
+                }
+            }            
+        }
+        
+        super.destroy();
     }
 
     private void writeErrorMessage(HttpServletResponse response, String message) {

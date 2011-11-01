@@ -2,12 +2,15 @@ package nl.b3p.gis.viewer.services;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.gis.viewer.downloads.Dispatcher;
+import nl.b3p.gis.viewer.downloads.DownloadThread;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -19,10 +22,10 @@ public class DispatcherServlet extends HttpServlet {
    private static final Log log = LogFactory.getLog(DispatcherServlet.class);
    private static ArrayList threads = new ArrayList();
    private static ArrayList finishedThreads = new ArrayList();
-   private static int maxThreadLog=300;
-   private static int refreshRate=10;
-   private static int dispatcherSleepTime=10000;
-   private static int maxAliveThreads=10;
+   private static int maxThreadLog = 300;
+   private static int refreshRate = 10;
+   private static int dispatcherSleepTime = 10000;
+   private static int maxAliveThreads = 10;
    private static Dispatcher dispatcher = null;
 
 
@@ -104,7 +107,22 @@ public class DispatcherServlet extends HttpServlet {
      */
     @Override
     public void destroy() {
+        log.debug("DESTROY DispatcherServlet."); 
+        
+        DownloadThread thread = null;
+        List queue = dispatcher.getQueue();
+        
+        Iterator it = queue.iterator();
+        while (it.hasNext()) {
+            thread = (DownloadThread)it.next();
+            
+            if (thread.isAlive()) {
+                thread.stopThread();
+            }
+        }
+        
         dispatcher.setDispatcherActive(false);
+                
         super.destroy();
     }
 

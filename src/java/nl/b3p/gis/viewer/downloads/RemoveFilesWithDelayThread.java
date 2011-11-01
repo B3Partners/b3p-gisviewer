@@ -37,7 +37,7 @@ public class RemoveFilesWithDelayThread extends Thread {
             if (!stop) {
                 DownloadUtil.removeFiles(file);
                 if (container.get(this.name) != null) {                    
-                    log.debug("RemoveFilesWithDelayThread removing container.");
+                    log.debug("Removing container: " + this.name);
                     
                     container.remove(this.name);
                 }

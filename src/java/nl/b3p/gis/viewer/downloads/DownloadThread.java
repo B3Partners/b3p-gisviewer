@@ -83,7 +83,6 @@ public class DownloadThread extends Thread {
     private String[] uuids;
     private String formaat;
     private Integer threadStatus;
-    private boolean running = false;
     static final Logging logging = Logging.ALL;
 
     private String applicationPath;
@@ -94,6 +93,8 @@ public class DownloadThread extends Thread {
     public static final int MAIL_TYPE_SUCCES = 1;
     public static final int MAIL_TYPE_TOO_LARGE = 2;
     public static final int MAIL_TYPE_ERROR = 99;
+    
+    private boolean stop = false;
 
     /**
      * Creates a new instance of DownloadThread
@@ -105,117 +106,118 @@ public class DownloadThread extends Thread {
 
     @Override
     public void run() {
-        threadStatus = STATUS_STARTED;
-        running = true;
-        Transaction tx = null;
-        
-        try {
-            //start hibernate session
-            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-            tx = sess.beginTransaction();
-            
-            String downloadPath = DownloadServlet.getDownloadPath() + File.separator;
+        if (!stop) {
+            threadStatus = STATUS_STARTED;
+            Transaction tx = null;
 
-            /* Create unique folder */
-            String folder = DownloadServlet.uniqueName("");
-            String folderName = downloadPath + folder;
-            File workingDir = new File(folderName);
-            if (!workingDir.mkdirs()) {
-                throw new IOException("Cannot create folder: " + workingDir.getAbsolutePath());
-            }
-
-            /* Pad naar zipfile */
-            String zipFileName = folder + EXTENSION;
-            ZIPNAME = zipFileName;
-
-            String zipFile = folderName + File.separator + zipFileName;
-
-            ArrayList<String> erroredTitles = new ArrayList<String>();
-            ArrayList<String> successTitles = new ArrayList<String>();
-
-            for (String uuid : uuids) { 
-                boolean error = false;
-
-                Integer gegevensbronId = new Integer(uuid);
-                Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensbronId);
-
-                String title = gb.getNaam();                
-                log.debug("STARTED DownloadThread voor gegevensbron: " + title);
-
-                try {
-                    if (getFormaat().equals(FORMAAT_SHP)) {
-                        writeShapesToWorkingDir(workingDir, gb);
-                    }  
-
-                    if (getFormaat().equals(FORMAAT_GML)) {
-                        writeGMLToWorkingDir(workingDir, title, gb);
-                    } 
-                    
-                } catch (Exception e) {
-                    error = true;
-                    log.debug("Dataset opgehaald met fouten: ", e);
-                }
-
-                if (error) {                    
-                    log.debug("Error while getting data for uuid: "+ uuid);
-                    erroredTitles.add(title);
-                } else {                    
-                    successTitles.add(title);
-                }
-
-            }
-            
-            if (uuids.length - erroredTitles.size() > 0) {
-                ZipOutputStream zip = null;
-                FileOutputStream fos = null;                
-                SizeLimitedOutputStream limitOut = null;
-                
-                try {
-                    fos = new FileOutputStream(zipFile);
-                    limitOut = new SizeLimitedOutputStream(fos, MAX_ZIP_FILESIZE);                    
-                    zip = new ZipOutputStream(limitOut);
-                    
-                    putDirInZip(zip, new File(workingDir.getAbsolutePath()), "");                    
-                } catch (Exception ex) {                    
-                    throw new Exception("Error creating zip: ", ex);
-                } finally {
-                    try {
-                        if (zip != null) {
-                            zip.close();
-                        }
-                        if (limitOut != null) {
-                            limitOut.close();
-                        }
-                        if (fos != null) {
-                            fos.close();
-                        }   
-                    } catch (Exception e) {
-                        log.error("Cannot close zip.", e);
-                    }                                  
-                }
-            }
-            
-            String downloadLink = folder + File.separator + zipFileName;            
-            sendEmail(zipFile, downloadLink, erroredTitles, successTitles, MAIL_TYPE_SUCCES);
-            
-            threadStatus = STATUS_FINISHED;
-        } catch (Exception e) {       
-            threadStatus = STATUS_ERROR;
-            log.error("Error downloading the data: ", e);
-                    
-            sendErrorEmail();
-        } finally {
             try {
-                if (tx != null) {
-                    tx.commit();
+                //start hibernate session
+                Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+                tx = sess.beginTransaction();
+
+                String downloadPath = DownloadServlet.getDownloadPath() + File.separator;
+
+                /* Create unique folder */
+                String folder = DownloadServlet.uniqueName("");
+                String folderName = downloadPath + folder;
+                File workingDir = new File(folderName);
+                if (!workingDir.mkdirs()) {
+                    throw new IOException("Cannot create folder: " + workingDir.getAbsolutePath());
                 }
-            } catch (Exception e) {
-                log.error("Error committing transaction, do rollback: ", e);
-                tx.rollback();
+
+                /* Pad naar zipfile */
+                String zipFileName = folder + EXTENSION;
+                ZIPNAME = zipFileName;
+
+                String zipFile = folderName + File.separator + zipFileName;
+
+                ArrayList<String> erroredTitles = new ArrayList<String>();
+                ArrayList<String> successTitles = new ArrayList<String>();
+
+                for (String uuid : uuids) { 
+                    boolean error = false;
+
+                    Integer gegevensbronId = new Integer(uuid);
+                    Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensbronId);
+
+                    String title = gb.getNaam();                
+                    log.debug("STARTED DownloadThread voor gegevensbron: " + title);
+
+                    try {
+                        if (getFormaat().equals(FORMAAT_SHP)) {
+                            writeShapesToWorkingDir(workingDir, gb);
+                        }  
+
+                        if (getFormaat().equals(FORMAAT_GML)) {
+                            writeGMLToWorkingDir(workingDir, title, gb);
+                        } 
+
+                    } catch (Exception e) {
+                        error = true;
+                        log.debug("Dataset opgehaald met fouten: ", e);
+                    }
+
+                    if (error) {                    
+                        log.debug("Error while getting data for uuid: "+ uuid);
+                        erroredTitles.add(title);
+                    } else {                    
+                        successTitles.add(title);
+                    }
+
+                }
+
+                if (uuids.length - erroredTitles.size() > 0) {
+                    ZipOutputStream zip = null;
+                    FileOutputStream fos = null;                
+                    SizeLimitedOutputStream limitOut = null;
+
+                    try {
+                        fos = new FileOutputStream(zipFile);
+                        limitOut = new SizeLimitedOutputStream(fos, MAX_ZIP_FILESIZE);                    
+                        zip = new ZipOutputStream(limitOut);
+
+                        putDirInZip(zip, new File(workingDir.getAbsolutePath()), "");                    
+                    } catch (Exception ex) {                    
+                        throw new Exception("Error creating zip: ", ex);
+                    } finally {
+                        try {
+                            if (zip != null) {
+                                zip.close();
+                            }
+                            if (limitOut != null) {
+                                limitOut.close();
+                            }
+                            if (fos != null) {
+                                fos.close();
+                            }   
+                        } catch (Exception e) {
+                            log.error("Cannot close zip.", e);
+                        }                                  
+                    }
+                }
+
+                String downloadLink = folder + File.separator + zipFileName;            
+                sendEmail(zipFile, downloadLink, erroredTitles, successTitles, MAIL_TYPE_SUCCES);
+
+                threadStatus = STATUS_FINISHED;
+            } catch (Exception e) {       
+                threadStatus = STATUS_ERROR;
+                log.error("Error downloading the data: ", e);
+
+                sendErrorEmail();
+            } finally {
+                try {
+                    if (tx != null) {
+                        tx.commit();
+                    }
+                } catch (Exception e) {
+                    log.error("Error committing transaction, do rollback: ", e);
+                    tx.rollback();
+                }
             }
-        }
-        
-        log.debug("ENDED DownloadThread.");
+
+            log.debug("ENDED DownloadThread.");          
+        } // end if !stop     
     }
 
     private void writeShapesToWorkingDir(File workingDir, Gegevensbron gb)
@@ -516,6 +518,10 @@ public class DownloadThread extends Thread {
         }
 
         zip.closeEntry();
+    }
+    
+    public void stopThread() {
+        stop = true;
     }
 
     private static synchronized String nextThreadName() {
