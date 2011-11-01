@@ -177,7 +177,7 @@ public class DataStoreUtil {
         } else if (filters.size() > 1) {
             filter = ff.and(filters);
         } else {
-            log.info("No filter found. Using the Filter.INCLUDE (all)");
+            log.debug("No filter found. Using the Filter.INCLUDE (all)");
             filter = Filter.INCLUDE;
         }
 
@@ -349,7 +349,7 @@ public class DataStoreUtil {
                 }
             }
             if (!wfsDs.getCapabilities().getFilterCapabilities().supports(filter)) {
-                log.info("Intersect,disjoint and bbox filters niet ondersteund. We geven het op: Filter wordt toegepast aan de client kant (java code).");
+                log.debug("Intersect,disjoint and bbox filters niet ondersteund. We geven het op: Filter wordt toegepast aan de client kant (java code).");
             }
         }
         if (ds instanceof WFS_1_1_0_DataStore) {

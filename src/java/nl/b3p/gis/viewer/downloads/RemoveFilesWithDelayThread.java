@@ -26,6 +26,8 @@ public class RemoveFilesWithDelayThread extends Thread {
 
     @Override
     public void run() {
+        log.debug("RUNNING RemoveFilesWithDelayThread.");
+        
         if (!stop) {
             try {
                 this.sleep(delay);
@@ -34,7 +36,9 @@ public class RemoveFilesWithDelayThread extends Thread {
             }
             if (!stop) {
                 DownloadUtil.removeFiles(file);
-                if (container.get(this.name) != null) {
+                if (container.get(this.name) != null) {                    
+                    log.debug("RemoveFilesWithDelayThread removing container.");
+                    
                     container.remove(this.name);
                 }
             }

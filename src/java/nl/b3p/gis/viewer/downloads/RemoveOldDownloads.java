@@ -24,7 +24,7 @@ public class RemoveOldDownloads extends TimerTask {
     
     @Override
     public void run() {  
-        log.info("Started task RemoveOldDownloads.");
+        log.debug("BEGIN RemoveOldDownloads.");
         
         Date now = new Date();        
         File workingDir = new File(downloadPath);
@@ -36,7 +36,7 @@ public class RemoveOldDownloads extends TimerTask {
                     if (files[i].isDirectory()) {
                         long seconds = (now.getTime() - files[i].lastModified()) / 1000;
                         
-                        log.info("Checking folder: " + files[i].toString() + " is alive: " + seconds);
+                        log.debug("CHECKING: " + files[i].toString() + " ALIVE: " + seconds);
                         
                         if (seconds > folderAliveInSeconds) {
                             removeFilesAndFolder(files[i]);
@@ -45,11 +45,13 @@ public class RemoveOldDownloads extends TimerTask {
                 }
             }
         }
+        
+        log.debug("END RemoveOldDownloads.");
     }
     
     private void removeFilesAndFolder(File folder) {
         if (folder.exists()) {
-            log.info("Cleaning folder: " + folder.toString());
+            log.debug("REMOVING: " + folder.toString());
             
             if (folder.isDirectory()) {
                 File[] files = folder.listFiles();

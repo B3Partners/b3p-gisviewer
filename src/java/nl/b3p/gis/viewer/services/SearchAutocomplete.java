@@ -56,7 +56,7 @@ public class SearchAutocomplete extends HttpServlet {
             try{
                 maxResults=new Integer(request.getParameter("maxResults"));
             }catch(Exception e){
-                log.info("no valid maxResult param found.");
+                log.debug("no valid maxResult param found.");
                 maxResults=null;
             }
             Zoeker zoeker = new Zoeker();

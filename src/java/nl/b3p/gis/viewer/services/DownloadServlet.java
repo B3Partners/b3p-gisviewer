@@ -33,6 +33,9 @@ public class DownloadServlet extends HttpServlet {
     
     private static String mailDownloadSucces = null;
     private static String mailDownloadError = null;
+    
+    private static final int runTaskEverySeconds = 86400;
+    private static final int folderAliveSeconds = 86400;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -52,10 +55,10 @@ public class DownloadServlet extends HttpServlet {
             mailDownloadError = getServletContext().getRealPath("/WEB-INF/txt/mail-download-error.txt");
             
             /* Task voor opruimen oude downloads */
-            long delay = 60000; //86400 * 1000;  // run task each day
+            long delay = runTaskEverySeconds * 1000;
             
             Timer timer = new Timer();
-            timer.schedule(new RemoveOldDownloads(downloadPath, 20), 0, delay);            
+            timer.schedule(new RemoveOldDownloads(downloadPath, folderAliveSeconds), 0, delay);           
         } catch (Exception e) {
             log.error("",e);
             throw new ServletException(e);
@@ -68,6 +71,8 @@ public class DownloadServlet extends HttpServlet {
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        
+        log.debug("DownloadServlet processRequest.");
 
         String downloadPath = getDownloadPath() + File.separator;
         String downloadCode = downloadPath + request.getParameter("download");

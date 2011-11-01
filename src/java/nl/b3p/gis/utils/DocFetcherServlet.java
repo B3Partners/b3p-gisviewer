@@ -59,7 +59,7 @@ public class DocFetcherServlet extends HttpServlet {
         if (tmpval == null || tmpval.trim().length() == 0) {
             tmpval = defaultValue;
         }
-        log.info("ConfigValue(" + parameter + ", " + tmpval + ")");
+        log.debug("ConfigValue(" + parameter + ", " + tmpval + ")");
         return tmpval.trim();
     }
 

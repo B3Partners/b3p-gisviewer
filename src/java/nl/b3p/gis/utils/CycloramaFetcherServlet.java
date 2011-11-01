@@ -78,7 +78,7 @@ public class CycloramaFetcherServlet extends HttpServlet {
         if (tmpval == null || tmpval.trim().length() == 0) {
             tmpval = defaultValue;
         }
-        log.info("ConfigValue(" + parameter + ", " + tmpval + ")");
+        log.debug("ConfigValue(" + parameter + ", " + tmpval + ")");
         if (tmpval==null)
             return null;
         else

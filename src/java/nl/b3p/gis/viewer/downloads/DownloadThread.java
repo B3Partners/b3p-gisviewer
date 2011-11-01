@@ -134,31 +134,30 @@ public class DownloadThread extends Thread {
             ArrayList<String> successTitles = new ArrayList<String>();
 
             for (String uuid : uuids) { 
-                String error = null;
+                boolean error = false;
 
                 Integer gegevensbronId = new Integer(uuid);
                 Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensbronId);
 
                 String title = gb.getNaam();                
-                log.info("DownloadThread gestart voor gegevensbron: " + title);
+                log.debug("STARTED DownloadThread voor gegevensbron: " + title);
 
                 try {
-                    if (getFormaat().equals(FORMAAT_SHP))
+                    if (getFormaat().equals(FORMAAT_SHP)) {
                         writeShapesToWorkingDir(workingDir, gb);
+                    }  
 
-                    if (getFormaat().equals(FORMAAT_GML))
+                    if (getFormaat().equals(FORMAAT_GML)) {
                         writeGMLToWorkingDir(workingDir, title, gb);
+                    } 
                     
                 } catch (Exception e) {
+                    error = true;
                     log.debug("Dataset opgehaald met fouten: ", e);
-                    error = "Dataset opgehaald met fouten: \n" + e.toString();
-                    if (e.getCause()!=null){
-                        error+="\nReden:\n"+e.getCause().toString();
-                    }
                 }
 
-                if (error != null) {                    
-                    log.debug("error while getting data for uuid "+uuid+": "+error);
+                if (error) {                    
+                    log.debug("Error while getting data for uuid: "+ uuid);
                     erroredTitles.add(title);
                 } else {                    
                     successTitles.add(title);
@@ -180,15 +179,19 @@ public class DownloadThread extends Thread {
                 } catch (Exception ex) {                    
                     throw new Exception("Error creating zip: ", ex);
                 } finally {
-                    if (zip != null) {
-                        zip.close();
-                    }
-                    if (limitOut != null) {
-                        limitOut.close();
-                    }
-                    if (fos != null) {
-                        fos.close();
-                    }                    
+                    try {
+                        if (zip != null) {
+                            zip.close();
+                        }
+                        if (limitOut != null) {
+                            limitOut.close();
+                        }
+                        if (fos != null) {
+                            fos.close();
+                        }   
+                    } catch (Exception e) {
+                        log.error("Cannot close zip.", e);
+                    }                                  
                 }
             }
             
@@ -196,7 +199,7 @@ public class DownloadThread extends Thread {
             sendEmail(zipFile, downloadLink, erroredTitles, successTitles, MAIL_TYPE_SUCCES);
             
             threadStatus = STATUS_FINISHED;
-        } catch (Exception e) {            
+        } catch (Exception e) {       
             threadStatus = STATUS_ERROR;
             log.error("Error downloading the data: ", e);
                     
@@ -211,6 +214,8 @@ public class DownloadThread extends Thread {
                 tx.rollback();
             }
         }
+        
+        log.debug("ENDED DownloadThread.");
     }
 
     private void writeShapesToWorkingDir(File workingDir, Gegevensbron gb)
@@ -425,11 +430,11 @@ public class DownloadThread extends Thread {
             Transport.send(msg);
         
         } catch (AddressException ae) {
-            log.error("Er is een fout opgetreden bij het opgegeven emailadres. ", ae);
+            log.error("Fout bij het opgegeven emailadres. ", ae);
         } catch (SendFailedException sfe) {
-            log.error("Er is een fout opgetreden bij het verzenden van het bericht.", sfe);
+            log.error("Fout bij het verzenden van het bericht.", sfe);
         } catch (MessagingException me) {
-            log.error("Er is een onbekende fout opgetreden bij het verzenden van het bericht. ", me);
+            log.error("Fout bij het verzenden van het bericht. ", me);
         } catch (Exception e) {
             log.error("Error", e);
         }
@@ -498,13 +503,13 @@ public class DownloadThread extends Thread {
                             is.close();
 
                             /* Delete file */
+                            log.debug("Deleting " + files[i].toString());
                             files[i].delete();
                         }
                     }
                 }
-
-                /* Delete folder */
-                dirFile.delete();
+                
+                //dirFile.delete();
             } else {
                 throw new Exception("File is not a directory");
             }

@@ -13,6 +13,8 @@ public class DownloadUtil {
 
     public static void removeFiles(File file) {
         if (file.exists()) {
+            log.debug("DownloadUtil REMOVING FILE: " + file.toString());
+            
             if (file.isDirectory()) {
                 File[] files = file.listFiles();
                 for (int i = 0; i < files.length; i++) {
