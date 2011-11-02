@@ -33,7 +33,9 @@ create table user_layer (
     scalehint_max varchar(255),
     use_style varchar(255),
     sld_part varchar(255),
+	show bool,
     default_on bool,
+	parent int4,
     primary key (id)
 );
 
