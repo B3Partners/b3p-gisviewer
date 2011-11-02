@@ -278,13 +278,11 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         session.setAttribute("appCode", code);
+        request.setAttribute("appCodeSaved", code);  
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
 
-        request.setAttribute("appCodeSaved", code);
-
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
-
         return getDefaultForward(mapping, request);
     }
 
@@ -298,6 +296,42 @@ public class KaartSelectieAction extends BaseGisAction {
         /* controleren of serviceUrl al voorkomt bij applicatie */
         HttpSession session = request.getSession(true);
         String code = (String) session.getAttribute("appCode");
+        
+        String currentAppReadOnly = dynaForm.getString("currentAppReadOnly");
+        Boolean makeAppReadOnly = (Boolean) dynaForm.get("makeAppReadOnly");
+
+        Boolean isReadOnly = false;
+        if (currentAppReadOnly != null && currentAppReadOnly.equals("1")) {
+            isReadOnly = true;
+        }
+
+        Boolean makeReadOnly = false;
+        if (makeAppReadOnly != null && makeAppReadOnly) {
+            makeReadOnly = true;
+        }
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        /* Als huidige Applicatie alleen lezen is kopie maken. Anders huidige applicatie
+        opslaan met alleen-lezen keuze van gebruiker. */
+        Applicatie currentApp = KaartSelectieUtil.getApplicatie(code);
+        if (isReadOnly) {
+            if (currentApp != null) {
+
+                Applicatie app = KaartSelectieUtil.copyApplicatie(currentApp, makeReadOnly, true);
+                app.setNaam(currentApp.getNaam());
+
+                sess.save(app);
+                sess.flush();
+
+                code = app.getCode();
+            }
+        } else if (!isReadOnly && makeReadOnly) {
+            currentApp.setRead_only(makeReadOnly);
+
+            sess.save(currentApp);
+            sess.flush();
+        }
 
         if (userAlreadyHasThisService(code, serviceUrl)) {
             reloadFormData(request);
@@ -348,8 +382,6 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         /* Nieuwe UserService entity aanmaken en opslaan */
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
         UserService us = new UserService(code, serviceUrl, groupName);
 
         /* Eerst parents ophalen. */
@@ -370,6 +402,9 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         sess.save(us);
+        
+        session.setAttribute("appCode", code);
+        request.setAttribute("appCodeSaved", code);
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
 
