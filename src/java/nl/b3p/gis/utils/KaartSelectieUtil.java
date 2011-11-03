@@ -581,21 +581,6 @@ public class KaartSelectieUtil {
         while (it.hasNext()) {
             Themas th = (Themas) it.next();
 
-            /* TODO: validAdmindataSource ging eerst via th.hasValidAdmindataSource(user)
-             * maar dit duurt soms erg lang, nu wordt er gekeken of er een gegevensbron is */
-            boolean validAdmindataSource = false;
-            Gegevensbron themaGb = th.getGegevensbron();
-
-            if (themaGb != null && themaGb.getAdmin_pk() != null) {
-                validAdmindataSource = true;
-            }
-
-            // Check of er een admin source is met rechten
-            if (th.isAnalyse_thema() && !validAdmindataSource) {
-                log.debug(th.getNaam() + "' is analyse kaartlaag maar"
-                        + " hier is nog geen gegevensbron voor geconfigureerd.");
-            }
-
             Integer themaId = th.getId();
             String ttitel = th.getNaam();
 
@@ -657,7 +642,7 @@ public class KaartSelectieUtil {
             if (th.getWms_layers_real() != null) {
                 jsonCluster.put("wmslayers", th.getWms_layers_real());
                 //if admintable is set then don't add the queryLayer
-                if (th.getWms_querylayers_real() != null && !validAdmindataSource) {
+                if (th.getWms_querylayers_real() != null) {
                     jsonCluster.put("wmsquerylayers", th.getWms_querylayers_real());
                 }
                 if (th.getWms_legendlayer_real() != null) {
@@ -667,7 +652,7 @@ public class KaartSelectieUtil {
             } else {
                 jsonCluster.put("wmslayers", th.getWms_layers());
                 //if admintable is set then don't add the queryLayer
-                if (th.getWms_querylayers() != null && !validAdmindataSource) {
+                if (th.getWms_querylayers() != null) {
                     jsonCluster.put("wmsquerylayers", th.getWms_querylayers());
                 }
                 if (th.getWms_legendlayer() != null) {
