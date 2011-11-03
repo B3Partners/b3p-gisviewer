@@ -8,6 +8,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +30,14 @@ import nl.b3p.gis.viewer.db.UserService;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
+import nl.b3p.ogc.sld.SldNamedLayer;
+import nl.b3p.ogc.sld.SldReader;
+import nl.b3p.ogc.sld.SldUserStyle;
 import nl.b3p.ogc.utils.KBConfiguration;
 import nl.b3p.ogc.utils.OGCConstants;
 import nl.b3p.ogc.utils.OGCRequest;
 import nl.b3p.wms.capabilities.Layer;
+import nl.b3p.wms.capabilities.Style;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionForward;
@@ -333,12 +338,16 @@ public class KaartSelectieAction extends BaseGisAction {
             sess.flush();
         }
 
+        /* TODO: Deze check even uitgezet zodat je meerdere eigen wms'en
+         * kunt toevoegen met andere sld url's
+        
         if (userAlreadyHasThisService(code, serviceUrl)) {
             reloadFormData(request);
 
             addMessage(request, ERROR_DUPLICATE_WMS, serviceUrl);
             return getAlternateForward(mapping, request);
         }
+        */
 
         /* WMS Service layers ophalen met Geotools */
         String wmsUrl = checkWmsUrl(serviceUrl.trim());
@@ -400,8 +409,52 @@ public class KaartSelectieAction extends BaseGisAction {
                 us.addLayer(ul);
             }
         }
+        
+        if (sldUrl != null && !sldUrl.equals("")) {
+            us.setSld_url(sldUrl);
+        }
 
         sess.save(us);
+        
+        /* Sld url opslaan en styles bij juiste layers opslaan */
+        /* NamedLayers uit Sld ophalen */
+        SldReader sldReader = new SldReader();
+        List<SldNamedLayer> namedLayers = null;
+        if (sldUrl != null && !sldUrl.equals("")) {            
+            namedLayers = sldReader.getNamedLayersByUrl(sldUrl);
+        }
+
+        Set<UserLayer> layerSet = us.getUser_layers();
+        Iterator dwIter = layerSet.iterator();
+
+        while (dwIter.hasNext()) {
+            UserLayer layer = (UserLayer) dwIter.next();
+
+            /* Kijken of voor deze layer UserStyles in bijbehorende NamedLayer
+             * voorkomen. Zo ja, deze als Style opslaan in database */
+            if (namedLayers != null && namedLayers.size() > 0) {
+                Set<Style> styles = getSldStylesSet(namedLayers,layer);                                
+                Iterator<Style> styleIt = styles.iterator();
+                while(styleIt.hasNext()){
+                    Style style = styleIt.next();
+                    
+                    layer.setSld_part(style.getSldPart());
+                    
+                    UserLayerStyle uls = new UserLayerStyle();
+                    uls.setLayerid(layer);
+                    
+                    if (layer.getName() == null && layer.getName().equals("")) {
+                        uls.setName(style.getName() + "_SLD" );  
+                    } else {
+                        uls.setName(layer.getName());
+                    }                                      
+                    
+                    layer.addStyle(uls);
+                    
+                    sess.save(layer);
+                }
+            }
+        }
         
         session.setAttribute("appCode", code);
         request.setAttribute("appCodeSaved", code);
@@ -1120,5 +1173,56 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         return ogcrequest.getUrl();
+    }
+    
+    
+    private Set<Style> getSldStylesSet(List<SldNamedLayer> allNamedLayers, UserLayer layer)
+            throws Exception {
+
+        Set<Style> styles = new HashSet<Style>();
+        SldReader sldReader = new SldReader();
+        //get only the named layers for this layer
+        List<SldNamedLayer> namedLayers=sldReader.getNamedLayers(allNamedLayers, layer.getName());
+        
+        for (SldNamedLayer namedLayer : namedLayers) {
+            List<SldUserStyle> userStyles = namedLayer.getUserStyles();//sldReader.getUserStyles(namedLayer);
+
+            for (SldUserStyle userStyle : userStyles) {
+                Style style = new Style();
+                //style.setLayer(layer);
+                style.setName(userStyle.getName());
+                style.setTitle(userStyle.getName());
+                style.setSldPart(userStyle.getSldPart());
+                styles.add(style);
+            }            
+        }
+        return styles;
+    }
+
+    private String getUniqueStyleName(Set<Style> styles, String name) throws Exception {        
+        return getUniqueStyleName(styles,name,null);
+    }
+    private String getUniqueStyleName(Set<Style> styles, String name, Integer tries) throws Exception {    
+        if (tries!=null && tries==10)
+            throw new Exception("Can't create unique name for style");
+                
+        String newName=name;
+        if (tries!=null)
+            newName+=tries;
+        
+        Iterator<Style> it = styles.iterator();
+        boolean unique=true;
+        while (it.hasNext()&& unique){
+            Style s= it.next();
+            if (s.getName().equals(newName))
+                unique=false;
+        }
+        if (!unique){
+            if (tries==null)
+                tries= new Integer("0");
+            tries++;            
+            return getUniqueStyleName(styles, name, tries);
+        }
+        return newName;
     }
 }

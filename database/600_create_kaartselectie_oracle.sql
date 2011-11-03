@@ -23,7 +23,7 @@ create table user_layer (
     scalehint_min varchar2(255 char),
     scalehint_max varchar2(255 char),
     use_style varchar2(255 char),
-    sld_part varchar2(255 char),
+    sld_part clob,
 	show number(1,0),
     default_on number(1,0),
 	parent number(10,0),

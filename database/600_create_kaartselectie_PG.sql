@@ -32,7 +32,7 @@ create table user_layer (
     scalehint_min varchar(255),
     scalehint_max varchar(255),
     use_style varchar(255),
-    sld_part varchar(255),
+    sld_part text,
 	show bool,
     default_on bool,
 	parent int4,
