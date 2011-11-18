@@ -58,7 +58,9 @@ import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.wms.capabilities.Layer;
+import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.wms.capabilities.SrsBoundingBox;
+import nl.b3p.wms.capabilities.TileSet;
 import nl.b3p.zoeker.configuratie.ZoekAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
 import nl.b3p.zoeker.services.Zoeker;
@@ -316,6 +318,7 @@ public class ViewerAction extends BaseGisAction {
         Polygon extentBbox = null;
         Polygon fullExtentBbox = null;
 
+        
         //stukje voor BBox toevoegen.
         Set bboxen = null;
         if (user.getSp().getTopLayer() != null) {
@@ -954,6 +957,31 @@ public class ViewerAction extends BaseGisAction {
                 }
                 if (shmin > 0) {
                     jsonCluster.put("scalehintmin", formatter.format(shmin));
+                }
+                //haal de eventuele tile gegevens op.
+                ServiceProvider sp=user.getSp();
+                if (sp!=null){
+                    TileSet ts=sp.getTileSet(layer);
+                    if (ts!=null){
+                        jsonCluster.put("tiled",true);
+                        jsonCluster.put("resolutions",ts.getResolutions());
+                        jsonCluster.put("tileWidth",ts.getWidth());
+                        jsonCluster.put("tileHeight",ts.getHeight());
+                        jsonCluster.put("tileFormat",ts.getFormat());
+                        jsonCluster.put("tileLayers",ts.getLayerString());
+                        jsonCluster.put("tileSrs",ts.getBoundingBox().getSrs());
+                        jsonCluster.put("tileVersion",sp.getWmsVersion());
+                        jsonCluster.put("tileStyles",ts.getStyles());
+                        if (ts.getBoundingBox()!=null){
+                            String bbox="";
+                            bbox+=ts.getBoundingBox().getMinx()+",";
+                            bbox+=ts.getBoundingBox().getMiny()+",";
+                            bbox+=ts.getBoundingBox().getMaxx()+",";
+                            bbox+=ts.getBoundingBox().getMaxy();
+                            jsonCluster.put("tileBoundingBox",bbox);
+                            
+                        }
+                    }
                 }
             }
             if (th.getMetadata_link() != null) {
