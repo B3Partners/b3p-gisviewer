@@ -1,5 +1,6 @@
 package nl.b3p.gis.viewer.services;
 
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.Principal;
@@ -7,10 +8,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
+import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.BaseGisAction;
 import nl.b3p.gis.viewer.db.Applicatie;
@@ -29,13 +33,11 @@ import org.securityfilter.filter.SecurityRequestWrapper;
 public class IndexAction extends BaseGisAction {
 
     private static final Log logger = LogFactory.getLog(IndexAction.class);
-
     protected static final String LOGIN = "login";
     protected static final String LOGINERROR = "loginError";
     protected static final String LOGOUT = "logout";
     protected static final String LIST = "list";
     protected static final String HELP = "help";
-
     private static final String PAGE_GISVIEWER_HOME = "gisviewer_home";
     private static final String PAGE_GISVIEWER_HELP = "gisviewer_help";
     private static final String PAGE_GISVIEWER_LOGIN = "gisviewer_login";
@@ -64,7 +66,7 @@ public class IndexAction extends BaseGisAction {
         hibProp = new ExtendedMethodProperties(LIST);
         hibProp.setDefaultForwardName(SUCCESS);
         hibProp.setAlternateForwardName(FAILURE);
-        map.put(LIST, hibProp);        
+        map.put(LIST, hibProp);
 
         hibProp = new ExtendedMethodProperties(HELP);
         hibProp.setDefaultMessageKey("algemeen.resetcache.success");
@@ -90,8 +92,7 @@ public class IndexAction extends BaseGisAction {
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         createLists(dynaForm, request);
 
-        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_HOME);
-        request.setAttribute("tekstBlokken", tekstBlokken);
+        populateTekstblok(request, PAGE_GISVIEWER_HOME);
 
         return mapping.findForward(SUCCESS);
     }
@@ -167,8 +168,9 @@ public class IndexAction extends BaseGisAction {
                 if (app == null) {
                     Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
 
-                    if (defaultApp != null)
+                    if (defaultApp != null) {
                         app = defaultApp;
+                    }
                 }
 
                 if (app != null) {
@@ -207,18 +209,16 @@ public class IndexAction extends BaseGisAction {
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
-        
-        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_LOGIN);
-        request.setAttribute("tekstBlokken", tekstBlokken);
+
+        populateTekstblok(request, PAGE_GISVIEWER_LOGIN);
 
         return getDefaultForward(mapping, request);
     }
 
     public ActionForward loginError(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_LOGIN);
-        request.setAttribute("tekstBlokken", tekstBlokken);
-        
+        populateTekstblok(request, PAGE_GISVIEWER_LOGIN);
+
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
@@ -266,9 +266,8 @@ public class IndexAction extends BaseGisAction {
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
 
-        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_HOME);
-        request.setAttribute("tekstBlokken", tekstBlokken);
-        
+        populateTekstblok(request, PAGE_GISVIEWER_HOME);
+
         return getDefaultForward(mapping, request);
     }
 
@@ -286,9 +285,38 @@ public class IndexAction extends BaseGisAction {
     }
 
     public ActionForward help(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_HELP);
-        request.setAttribute("tekstBlokken", tekstBlokken);
+        populateTekstblok(request, PAGE_GISVIEWER_HELP);
 
         return getDefaultForward(mapping, request);
+    }
+
+    private void populateTekstblok(HttpServletRequest request, String page) {
+        List tekstBlokken = getTekstBlokken(page);
+        request.setAttribute("tekstBlokken", tekstBlokken);
+
+        Integer tekstblokHeight = 220;
+        Boolean useCaroussel = true;
+        
+        try {
+            ConfigKeeper configKeeper = new ConfigKeeper();
+            Map map = configKeeper.getConfigMap("commons");
+
+            if (map != null) {
+                String cfgTekstblokHeight = (String) map.get("tekstblokHeight");
+                String cfgUseCaroussel = (String) map.get("useCaroussel");
+
+                if (cfgTekstblokHeight != null && !cfgTekstblokHeight.equals("")) {
+                    tekstblokHeight = new Integer(cfgTekstblokHeight);
+                }
+                if (cfgUseCaroussel != null) {
+                    useCaroussel = Boolean.valueOf(cfgUseCaroussel);
+                }
+            }
+        } catch (Exception ex) {
+            logger.error("Fout tijdens ophalen tekstblokken.", ex);
+        }
+
+        request.setAttribute("tekstblokHeight", tekstblokHeight);
+        request.setAttribute("useCaroussel", useCaroussel);
     }
 }
