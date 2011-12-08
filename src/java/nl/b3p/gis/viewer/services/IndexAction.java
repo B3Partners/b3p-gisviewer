@@ -293,30 +293,5 @@ public class IndexAction extends BaseGisAction {
     private void populateTekstblok(HttpServletRequest request, String page) {
         List tekstBlokken = getTekstBlokken(page);
         request.setAttribute("tekstBlokken", tekstBlokken);
-
-        Integer tekstblokHeight = 220;
-        Boolean useCaroussel = true;
-        
-        try {
-            ConfigKeeper configKeeper = new ConfigKeeper();
-            Map map = configKeeper.getConfigMap("commons");
-
-            if (map != null) {
-                String cfgTekstblokHeight = (String) map.get("tekstblokHeight");
-                String cfgUseCaroussel = (String) map.get("useCaroussel");
-
-                if (cfgTekstblokHeight != null && !cfgTekstblokHeight.equals("")) {
-                    tekstblokHeight = new Integer(cfgTekstblokHeight);
-                }
-                if (cfgUseCaroussel != null) {
-                    useCaroussel = Boolean.valueOf(cfgUseCaroussel);
-                }
-            }
-        } catch (Exception ex) {
-            logger.error("Fout tijdens ophalen tekstblokken.", ex);
-        }
-
-        request.setAttribute("tekstblokHeight", tekstblokHeight);
-        request.setAttribute("useCaroussel", useCaroussel);
     }
 }
