@@ -2,14 +2,18 @@ package nl.b3p.gis.viewer;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.net.URLEncoder;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.Signature;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionForward;
@@ -44,17 +48,25 @@ public class CyclomediaAction extends ViewerCrudAction {
             // wachtwoord
             // saved private key from uploaded file
             
-            String accountId = "b3p";
-            char[] password = "5000".toCharArray();
-            String date = (new Date()).toString();
-            String token ="X" + accountId + "&" + imageId + "&" + date + "Z";
+            /* Wat Venray foto id's */
+            // 5D05VXT6, 5D05VXU4,5D05VXUE
+            imageId = "5D05VXT6";
             
+            String accountId = "venray_intern"; // B3_develop
+            char[] password = "5000".toCharArray(); //***REMOVED***
+            
+            DateFormat df = new SimpleDateFormat("yyyy-M-d H:m");         
+            String date = df.format(new Date());
+            String token ="X" + accountId + "&" + imageId + "&" + date;
+            
+            String b3pApiKey = "K3MRqDUdej4JGvohGfM5e78xaTUxmbYBqL0tSHsNWnwdWPoxizYBmjIBGHAhS3U1";
+            String venrayApiKey = "978e273a8b2f117a2c3156744b6fca0ebef1bedd";            
+           
             File bestand = new File("C:\\tmp\\venray_5000.pfx");
             
             KeyStore ks = java.security.KeyStore.getInstance(CERT_TYPE);
-            ks.load(new FileInputStream(bestand), password); 
+            ks.load(new FileInputStream(bestand), password);            
             
-            /* private key opvissen */
             Enumeration<String> aliases = ks.aliases();
             PrivateKey privateKey = null;
             while (aliases.hasMoreElements()) {
@@ -73,14 +85,16 @@ public class CyclomediaAction extends ViewerCrudAction {
             instance.update(privateKey.getEncoded());
             byte[] signature = instance.sign();
             
-            //openssl_sign(token, signature, , OPENSSL_ALGO_SHA1);
+            Base64 encoder = new Base64();
+            String base64 = new String(encoder.encode(signature));
             
-            /* Genereate TID */
-            String tid = "";
+            /* Genereate TID */            
+            String tid = URLEncoder.encode(token + "&" + base64, "utf-8");
             
-            /* Set TID and imageId for jsp */            
-            request.setAttribute("tid", tid);
+            /* Set TID and imageId for jsp */   
             request.setAttribute("imageId", imageId);
+            request.setAttribute("apiKey", venrayApiKey);
+            request.setAttribute("tid", tid);    
         }
 
         return mapping.findForward(SUCCESS);
