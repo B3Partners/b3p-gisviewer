@@ -44,6 +44,7 @@ public class DownloadAction extends ViewerCrudAction {
             HttpServletRequest request, HttpServletResponse response) throws Exception {
         
         String id = dynaForm.getString("uuids");
+        String wkt = dynaForm.getString("wkt");
 
         if (id != null && !id.equals("-1")) {
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
@@ -59,6 +60,10 @@ public class DownloadAction extends ViewerCrudAction {
 
             if (kbBron != null) {
                 cdt.setKaartenbalieBron(kbBron);
+            }
+            
+            if (wkt != null && !wkt.equals("")) {
+                cdt.setWkt(wkt);
             }
 
             String servletpath = request.getRequestURL().toString();

@@ -1,5 +1,6 @@
 package nl.b3p.gis.viewer.downloads;
 
+import com.vividsolutions.jts.geom.Geometry;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -54,6 +55,7 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.filter.Filter;
 
 /**
  * @author Boy
@@ -81,6 +83,7 @@ public class DownloadThread extends Thread {
     private static int threadCounter = 1;
     private String email;
     private String[] uuids;
+    private String wkt;
     private String formaat;
     private Integer threadStatus;
     static final Logging logging = Logging.ALL;
@@ -608,23 +611,40 @@ public class DownloadThread extends Thread {
 
     private FeatureCollection getFeatureCollection(DataStore datastore, Gegevensbron gb) throws IOException, Exception {
         FeatureCollection fc = null;
+        
+        /* Geometry filter meegeven ? */
+        Geometry geom = null;
+        String wktString = getWkt();
+        if (wktString != null && !wktString.equals("")) {
+            geom = DataStoreUtil.createGeomFromWKTString(wktString);
+        }
+        
+        /* geom filter toevoegen */
+        Filter geomFilter = null;
+        if (geom != null) {
+            geomFilter = DataStoreUtil.createIntersectFilter(gb, datastore, geom);
+        }    
 
         if (datastore instanceof WFS_1_0_0_DataStore) {
             List<String> propnames = new ArrayList<String>();
             propnames.add(gb.getAdmin_pk());
 
-            fc = DataStoreUtil.getFeatureCollection(datastore, gb, null, propnames, null, true);
+            fc = DataStoreUtil.getFeatureCollection(datastore, gb, geomFilter, propnames, null, true);
 
         } else if (datastore instanceof WFS_1_1_0_DataStore) {
             List<String> propnames = new ArrayList<String>();
             propnames.add(gb.getAdmin_pk());
 
-            fc = DataStoreUtil.getFeatureCollection(datastore, gb, null, propnames, null, true);
+            fc = DataStoreUtil.getFeatureCollection(datastore, gb, geomFilter, propnames, null, true);
 
         } else { // JDBC Bron
             String typeName = gb.getAdmin_tabel();
             FeatureStore<SimpleFeatureType, SimpleFeature> fs = (FeatureStore<SimpleFeatureType, SimpleFeature>) datastore.getFeatureSource(typeName);
-            fc = fs.getFeatures();
+            
+            if (geomFilter != null)
+                fc = fs.getFeatures(geomFilter);
+            else
+                fc = fs.getFeatures();
         }
 
         return fc;
@@ -639,5 +659,13 @@ public class DownloadThread extends Thread {
         }
 
         return bron;
+    }
+
+    public String getWkt() {
+        return wkt;
+    }
+
+    public void setWkt(String wkt) {
+        this.wkt = wkt;
     }
 }
