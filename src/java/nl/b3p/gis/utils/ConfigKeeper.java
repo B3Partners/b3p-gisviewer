@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import nl.b3p.gis.viewer.db.Configuratie;
+import nl.b3p.gis.viewer.db.CyclomediaAccount;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -775,5 +776,19 @@ public class ConfigKeeper {
         sess.save(cfg);
 
         sess.flush();
+    }
+    
+    public CyclomediaAccount getCyclomediaAccount(String appCode) {
+        CyclomediaAccount account = null;
+        
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();        
+        List results = sess.createQuery("from CyclomediaAccount where app_code = :appcode")
+                .setParameter("appcode", appCode).setMaxResults(1).list();
+        
+        if (results != null && results.size() == 1) {
+            return (CyclomediaAccount) results.get(0);
+        }
+        
+        return account;
     }
 }

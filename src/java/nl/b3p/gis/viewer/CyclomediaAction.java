@@ -25,6 +25,11 @@ import java.util.Date;
 import java.util.Enumeration;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import nl.b3p.gis.utils.ConfigKeeper;
+import nl.b3p.gis.utils.KaartSelectieUtil;
+import nl.b3p.gis.viewer.db.Applicatie;
+import nl.b3p.gis.viewer.db.CyclomediaAccount;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,77 +59,56 @@ public class CyclomediaAction extends ViewerCrudAction {
 
         String imageId = (String) request.getParameter("imageId");
         
-        if (imageId != null && !imageId.equals("")) {     
+        /* Applicatie code ophalen */
+        Applicatie app = null;
+        HttpSession session = request.getSession(true);
+        String appCode = (String) session.getAttribute("appCode");
+        if (appCode != null && appCode.length() > 0) {
+            app = KaartSelectieUtil.getApplicatie(appCode);
+        }
+
+        if (app == null) {
+            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
+
+            if (defaultApp != null)
+                app = defaultApp;
+        }
+        
+        ConfigKeeper keeper = new ConfigKeeper();
+        CyclomediaAccount cycloAccount = keeper.getCyclomediaAccount(app.getCode());
+        
+        if (imageId != null && !imageId.equals("") && cycloAccount != null) {
             
-            /* Configureerbaar maken. Opslaan in CyclomediaAccount entity */
-            // apikey
-            // acountId
-            // wachtwoord
-            // privatekey input veld of eenmalig via pfx upload ophalen
+            String apiKey = cycloAccount.getApiKey();
             
-            String b3pApiKey = "K3MRqDUdej4JGvohGfM5e78xaTUxmbYBqL0tSHsNWnwdWPoxizYBmjIBGHAhS3U1";
-            String accountId = "5155";
-            String wachtwoord = "5155";
+            /* TODO: Vervangen voor niet hard-coded vervangen bij ongeldige api key.
+             * Dit is momenteel de b3p api key */
+            if (apiKey == null || apiKey.equals("")) {
+                apiKey = "K3MRqDUdej4JGvohGfM5e78xaTUxmbYBqL0tSHsNWnwdWPoxizYBmjIBGHAhS3U1";
+            }
+            
+            String accountId = cycloAccount.getAccountId();
+            String wachtwoord = cycloAccount.getWachtwoord();
             
             DateFormat df = new SimpleDateFormat("yyyy-M-d H:mm");         
             String date = df.format(new Date());
             String token ="X" + accountId + "&" + imageId + "&" + date + "Z";
-           
-            /* Lees private key uit pfx bestand */
-            File bestand = new File("C:\\tmp\\stichtsevecht_5155.pfx");
-            String base64 = getBase64EncodedSignatureFromPfx(bestand, wachtwoord, token);
             
-            /* TID */   
-            String tid = URLEncoder.encode(token + "&" + base64, URL_ENCODING);
+            String privateBase64Key = cycloAccount.getPrivateBase64Key();
+            
+            if (privateBase64Key == null || privateBase64Key.equals("")) {
+                log.error("Kon private key voor aanmaken TID niet ophalen!");
+            }
+            
+            String tid = getTIDFromBase64EncodedString(privateBase64Key, token);
             
             /* Set Apikey, imageId and TID on request for jsp */
-            request.setAttribute("apiKey", b3pApiKey);
+            request.setAttribute("apiKey", apiKey);
             request.setAttribute("imageId", imageId);
             request.setAttribute("tid", tid);
         }
         
         return mapping.findForward(SUCCESS);
-    }
-    
-    private PrivateKey getPrivateKeyFromPfxFile(File bestand, String password)
-            throws KeyStoreException, IOException, NoSuchAlgorithmException,
-            CertificateException, UnrecoverableKeyException {
-        
-        PrivateKey privateKey = null;
-        
-        KeyStore ks = java.security.KeyStore.getInstance(CERT_TYPE);
-        ks.load(new FileInputStream(bestand), password.toCharArray());            
-
-        Enumeration<String> aliases = ks.aliases();        
-        while (aliases.hasMoreElements()) {
-            String alias = aliases.nextElement();
-
-            Key key = ks.getKey(alias, password.toCharArray());
-            String keyFormat = key.getFormat();
-
-            if ( (key instanceof RSAPrivateCrtKeyImpl) && keyFormat.equals(KEY_FORMAT) ) {
-                privateKey = (PrivateKey)key;
-            }
-        }
-        
-        return privateKey;
-    }
-    
-    private String getBase64EncodedSignatureFromPfx(File bestand, String password, String token)
-            throws KeyStoreException, IOException, NoSuchAlgorithmException,
-            CertificateException, UnrecoverableKeyException, InvalidKeyException,
-            SignatureException {
-        
-        String base64 = null;
-
-        PrivateKey privateKey = getPrivateKeyFromPfxFile(bestand, password);
-        byte[] signature = sign(privateKey, token);    
-
-        /* Base 64 encode signature */
-        Base64 encoder = new Base64();
-        base64 = new String(encoder.encode(signature));
-        
-        return base64;
     }
     
     private byte[] sign(PrivateKey privateKey, String token) 
@@ -136,15 +120,6 @@ public class CyclomediaAction extends ViewerCrudAction {
         byte[] signature = instance.sign();
         
         return signature;
-    }
-    
-    private String getBase64EncodedPrivateKey(PrivateKey privateKey) {
-        String base64EncodedPrivateKey = null;
-        Base64 encoder = new Base64();
-        
-        base64EncodedPrivateKey = new String(encoder.encode(privateKey.getEncoded()));
-        
-        return base64EncodedPrivateKey;
     }
     
     private String getTIDFromBase64EncodedString(String base64Encoded, String token)

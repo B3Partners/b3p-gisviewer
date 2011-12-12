@@ -75,5 +75,25 @@ public class CyclomediaAccount {
 
     public void setWachtwoord(String wachtwoord) {
         this.wachtwoord = wachtwoord;
-    }   
+    }
+    
+    @Override
+    public Object clone() {
+        CyclomediaAccount cloneObj = new CyclomediaAccount();
+        
+        if (this.apiKey != null) {
+            cloneObj.apiKey = this.apiKey;
+        }
+        if (this.accountId != null) {
+            cloneObj.accountId = this.accountId;
+        }
+        if (this.wachtwoord != null) {
+            cloneObj.wachtwoord = this.wachtwoord;
+        }
+        if (this.privateBase64Key != null) {
+            cloneObj.privateBase64Key = this.privateBase64Key;
+        }
+
+        return cloneObj;
+    }
 }

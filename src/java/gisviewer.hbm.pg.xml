@@ -230,4 +230,15 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="versie" not-null="true" type="int"/>
         <property name="default_app" not-null="true" type="boolean"/>
     </class>
+    
+    <class name="nl.b3p.gis.viewer.db.CyclomediaAccount">
+        <id name="id" type="int">
+            <generator class="identity"/>
+        </id>
+        <property name="apiKey" column="api_key" />
+        <property name="accountId" column="account_id" />
+        <property name="wachtwoord" />
+        <property name="privateBase64Key" type="text" column="private_base64_key"/>
+        <property name="appCode" column="app_code"/>
+    </class>
 </hibernate-mapping>

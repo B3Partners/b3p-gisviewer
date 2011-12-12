@@ -14,7 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Configuratie;
-import nl.b3p.gis.viewer.db.Gegevensbron;
+import nl.b3p.gis.viewer.db.CyclomediaAccount;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.db.UserKaartgroep;
 import nl.b3p.gis.viewer.db.UserKaartlaag;
@@ -943,6 +943,16 @@ public class KaartSelectieUtil {
         UserService service = (UserService) sess.get(UserService.class, serviceId);
         sess.delete(service);
     }
+    
+    public static void removeCyclomediaAccount(String appCode) {
+        ConfigKeeper keeper = new ConfigKeeper();
+        CyclomediaAccount cycloeAccount = keeper.getCyclomediaAccount(appCode);
+        
+        if (cycloeAccount != null) {
+            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+            sess.delete(cycloeAccount);
+        }
+    }
 
     public static List<org.geotools.data.ows.Layer> getParentLayers(org.geotools.data.ows.Layer[] layers) {
         List<org.geotools.data.ows.Layer> parents = new ArrayList();
@@ -1062,6 +1072,9 @@ public class KaartSelectieUtil {
 
         /* Maak kopie User kaartlagen */
         copyUserKaartlagen(sourceApp.getCode(), newCode);
+        
+        /* Kopie CyclomediaAccount */
+        copyCyclomediaAccount(sourceApp.getCode(), newCode);
 
         /* TODO: User services niet kopieeren ? */
 
@@ -1096,6 +1109,23 @@ public class KaartSelectieUtil {
         for (UserKaartgroep groep : groepen) {
             UserKaartgroep clone = (UserKaartgroep) groep.clone();
             clone.setCode(newCode);
+
+            sess.save(clone);
+            sess.flush();
+        }
+    }
+    
+    private static void copyCyclomediaAccount(String oldCode, String newCode) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        List<CyclomediaAccount> groepen = sess.createQuery("from CyclomediaAccount where"
+                + " app_code = :appcode")
+                .setParameter("appcode", oldCode)
+                .list();
+
+        for (CyclomediaAccount groep : groepen) {
+            CyclomediaAccount clone = (CyclomediaAccount) groep.clone();
+            clone.setAppCode(newCode);
 
             sess.save(clone);
             sess.flush();
