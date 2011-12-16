@@ -32,6 +32,7 @@ import org.hibernate.Session;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.securityfilter.filter.SecurityRequestWrapper;
 
 /**
  *
@@ -41,7 +42,8 @@ public class KaartSelectieUtil {
     
     private static final Log log = LogFactory.getLog(KaartSelectieUtil.class);
 
-    public static String APPCODE = null;
+    public static String APPCODE = null;    
+    private static HttpServletRequest tempRequest = null;
 
     public static void populateKaartSelectieForm(String appCode, HttpServletRequest request)
             throws JSONException, Exception {
@@ -277,6 +279,18 @@ public class KaartSelectieUtil {
 
     private static void setKaartlagenTree(HttpServletRequest request) throws JSONException, Exception {
 
+        /* TODO: Kijken of dit niet mooier kan. Gaat mis omdat er
+         * nu ook een upload in het form zit waardoor deze binnenkomende
+         * request van een multipart type is. Hierdoor worden onderstaande
+         * themas en user niet opgehaald */
+        if (request instanceof SecurityRequestWrapper) {
+            tempRequest = request;
+        } else {
+            if (tempRequest != null) {
+                request = tempRequest;
+            }
+        }
+        
         List ctl = SpatialUtil.getValidClusters();
 
         /* Nodig zodat ongeconfigureerde layers niet getoond worden */
@@ -295,7 +309,6 @@ public class KaartSelectieUtil {
         List<JSONObject> servicesTrees = new ArrayList();
 
         /* user services ophalen */
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         String code = APPCODE;
 
         List<UserService> services = getUserServices(code);
