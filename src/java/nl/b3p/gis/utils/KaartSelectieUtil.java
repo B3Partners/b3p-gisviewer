@@ -27,6 +27,7 @@ import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.wms.capabilities.Layer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.struts.upload.MultipartRequestWrapper;
 import org.geotools.data.ows.StyleImpl;
 import org.hibernate.Session;
 import org.json.JSONArray;
@@ -45,12 +46,12 @@ public class KaartSelectieUtil {
     public static String APPCODE = null;    
     private static HttpServletRequest notMultiPartRequest = null;
 
-    public static void populateKaartSelectieForm(String appCode, HttpServletRequest request,
-            boolean uploading) throws JSONException, Exception {
+    public static void populateKaartSelectieForm(String appCode, HttpServletRequest request)
+            throws JSONException, Exception {
 
         APPCODE = appCode;
 
-        setKaartlagenTree(request, uploading);
+        setKaartlagenTree(request);
         setUserServiceTrees(request);
     }
 
@@ -277,16 +278,18 @@ public class KaartSelectieUtil {
         return app;
     }
 
-    private static void setKaartlagenTree(HttpServletRequest request, boolean uploading) 
+    private static void setKaartlagenTree(HttpServletRequest request) 
             throws JSONException, Exception {
 
         /* TODO: Kijken of dit niet mooier kan. Gaat mis omdat er
          * nu ook een upload in het form zit waardoor deze binnenkomende
          * request van een multipart type is. Hierdoor worden onderstaande
          * themas en user niet opgehaald */        
-        if (request instanceof SecurityRequestWrapper && !uploading) {
+        if (request instanceof SecurityRequestWrapper) {
             notMultiPartRequest = request;
-        } else {
+        }
+        
+        if (request instanceof MultipartRequestWrapper && notMultiPartRequest != null) {
             request = notMultiPartRequest;
         }
         
@@ -299,9 +302,15 @@ public class KaartSelectieUtil {
         Map rootClusterMap = getClusterMap(themalist, ctl, null);
 
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-
-        JSONObject treeObject = createJasonObject(rootClusterMap, user);
-        request.setAttribute("tree", treeObject);
+        
+        JSONObject treeObject = null;
+        if (user != null) {
+            treeObject = createJasonObject(rootClusterMap, user);
+            
+            if (treeObject != null) {
+                request.setAttribute("tree", treeObject);
+            }
+        }
     }
 
     private static void setUserServiceTrees(HttpServletRequest request) throws JSONException, Exception {
