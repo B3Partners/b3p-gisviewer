@@ -43,14 +43,14 @@ public class KaartSelectieUtil {
     private static final Log log = LogFactory.getLog(KaartSelectieUtil.class);
 
     public static String APPCODE = null;    
-    private static HttpServletRequest tempRequest = null;
+    private static HttpServletRequest notMultiPartRequest = null;
 
-    public static void populateKaartSelectieForm(String appCode, HttpServletRequest request)
-            throws JSONException, Exception {
+    public static void populateKaartSelectieForm(String appCode, HttpServletRequest request,
+            boolean uploading) throws JSONException, Exception {
 
         APPCODE = appCode;
 
-        setKaartlagenTree(request);
+        setKaartlagenTree(request, uploading);
         setUserServiceTrees(request);
     }
 
@@ -277,18 +277,17 @@ public class KaartSelectieUtil {
         return app;
     }
 
-    private static void setKaartlagenTree(HttpServletRequest request) throws JSONException, Exception {
+    private static void setKaartlagenTree(HttpServletRequest request, boolean uploading) 
+            throws JSONException, Exception {
 
         /* TODO: Kijken of dit niet mooier kan. Gaat mis omdat er
          * nu ook een upload in het form zit waardoor deze binnenkomende
          * request van een multipart type is. Hierdoor worden onderstaande
-         * themas en user niet opgehaald */
-        if (request instanceof SecurityRequestWrapper) {
-            tempRequest = request;
+         * themas en user niet opgehaald */        
+        if (request instanceof SecurityRequestWrapper && !uploading) {
+            notMultiPartRequest = request;
         } else {
-            if (tempRequest != null) {
-                request = tempRequest;
-            }
+            request = notMultiPartRequest;
         }
         
         List ctl = SpatialUtil.getValidClusters();

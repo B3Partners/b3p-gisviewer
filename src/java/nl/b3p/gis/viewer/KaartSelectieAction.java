@@ -111,7 +111,7 @@ public class KaartSelectieAction extends BaseGisAction {
         HttpSession session = request.getSession(true);
         String appCode = (String) session.getAttribute("appCode");
 
-        KaartSelectieUtil.populateKaartSelectieForm(appCode, request);
+        KaartSelectieUtil.populateKaartSelectieForm(appCode, request, false);
 
         /* Applicatie ophalen om te zien of deze read-only is */
         Applicatie app = KaartSelectieUtil.getApplicatie(appCode);
@@ -285,7 +285,7 @@ public class KaartSelectieAction extends BaseGisAction {
         session.setAttribute("appCode", code);
         request.setAttribute("appCodeSaved", code);  
 
-        KaartSelectieUtil.populateKaartSelectieForm(code, request);
+        KaartSelectieUtil.populateKaartSelectieForm(code, request, false);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
@@ -459,7 +459,7 @@ public class KaartSelectieAction extends BaseGisAction {
         session.setAttribute("appCode", code);
         request.setAttribute("appCodeSaved", code);
 
-        KaartSelectieUtil.populateKaartSelectieForm(code, request);
+        KaartSelectieUtil.populateKaartSelectieForm(code, request, false);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
@@ -478,7 +478,7 @@ public class KaartSelectieAction extends BaseGisAction {
             KaartSelectieUtil.removeService(serviceId);
         }
 
-        KaartSelectieUtil.populateKaartSelectieForm(code, request);
+        KaartSelectieUtil.populateKaartSelectieForm(code, request, false);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
