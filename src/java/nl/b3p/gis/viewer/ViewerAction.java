@@ -80,8 +80,7 @@ public class ViewerAction extends BaseGisAction {
     protected static final String LIST = "list";
     protected static final String LOGIN = "login";
     protected static final String SIMPLE_VIEWER_FW = "simpleviewer";
-
-    private static final String PAGE_GISVIEWER_TAB="gisviewer_tab";
+    private static final String PAGE_GISVIEWER_TAB = "gisviewer_tab";
 
     /*Mogelijke request waarden*/
     //De themaid's die zichtbaar moeten zijn in de kaart en aangevinkt moeten zijn. Komma gescheiden
@@ -116,9 +115,7 @@ public class ViewerAction extends BaseGisAction {
     public static final String EXPANDNODES = "expandNodes";
     /*Einde mogelijke request waarden*/
     public static final String ZOEKCONFIGURATIES = "zoekconfiguraties";
-    
-    public static final double squareRootOf2=Math.sqrt(2);
-
+    public static final double squareRootOf2 = Math.sqrt(2);
     public static final String APPCODE = "appCode";
 
     /**
@@ -192,7 +189,7 @@ public class ViewerAction extends BaseGisAction {
             if (viewerTemplate != null && viewerTemplate.equals("embedded")) {
                 return mapping.findForward(SIMPLE_VIEWER_FW);
             }
-        }        
+        }
         return mapping.findForward(SUCCESS);
     }
 
@@ -221,7 +218,7 @@ public class ViewerAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         /* Als app nog steeds null is dan is er geen default app en is er geen geldige
-         appcode meegegeven. Dan een default app maken en opslaan */
+        appcode meegegeven. Dan een default app maken en opslaan */
         if (app == null) {
             app = KaartSelectieUtil.getNewApplicatie();
             app.setDefault_app(true);
@@ -229,7 +226,7 @@ public class ViewerAction extends BaseGisAction {
 
             sess.save(app);
             sess.flush();
-            
+
             ConfigKeeper.writeDefaultApplicatie(app.getCode());
         }
 
@@ -290,7 +287,7 @@ public class ViewerAction extends BaseGisAction {
             }
         }
 
-        ConfigKeeper configKeeper = new ConfigKeeper();        
+        ConfigKeeper configKeeper = new ConfigKeeper();
         Map map = configKeeper.getConfigMap(appCode);
 
         /* Indien niet aanwezig dan defaults laden */
@@ -318,7 +315,7 @@ public class ViewerAction extends BaseGisAction {
         Polygon extentBbox = null;
         Polygon fullExtentBbox = null;
 
-        
+
         //stukje voor BBox toevoegen.
         Set bboxen = null;
         if (user.getSp().getTopLayer() != null) {
@@ -370,8 +367,8 @@ public class ViewerAction extends BaseGisAction {
             }
         }
 
-        if (FormUtils.nullIfEmpty(request.getParameter(RESOLUTION))!=null){
-            request.setAttribute(RESOLUTION,request.getParameter(RESOLUTION));
+        if (FormUtils.nullIfEmpty(request.getParameter(RESOLUTION)) != null) {
+            request.setAttribute(RESOLUTION, request.getParameter(RESOLUTION));
         }
 
         //als er geen juiste extent is gevonden en er is een actiefthemaid meegegeven gebruik de bbox van die layer
@@ -483,7 +480,7 @@ public class ViewerAction extends BaseGisAction {
         if (zoekconfiguraties != null) {
             request.setAttribute(ZOEKCONFIGURATIES, zoekconfiguratiesJson);
         }
-        
+
         if (zoekConfigId != null || zoekIngangNaam != null) {
             if (velden != null) {
                 String params = "";
@@ -497,28 +494,42 @@ public class ViewerAction extends BaseGisAction {
                         veldNaam = za.getLabel();
                         waarde = request.getParameter(veldNaam);
                     }
+
                     if (waarde == null && za.getAttribuutLocalnaam() != null) {
                         veldNaam = za.getAttribuutLocalnaam();
                         waarde = request.getParameter(veldNaam);
-                    }           
+                    }
+
                     if (waarde == null && za.getAttribuutnaam() != null) {
                         veldNaam = za.getAttribuutnaam();
                         waarde = request.getParameter(veldNaam);
                     }
-                    if (waarde == null) {
-                        waarde = "null";
-                    }    
 
-                    /* Bij het zoekveld type lijkt op moet er ook %% om de waarde heen
-                     anders vind de back-end niets */
-                    if (za.getType() == 0) {
-                        waarde = "%" + waarde.trim() + "%";
+                    if (waarde == null) {
+                        String upper = veldNaam.toUpperCase();
+                        waarde = request.getParameter(upper);
+                    }
+                    
+                    if (waarde == null) {
+                        String lower = veldNaam.toLowerCase();
+                        waarde = request.getParameter(lower);
                     }
 
-                    if (i < 1)
+                    if (waarde == null) {
+                        waarde = "null";
+                    }
+
+                    /* Bij het zoekveld type lijkt op moet er ook %% om de waarde heen
+                    anders vind de back-end niets */
+                    if (za.getType() == 0) {
+                        //waarde = "%" + waarde.trim() + "%";
+                    }
+
+                    if (i < 1) {
                         params += waarde;
-                    else
+                    } else {
                         params += "," + waarde;
+                    }
 
                     i++;
                 }
@@ -650,15 +661,12 @@ public class ViewerAction extends BaseGisAction {
     }
 
     protected JSONObject createJasonObject(Map rootClusterMap, List actieveThemas, List actieveClusters, GisPrincipal user, String appCode) throws JSONException {
-        JSONObject root = new JSONObject()
-                .put("id", "root")
-                .put("type", "root")
-                .put("title", "root");
+        JSONObject root = new JSONObject().put("id", "root").put("type", "root").put("title", "root");
 
         if (rootClusterMap == null || rootClusterMap.isEmpty()) {
             return root;
         }
-        
+
         List clusterMaps = (List) rootClusterMap.get("subclusters");
         if (clusterMaps == null || clusterMaps.isEmpty()) {
             return root;
@@ -683,7 +691,7 @@ public class ViewerAction extends BaseGisAction {
             return clusterArray;
         }
 
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();        
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         Iterator it = subclusterMaps.iterator();
         while (it.hasNext()) {
@@ -692,24 +700,24 @@ public class ViewerAction extends BaseGisAction {
             Clusters cluster = (Clusters) clMap.get("cluster");
 
             /* Cluster hoeft niet getoond te worden als er eigen kaartlagen
-             aangezet zijn maar hier hoort het cluster niet bij */
+            aangezet zijn maar hier hoort het cluster niet bij */
             boolean showCluster = false;
-            for (UserKaartlaag laag : userlagen){
-                
+            for (UserKaartlaag laag : userlagen) {
+
                 Integer themaId = laag.getThemaid();
-                
-                Themas thema = (Themas)sess.get(Themas.class, themaId);
-                
-                if(isInCluster(thema,cluster)){
-                    showCluster=true;
+
+                Themas thema = (Themas) sess.get(Themas.class, themaId);
+
+                if (isInCluster(thema, cluster)) {
+                    showCluster = true;
                     break;
-                }                
+                }
             }
 
             /* controleren of cluster default aan staat in user kaartgroepen */
             boolean defaultOn = false;
             if (groepen != null && groepen.size() > 0) {
-                for (UserKaartgroep groep: groepen) {
+                for (UserKaartgroep groep : groepen) {
                     if (groep.getClusterid() == cluster.getId()) {
                         if (groep.getDefault_on()) {
                             defaultOn = true;
@@ -725,8 +733,9 @@ public class ViewerAction extends BaseGisAction {
             jsonCluster.put("type", "child");
 
             String titel = cluster.getNaam();
-            if (titel == null || titel.equals(""))
+            if (titel == null || titel.equals("")) {
                 titel = "(geen naam opgegeven)";
+            }
 
             jsonCluster.put("title", titel);
             jsonCluster.put("cluster", true);
@@ -740,7 +749,7 @@ public class ViewerAction extends BaseGisAction {
             if (actieveClusters != null && actieveClusters.contains(cluster.getId())) {
                 jsonCluster.put("active", true);
                 jsonCluster.put("visible", true);
-            } else if ((actieveClusters==null || actieveClusters.isEmpty()) && cluster.isDefault_visible()) {
+            } else if ((actieveClusters == null || actieveClusters.isEmpty()) && cluster.isDefault_visible()) {
                 jsonCluster.put("visible", true);
             } else {
                 jsonCluster.put("visible", false);
@@ -773,8 +782,8 @@ public class ViewerAction extends BaseGisAction {
 
             List subsubclusterMaps = (List) clMap.get("subclusters");
             childrenArray = getSubClusters(subsubclusterMaps, childrenArray, actieveThemas, actieveClusters, user, order, appCode, groepen, userlagen);
-            
-            if (childrenArray.length()>0){
+
+            if (childrenArray.length() > 0) {
                 jsonCluster.put("children", childrenArray);
 
                 if (clusterArray == null) {
@@ -783,7 +792,7 @@ public class ViewerAction extends BaseGisAction {
                 clusterArray.put(jsonCluster);
             }
 
-            
+
         }
 
         return clusterArray;
@@ -805,7 +814,7 @@ public class ViewerAction extends BaseGisAction {
             boolean defaultOn = false;
             if (lagen != null && lagen.size() > 0) {
                 boolean isInList = false;
-                for (UserKaartlaag laag : lagen){                   
+                for (UserKaartlaag laag : lagen) {
                     if (laag.getThemaid().equals(th.getId())) {
                         isInList = true;
 
@@ -815,16 +824,16 @@ public class ViewerAction extends BaseGisAction {
                         break;
                     }
                 }
-                if (!isInList){
-                   continue;
+                if (!isInList) {
+                    continue;
                 }
             }
-            
+
             /* TODO: validAdmindataSource ging eerst via th.hasValidAdmindataSource(user)
              * maar dit duurt soms erg lang, nu wordt er gekeken of er een gegevensbron is */
             boolean validAdmindataSource = false;
             Gegevensbron themaGb = th.getGegevensbron();
-            
+
             if (themaGb != null && themaGb.getAdmin_pk() != null) {
                 validAdmindataSource = true;
             }
@@ -864,12 +873,12 @@ public class ViewerAction extends BaseGisAction {
                 } else {
                     jsonCluster.put("analyse", "off");
                 }
-            } else if (actieveThemas == null || actieveThemas.isEmpty()){
+            } else if (actieveThemas == null || actieveThemas.isEmpty()) {
                 if (th.isVisible()) {
                     jsonCluster.put("visible", "on");
                 } else {
                     jsonCluster.put("visible", "off");
-                }                
+                }
 
                 if (th.isAnalyse_thema() && validAdmindataSource) {
                     jsonCluster.put("analyse", "on");
@@ -890,10 +899,11 @@ public class ViewerAction extends BaseGisAction {
              * hoeft nu alleen maar te highlighten en geen info meer op te halen.
              * Dus analyse moet ook aanstaan als er geen valdAdmindatasource is.
              */
-            if (th.isAnalyse_thema())
+            if (th.isAnalyse_thema()) {
                 jsonCluster.put("highlight", "on");
-            else
+            } else {
                 jsonCluster.put("highlight", "off");
+            }
 
             /* Property die gebruikt kan worden bij het downloaden van Shape en GML.
              * Er is dan een gegevensbron nodig */
@@ -941,7 +951,7 @@ public class ViewerAction extends BaseGisAction {
                 double shmax = -1.0;
                 try {
                     shmax = Double.parseDouble(layer.getScaleHintMax());
-                    shmax/=squareRootOf2; 
+                    shmax /= squareRootOf2;
                 } catch (NumberFormatException nfe) {
                     log.debug("max scale hint not valid: " + layer.getScaleHintMax());
                 }
@@ -951,7 +961,7 @@ public class ViewerAction extends BaseGisAction {
                 double shmin = -1.0;
                 try {
                     shmin = Double.parseDouble(layer.getScaleHintMin());
-                    shmin/=squareRootOf2; 
+                    shmin /= squareRootOf2;
                 } catch (NumberFormatException nfe) {
                     log.debug("min scale hint not valid: " + layer.getScaleHintMin());
                 }
@@ -959,27 +969,27 @@ public class ViewerAction extends BaseGisAction {
                     jsonCluster.put("scalehintmin", formatter.format(shmin));
                 }
                 //haal de eventuele tile gegevens op.
-                ServiceProvider sp=user.getSp();
-                if (sp!=null){
-                    TileSet ts=sp.getTileSet(layer);
-                    if (ts!=null){
-                        jsonCluster.put("tiled",true);
-                        jsonCluster.put("resolutions",ts.getResolutions());
-                        jsonCluster.put("tileWidth",ts.getWidth());
-                        jsonCluster.put("tileHeight",ts.getHeight());
-                        jsonCluster.put("tileFormat",ts.getFormat());
-                        jsonCluster.put("tileLayers",ts.getLayerString());
-                        jsonCluster.put("tileSrs",ts.getBoundingBox().getSrs());
-                        jsonCluster.put("tileVersion",sp.getWmsVersion());
-                        jsonCluster.put("tileStyles",ts.getStyles());
-                        if (ts.getBoundingBox()!=null){
-                            String bbox="";
-                            bbox+=ts.getBoundingBox().getMinx()+",";
-                            bbox+=ts.getBoundingBox().getMiny()+",";
-                            bbox+=ts.getBoundingBox().getMaxx()+",";
-                            bbox+=ts.getBoundingBox().getMaxy();
-                            jsonCluster.put("tileBoundingBox",bbox);
-                            
+                ServiceProvider sp = user.getSp();
+                if (sp != null) {
+                    TileSet ts = sp.getTileSet(layer);
+                    if (ts != null) {
+                        jsonCluster.put("tiled", true);
+                        jsonCluster.put("resolutions", ts.getResolutions());
+                        jsonCluster.put("tileWidth", ts.getWidth());
+                        jsonCluster.put("tileHeight", ts.getHeight());
+                        jsonCluster.put("tileFormat", ts.getFormat());
+                        jsonCluster.put("tileLayers", ts.getLayerString());
+                        jsonCluster.put("tileSrs", ts.getBoundingBox().getSrs());
+                        jsonCluster.put("tileVersion", sp.getWmsVersion());
+                        jsonCluster.put("tileStyles", ts.getStyles());
+                        if (ts.getBoundingBox() != null) {
+                            String bbox = "";
+                            bbox += ts.getBoundingBox().getMinx() + ",";
+                            bbox += ts.getBoundingBox().getMiny() + ",";
+                            bbox += ts.getBoundingBox().getMaxx() + ",";
+                            bbox += ts.getBoundingBox().getMaxy();
+                            jsonCluster.put("tileBoundingBox", bbox);
+
                         }
                     }
                 }
@@ -1041,7 +1051,7 @@ public class ViewerAction extends BaseGisAction {
         List<JSONObject> servicesTrees = new ArrayList();
 
         List<UserService> services = SpatialUtil.getValidUserServices(appCode);
-        
+
         /* per service een tree maken */
         for (UserService service : services) {
             JSONObject tree = createUserServiceTree(service);
@@ -1149,19 +1159,22 @@ public class ViewerAction extends BaseGisAction {
     }
 
     private boolean isInCluster(Themas thema, Clusters inCluster) {
-        if (thema.getCluster()==null)
-            return false;              
-        else
-            return isInCluster(thema.getCluster(),inCluster);
+        if (thema.getCluster() == null) {
+            return false;
+        } else {
+            return isInCluster(thema.getCluster(), inCluster);
+        }
     }
 
     private boolean isInCluster(Clusters cluster, Clusters inCluster) {
-        if (cluster.getId().equals(inCluster.getId()))
-            return true;  
-        if (cluster.getParent()==null)
+        if (cluster.getId().equals(inCluster.getId())) {
+            return true;
+        }
+        if (cluster.getParent() == null) {
             return false;
-        else
+        } else {
             return isInCluster(cluster.getParent(), inCluster);
-        
+        }
+
     }
 }
