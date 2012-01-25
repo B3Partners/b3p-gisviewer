@@ -184,6 +184,8 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
             <key column="serviceid"/>
             <one-to-many class="nl.b3p.gis.viewer.db.UserLayer"/>
         </set>
+        <property name="name" type="string"/>
+        <property name="use_in_list" type="boolean"/>
     </class>
     <class name="nl.b3p.gis.viewer.db.UserLayer">
         <id name="id">

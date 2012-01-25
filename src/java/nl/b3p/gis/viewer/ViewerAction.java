@@ -294,6 +294,15 @@ public class ViewerAction extends BaseGisAction {
         if ((map == null) || (map.size() < 1)) {
             map = configKeeper.getDefaultInstellingen();
         }
+        
+        /* Kijken of er een dropdown gemaakt moet worden voor user wms lijst 
+         * in kaartselectiescherm */
+        Boolean useUserWmsDropdown = (Boolean) map.get("useUserWmsDropdown");
+        
+        if (useUserWmsDropdown != null) {
+            HttpSession session = request.getSession(true);
+            session.setAttribute("useUserWmsDropdown", useUserWmsDropdown);
+        }  
 
         request.setAttribute("configMap", map);
 

@@ -43,6 +43,8 @@ create table user_service (
     url varchar2(255 char) not null,
     groupname varchar2(255 char) not null,
     sld_url varchar2(255 char),
+	name varchar2(255 char),
+	use_in_list number(1,0),
     primary key (id)
 );
 

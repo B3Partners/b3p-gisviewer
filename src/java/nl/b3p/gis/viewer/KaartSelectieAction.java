@@ -110,6 +110,7 @@ public class KaartSelectieAction extends BaseGisAction {
 
         HttpSession session = request.getSession(true);
         String appCode = (String) session.getAttribute("appCode");
+        Boolean useUserWmsDropdown = (Boolean) session.getAttribute("useUserWmsDropdown");
 
         KaartSelectieUtil.populateKaartSelectieForm(appCode, request);
 
@@ -123,6 +124,27 @@ public class KaartSelectieAction extends BaseGisAction {
                 dynaForm.set("currentAppReadOnly", "1");
             } else {
                 dynaForm.set("currentAppReadOnly", "0");
+            }
+        }
+        
+        if (useUserWmsDropdown != null) {
+            if (useUserWmsDropdown) {
+                dynaForm.set("useUserWmsDropdown", "1");
+                request.setAttribute("useUserWmsDropdown", "1");
+                
+                Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+                
+                List<UserService> services = sess.createQuery("from UserService where"
+                        + " use_in_list = :uselist order by name")
+                        .setParameter("uselist", true)
+                        .list();
+                
+                if (services != null && services.size() > 0) {
+                    request.setAttribute("userWmsList", services);
+                }                
+            } else {
+                dynaForm.set("useUserWmsDropdown", "0");
+                request.setAttribute("useUserWmsDropdown", "0");
             }
         }
 
@@ -153,8 +175,10 @@ public class KaartSelectieAction extends BaseGisAction {
 
         HttpSession session = request.getSession(true);
         String code = (String) session.getAttribute("appCode");
-
+        
         String currentAppReadOnly = dynaForm.getString("currentAppReadOnly");
+
+        String useUserWmsDropdown = dynaForm.getString("useUserWmsDropdown");
         Boolean makeAppReadOnly = (Boolean) dynaForm.get("makeAppReadOnly");
 
         Boolean isReadOnly = false;
@@ -283,7 +307,26 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         session.setAttribute("appCode", code);
-        request.setAttribute("appCodeSaved", code);  
+        request.setAttribute("appCodeSaved", code); 
+        
+        if (useUserWmsDropdown != null && !useUserWmsDropdown.equals("")) {
+            if (useUserWmsDropdown.equals("1")) {               
+                List<UserService> services = sess.createQuery("from UserService where"
+                        + " use_in_list = :uselist order by name")
+                        .setParameter("uselist", true)
+                        .list();
+                
+                if (services != null && services.size() > 0) {
+                    request.setAttribute("userWmsList", services);
+                } 
+                
+                session.setAttribute("useUserWmsDropdown", true);
+                request.setAttribute("useUserWmsDropdown", "1"); 
+            } else {
+                session.setAttribute("useUserWmsDropdown", false);
+                request.setAttribute("useUserWmsDropdown", "0"); 
+            }            
+        }
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
 
@@ -297,6 +340,23 @@ public class KaartSelectieAction extends BaseGisAction {
         String groupName = (String) dynaForm.get("groupName");
         String serviceUrl = (String) dynaForm.get("serviceUrl");
         String sldUrl = (String) dynaForm.get("sldUrl");
+        
+        Boolean useWmsDropdown = false;        
+        String selectedUserWMSId = (String) dynaForm.get("selectedUserWMSId");        
+        
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        
+        if (selectedUserWMSId != null && !selectedUserWMSId.equals("")) {
+            UserService service = (UserService) sess.get(UserService.class, new Integer(selectedUserWMSId));
+            
+            if (service != null) {
+                useWmsDropdown = true;
+                
+                groupName = service.getGroupname();
+                serviceUrl = service.getUrl();
+                sldUrl = service.getSld_url();
+            }
+        }
 
         /* controleren of serviceUrl al voorkomt bij applicatie */
         HttpSession session = request.getSession(true);
@@ -314,8 +374,6 @@ public class KaartSelectieAction extends BaseGisAction {
         if (makeAppReadOnly != null && makeAppReadOnly) {
             makeReadOnly = true;
         }
-
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         /* Als huidige Applicatie alleen lezen is kopie maken. Anders huidige applicatie
         opslaan met alleen-lezen keuze van gebruiker. */
@@ -460,6 +518,23 @@ public class KaartSelectieAction extends BaseGisAction {
         request.setAttribute("appCodeSaved", code);
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
+        
+        if (useWmsDropdown) {            
+            List<UserService> services = sess.createQuery("from UserService where"
+                    + " use_in_list = :uselist order by name")
+                    .setParameter("uselist", true)
+                    .list();
+
+            if (services != null && services.size() > 0) {
+                request.setAttribute("userWmsList", services);
+            } 
+
+            session.setAttribute("useUserWmsDropdown", true);
+            request.setAttribute("useUserWmsDropdown", "1");            
+        } else {
+            session.setAttribute("useUserWmsDropdown", false);
+            request.setAttribute("useUserWmsDropdown", "0"); 
+        }                
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
@@ -468,6 +543,13 @@ public class KaartSelectieAction extends BaseGisAction {
     public ActionForward deleteWMSServices(ActionMapping mapping, DynaValidatorForm dynaForm,
             HttpServletRequest request, HttpServletResponse response) throws Exception {
 
+        Boolean useWmsDropdown = false;        
+        String selectedUserWMSId = (String) dynaForm.get("selectedUserWMSId");     
+        
+        if (selectedUserWMSId != null && !selectedUserWMSId.equals("")) {
+            useWmsDropdown = true;
+        }
+        
         String[] servicesAan = (String[]) dynaForm.get("servicesAan");
 
         HttpSession session = request.getSession(true);
@@ -479,6 +561,24 @@ public class KaartSelectieAction extends BaseGisAction {
         }
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
+        
+        if (useWmsDropdown) {    
+            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+            List<UserService> services = sess.createQuery("from UserService where"
+                    + " use_in_list = :uselist order by name")
+                    .setParameter("uselist", true)
+                    .list();
+
+            if (services != null && services.size() > 0) {
+                request.setAttribute("userWmsList", services);
+            } 
+
+            session.setAttribute("useUserWmsDropdown", true);
+            request.setAttribute("useUserWmsDropdown", "1");            
+        } else {
+            session.setAttribute("useUserWmsDropdown", false);
+            request.setAttribute("useUserWmsDropdown", "0"); 
+        }  
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);

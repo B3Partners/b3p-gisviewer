@@ -427,6 +427,13 @@ public class ConfigKeeper {
             cfg.setSetting(appCode);
             cfg.setType("java.lang.String");
             sess.save(cfg);
+            
+            cfg = new Configuratie();
+            cfg.setProperty("useUserWmsDropdown");
+            cfg.setPropval("true");
+            cfg.setSetting(appCode);
+            cfg.setType("java.lang.Boolean");
+            sess.save(cfg);
 
             sess.flush();
         }
@@ -773,6 +780,13 @@ public class ConfigKeeper {
         cfg.setPropval("the_geom");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.String");
+        sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("useUserWmsDropdown");
+        cfg.setPropval("true");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.Boolean");
         sess.save(cfg);
 
         sess.flush();

@@ -15,6 +15,9 @@ public class UserService {
     private String groupname;
     private String sld_url;
     private Set user_layers = new HashSet<UserLayer>();
+    
+    private String name;
+    private Boolean use_in_list;
 
     public UserService() {
     }
@@ -75,5 +78,21 @@ public class UserService {
 
     public void addLayer(UserLayer ul) {
         this.user_layers.add(ul);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Boolean getUse_in_list() {
+        return use_in_list;
+    }
+
+    public void setUse_in_list(Boolean use_in_list) {
+        this.use_in_list = use_in_list;
     }
 }

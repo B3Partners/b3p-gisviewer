@@ -20,6 +20,8 @@ create table user_service (
     url varchar(255) not null,
     groupname varchar(255) not null,
     sld_url varchar(255),
+	name varchar(255),
+	use_in_list bool,
     primary key (id)
 );
 
