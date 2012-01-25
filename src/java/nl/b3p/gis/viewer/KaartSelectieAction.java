@@ -689,17 +689,11 @@ public class KaartSelectieAction extends BaseGisAction {
 
     public ActionForward deleteWMSServices(ActionMapping mapping, DynaValidatorForm dynaForm,
             HttpServletRequest request, HttpServletResponse response) throws Exception {
-
-        Boolean useWmsDropdown = false;        
-        String selectedUserWMSId = (String) dynaForm.get("selectedUserWMSId");     
         
-        if (selectedUserWMSId != null && !selectedUserWMSId.equals("")) {
-            useWmsDropdown = true;
-        }
+        HttpSession session = request.getSession(true);
+        Boolean useUserWmsDropdown = (Boolean) session.getAttribute("useUserWmsDropdown");
         
         String[] servicesAan = (String[]) dynaForm.get("servicesAan");
-
-        HttpSession session = request.getSession(true);
         String code = (String) session.getAttribute("appCode");
         
         Applicatie app = KaartSelectieUtil.getApplicatie(code);
@@ -711,7 +705,7 @@ public class KaartSelectieAction extends BaseGisAction {
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
         
-        if (useWmsDropdown) {    
+        if (useUserWmsDropdown) {    
             Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
             List<UserService> services = sess.createQuery("from UserService where"
                     + " use_in_list = :uselist order by name")
