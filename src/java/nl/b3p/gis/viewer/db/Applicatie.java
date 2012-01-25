@@ -27,7 +27,8 @@ public class Applicatie {
     private Integer versie;
     private Boolean default_app;
     private Set children;
-
+    
+    private String email;
 
     public Applicatie() {
     }
@@ -129,6 +130,14 @@ public class Applicatie {
 
     public void setDefault_app(Boolean default_app) {
         this.default_app = default_app;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
     
     public static String createApplicatieCode()

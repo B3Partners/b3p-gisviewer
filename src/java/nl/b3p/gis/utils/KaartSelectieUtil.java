@@ -1070,6 +1070,7 @@ public class KaartSelectieUtil {
 
         Integer versie = sourceApp.getVersie() + 1;
 
+        app.setEmail(sourceApp.getEmail());
         app.setNaam(sourceApp.getNaam());
         app.setCode(newCode);
         app.setGebruikersCode(sourceApp.getGebruikersCode());

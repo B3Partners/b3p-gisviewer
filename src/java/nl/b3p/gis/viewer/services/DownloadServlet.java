@@ -39,6 +39,8 @@ public class DownloadServlet extends HttpServlet {
     private static final int runTaskEverySeconds = 86400;
     private static final int folderAliveSeconds = 86400;
     
+    private static String mailKaartselectie = null;
+    
     private Timer timer = null;
 
     @Override
@@ -57,6 +59,7 @@ public class DownloadServlet extends HttpServlet {
             
             mailDownloadSucces = getServletContext().getRealPath("/WEB-INF/txt/mail-download-succes.txt");
             mailDownloadError = getServletContext().getRealPath("/WEB-INF/txt/mail-download-error.txt");
+            mailKaartselectie = getServletContext().getRealPath("/WEB-INF/txt/mail-kaartselectie.txt");
             
             /* Task voor opruimen oude downloads */
             long delay = runTaskEverySeconds * 1000;
@@ -205,6 +208,14 @@ public class DownloadServlet extends HttpServlet {
 
     public static String getMailDownloadError() {
         return mailDownloadError;
+    }
+
+    public static String getMailKaartselectie() {
+        return mailKaartselectie;
+    }
+
+    public static void setMailKaartselectie(String mailKaartselectie) {
+        DownloadServlet.mailKaartselectie = mailKaartselectie;
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">

@@ -1,21 +1,37 @@
 package nl.b3p.gis.viewer;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.DecimalFormat;
+import java.text.MessageFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import javax.mail.Address;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.SendFailedException;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import nl.b3p.commons.services.StreamCopy;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.db.Applicatie;
@@ -27,6 +43,7 @@ import nl.b3p.gis.viewer.db.UserKaartlaag;
 import nl.b3p.gis.viewer.db.UserLayer;
 import nl.b3p.gis.viewer.db.UserLayerStyle;
 import nl.b3p.gis.viewer.db.UserService;
+import nl.b3p.gis.viewer.services.DownloadServlet;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
@@ -69,6 +86,10 @@ public class KaartSelectieAction extends BaseGisAction {
     protected static final String ERROR_SAVE_WMS_IO = "error.save.wms.io";
     protected static final String ERROR_SAVE_WMS_SERVICE = "error.save.wms.service";
     protected static final String ERROR_SAVE_WMS_SAX = "error.save.wms.sax";
+    
+    private static final int BUFFER_SIZE = 8192;
+    private static final String ISO_CHARSET = "ISO-8859-1";
+    private static final String UTF8_CHARSET = "UTF-8";
 
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
@@ -121,10 +142,18 @@ public class KaartSelectieAction extends BaseGisAction {
             Boolean readOnly = app.getRead_only();
 
             if (readOnly) {
-                dynaForm.set("currentAppReadOnly", "1");
+                dynaForm.set("currentAppReadOnly", "1");    
+                request.setAttribute("currentAppReadOnly", "1");
             } else {
                 dynaForm.set("currentAppReadOnly", "0");
+                request.setAttribute("currentAppReadOnly", "0");
             }
+            
+            dynaForm.set("kaartNaam", app.getNaam());            
+            dynaForm.set("gebruikerEmail", app.getEmail());
+            
+            request.setAttribute("kaartNaam", app.getNaam());
+            request.setAttribute("gebruikerEmail", app.getEmail());
         }
         
         if (useUserWmsDropdown != null) {
@@ -191,16 +220,36 @@ public class KaartSelectieAction extends BaseGisAction {
             makeReadOnly = true;
         }
 
+        String kaartNaam = dynaForm.getString("kaartNaam");
+        String gebruikerEmail = dynaForm.getString("gebruikerEmail");
+        
+        String newkaartoption = dynaForm.getString("newkaartoption");
+        
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         /* Als huidige Applicatie alleen lezen is kopie maken. Anders huidige applicatie
         opslaan met alleen-lezen keuze van gebruiker. */
         Applicatie currentApp = KaartSelectieUtil.getApplicatie(code);
+        
+        /* Indien gebruiker de optie heeft gekozen om als nieuwe kaart op te slaan 
+         * dan behandelen als read-only zodat er een nieuwe app komt */
+        if (newkaartoption != null && newkaartoption.equals("new")) {
+            isReadOnly = true;
+        }
+        
         if (isReadOnly) {
             if (currentApp != null) {
 
                 Applicatie app = KaartSelectieUtil.copyApplicatie(currentApp, makeReadOnly, true);
-                app.setNaam(currentApp.getNaam());
+                
+                if (kaartNaam != null && !kaartNaam.equals("") && gebruikerEmail != null 
+                    && !gebruikerEmail.equals("")) {
+                        app.setNaam(kaartNaam);
+                        app.setEmail(gebruikerEmail);                    
+                } else {
+                    app.setNaam(currentApp.getNaam());
+                    app.setEmail(currentApp.getEmail());
+                }
 
                 sess.save(app);
                 sess.flush();
@@ -327,11 +376,90 @@ public class KaartSelectieAction extends BaseGisAction {
                 request.setAttribute("useUserWmsDropdown", "0"); 
             }            
         }
+        
+        /* Emailen als gebruiker naam en emailadres heeft ingevuld */ 
+        if (kaartNaam != null && !kaartNaam.equals("") && gebruikerEmail != null 
+                && !gebruikerEmail.equals("")) {
+            
+            String servletpath = request.getRequestURL().toString();
+            servletpath = servletpath.substring(0,servletpath.lastIndexOf("/"));
+            
+            String url = servletpath + "/viewer.do?appCode=" + code;
+            sendEmail(kaartNaam, gebruikerEmail, url);        
+        }
 
         KaartSelectieUtil.populateKaartSelectieForm(code, request);
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
+    }
+    
+    private void sendEmail(String kaartNaam, String gebruikerEmail, String link) {        
+        try {        
+            java.util.Properties properties = System.getProperties();
+
+            /* Set host */
+            String smtpHost = DownloadServlet.getSmtpHost();
+            properties.put("mail.smtp.host", smtpHost);
+
+            javax.mail.Session mailSession = javax.mail.Session.getInstance(properties, null);
+            mailSession.setDebug(false);
+
+            /* From */
+            MimeMessage msg = new MimeMessage(mailSession);
+            String contactEmail = DownloadServlet.getContactEmail();
+            if (contactEmail == null) {
+                throw new Exception("Instelling contact e-mail is verplicht.");
+            }
+            
+            Address frmAddress = new InternetAddress(contactEmail);
+            msg.setFrom(frmAddress);
+
+            /* To */
+            Address[] toAddresses = InternetAddress.parse(gebruikerEmail);
+            msg.setRecipients(Message.RecipientType.TO, toAddresses);
+
+            /* Subject */
+            String onderwerp = "Gisviewer link naar " + kaartNaam + " kaart";
+            msg.setSubject(onderwerp);
+
+            /* Get mail text from file */
+            String file = DownloadServlet.getMailKaartselectie();
+
+            /* Object params */
+            Object[] params = null;
+
+            params = new Object[] {
+                kaartNaam, // 0 = kaart naam
+                link, // 1 = download link
+                contactEmail // 2 = contact email
+            };
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();            
+            InputStream in = null;
+            in = new BufferedInputStream(new FileInputStream(file), BUFFER_SIZE);
+            StreamCopy.copy(in, out);
+            MessageFormat textMessage = new MessageFormat(out.toString(ISO_CHARSET), Locale.ENGLISH);   
+
+            /* Content */
+            String tekst = textMessage.format(params);        
+            msg.setContent(tekst, "text/plain");
+
+            /* Date */
+            msg.setSentDate(new Date());
+            
+            /* Send it */
+            Transport.send(msg);
+        
+        } catch (AddressException ae) {
+            log.error("Fout bij het opgegeven emailadres. ", ae);
+        } catch (SendFailedException sfe) {
+            log.error("Fout bij het verzenden van het bericht.", sfe);
+        } catch (MessagingException me) {
+            log.error("Fout bij het verzenden van het bericht. ", me);
+        } catch (Exception e) {
+            log.error("Error", e);
+        }
     }
 
     public ActionForward saveWMSService(ActionMapping mapping, DynaValidatorForm dynaForm,
@@ -378,10 +506,12 @@ public class KaartSelectieAction extends BaseGisAction {
         /* Als huidige Applicatie alleen lezen is kopie maken. Anders huidige applicatie
         opslaan met alleen-lezen keuze van gebruiker. */
         Applicatie currentApp = KaartSelectieUtil.getApplicatie(code);
+        Applicatie app = null;
+        
         if (isReadOnly) {
             if (currentApp != null) {
 
-                Applicatie app = KaartSelectieUtil.copyApplicatie(currentApp, makeReadOnly, true);
+                app = KaartSelectieUtil.copyApplicatie(currentApp, makeReadOnly, true);
                 app.setNaam(currentApp.getNaam());
 
                 sess.save(app);
@@ -534,7 +664,24 @@ public class KaartSelectieAction extends BaseGisAction {
         } else {
             session.setAttribute("useUserWmsDropdown", false);
             request.setAttribute("useUserWmsDropdown", "0"); 
-        }                
+        }        
+        
+        if (app != null) {
+            Boolean readOnly = app.getRead_only();
+
+            if (readOnly) {
+                dynaForm.set("currentAppReadOnly", "1");    
+                request.setAttribute("currentAppReadOnly", "1");
+            } else {
+                dynaForm.set("currentAppReadOnly", "0");
+                request.setAttribute("currentAppReadOnly", "0");
+            }
+            
+            dynaForm.set("kaartNaam", app.getNaam());
+            dynaForm.set("gebruikerEmail", app.getEmail());
+            
+            request.setAttribute("kaartNaam", app.getNaam());
+        }
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
@@ -554,6 +701,8 @@ public class KaartSelectieAction extends BaseGisAction {
 
         HttpSession session = request.getSession(true);
         String code = (String) session.getAttribute("appCode");
+        
+        Applicatie app = KaartSelectieUtil.getApplicatie(code);
 
         for (int i = 0; i < servicesAan.length; i++) {
             Integer serviceId = new Integer(servicesAan[i]);
@@ -578,7 +727,24 @@ public class KaartSelectieAction extends BaseGisAction {
         } else {
             session.setAttribute("useUserWmsDropdown", false);
             request.setAttribute("useUserWmsDropdown", "0"); 
-        }  
+        }
+        
+        if (app != null) {
+            Boolean readOnly = app.getRead_only();
+
+            if (readOnly) {
+                dynaForm.set("currentAppReadOnly", "1");    
+                request.setAttribute("currentAppReadOnly", "1");
+            } else {
+                dynaForm.set("currentAppReadOnly", "0");
+                request.setAttribute("currentAppReadOnly", "0");
+            }
+            
+            dynaForm.set("kaartNaam", app.getNaam());
+            dynaForm.set("gebruikerEmail", app.getEmail());
+            
+            request.setAttribute("kaartNaam", app.getNaam());
+        }
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);

@@ -273,6 +273,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="user_copy" not-null="true" type="boolean"/>
         <property name="versie" not-null="true" type="int"/>
         <property name="default_app" not-null="true" type="boolean"/>
+        <property name="email"/>
     </class>
     
     <class name="nl.b3p.gis.viewer.db.CyclomediaAccount">

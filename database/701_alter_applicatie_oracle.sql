@@ -1,0 +1,1 @@
+ALTER TABLE applicatie ADD (email varchar2(255));

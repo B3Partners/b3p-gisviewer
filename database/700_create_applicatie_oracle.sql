@@ -9,6 +9,7 @@ create table applicatie (
     user_copy number(1) default 0 not null,
     versie number(10,0) default 1 not null,
     default_app number(1) default 0 not null,
+	email varchar2(255 char),
     primary key (id)
 );
 
