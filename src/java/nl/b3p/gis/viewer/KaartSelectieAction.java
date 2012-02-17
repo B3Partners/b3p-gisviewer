@@ -149,11 +149,20 @@ public class KaartSelectieAction extends BaseGisAction {
                 request.setAttribute("currentAppReadOnly", "0");
             }
             
-            dynaForm.set("kaartNaam", app.getNaam());            
-            dynaForm.set("gebruikerEmail", app.getEmail());
-            
+            dynaForm.set("kaartNaam", app.getNaam());  
             request.setAttribute("kaartNaam", app.getNaam());
-            request.setAttribute("gebruikerEmail", app.getEmail());
+            
+            if (app.getEmail() == null || app.getEmail().equals("")) {
+                String emailSuffix = DownloadServlet.getEmailSuffix();
+                
+                if (emailSuffix != null && !emailSuffix.equals("")) {
+                    dynaForm.set("gebruikerEmail", emailSuffix);
+                    request.setAttribute("gebruikerEmail", emailSuffix);
+                }
+            } else {
+                dynaForm.set("gebruikerEmail", app.getEmail());
+                request.setAttribute("gebruikerEmail", app.getEmail());                
+            }
         }
         
         if (useUserWmsDropdown != null) {

@@ -29,7 +29,8 @@ public class DownloadServlet extends HttpServlet {
 
     private static String downloadPath = null;
     private static String smtpHost = null;
-    private static String contactEmail = null;  
+    private static String contactEmail = null;
+    private static String emailSuffix = null;  
 
     private static String downloadServletPath = "/services/DownloadServlet";
     
@@ -55,6 +56,9 @@ public class DownloadServlet extends HttpServlet {
             }
             if (config.getInitParameter("contactEmail") != null) {
                 contactEmail = config.getInitParameter("contactEmail");
+            }
+            if (config.getInitParameter("emailSuffix") != null) {
+                emailSuffix = config.getInitParameter("emailSuffix");
             }
             
             mailDownloadSucces = getServletContext().getRealPath("/WEB-INF/txt/mail-download-succes.txt");
@@ -216,6 +220,14 @@ public class DownloadServlet extends HttpServlet {
 
     public static void setMailKaartselectie(String mailKaartselectie) {
         DownloadServlet.mailKaartselectie = mailKaartselectie;
+    }
+
+    public static String getEmailSuffix() {
+        return emailSuffix;
+    }
+
+    public static void setEmailSuffix(String emailSuffix) {
+        DownloadServlet.emailSuffix = emailSuffix;
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
