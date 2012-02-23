@@ -73,6 +73,7 @@ import org.hibernate.Session;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.securityfilter.filter.SecurityFilter;
 
 public class ViewerAction extends BaseGisAction {
 
@@ -176,7 +177,14 @@ public class ViewerAction extends BaseGisAction {
         //als er geen user principal is (ook geen anoniem) dan forwarden naar de login.
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
 
-        if (user == null) {
+        /* User is null bij ongeldige inloggegevens, ip check of als de
+         * Applicatie geen gebruikerscode heeft gekoppeld. */
+        if (user == null) {            
+            SecurityFilter.saveRequestInformation(request);
+            
+            HttpSession session = request.getSession();
+            session.setAttribute("previousLogin", true);
+            
             log.info("Geen user beschikbaar, ook geen anoniem. Forward naar login om te proberen een user te maken met login gegevens.");
             return mapping.findForward(LOGIN);
         }

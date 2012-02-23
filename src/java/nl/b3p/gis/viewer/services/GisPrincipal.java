@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import nl.b3p.gis.utils.ConfigListsUtil;
 import nl.b3p.gis.utils.KaartSelectieUtil;
@@ -264,8 +265,16 @@ public class GisPrincipal implements Principal {
     public static GisPrincipal getGisPrincipal(HttpServletRequest request) {
         return getGisPrincipal(request, false);
     }
+    
+    public static GisPrincipal getGisPrincipal(HttpServletRequest request, HttpServletResponse response) {
+        return getGisPrincipal(request, false);
+    }
 
-    public static GisPrincipal getGisPrincipal(HttpServletRequest request, boolean flushCache) {
+    public static GisPrincipal getGisPrincipal(HttpServletRequest request, boolean flushCache) {        
+        /* Controleren of er al een andere gebruiker is ingelogd */
+        HttpSession session = request.getSession();        
+        Boolean previousLogin = (Boolean) session.getAttribute("previousLogin");
+        
         Principal user = request.getUserPrincipal();
         if (!(user instanceof GisPrincipal && request instanceof SecurityRequestWrapper)) {
             return null;
@@ -294,11 +303,22 @@ public class GisPrincipal implements Principal {
 
         if (app != null && gpCode != null) {
             String appUserCode = app.getGebruikersCode();
+            
+            /* Bezoeker is al ingelogd maar er is geen gebruikerscode gekoppeld
+             * aan deze Applicatie. Uitloggen en inlog form tonen */
+            if (appUserCode == null && gpCode != null && previousLogin == null) {
+                session.invalidate();
 
+                log.debug("Sessie ongeldig gemaakt. Applicatie heeft geen gebruikerscode. "
+                        + "Opnieuw inloggen. Applicatieid is " + app.getId());
+                
+                return null;
+            }            
+            
+            /* Bezoeker is al ingelogd maar er is een andere gebruikerscode gekoppeld
+             * aan deze Applicatie. Uitloggen en op achtergrond inloggen met
+             * nieuwe gebruiker */
             if (appUserCode != null && !appUserCode.equals(gpCode)) {
-
-                // user is using different code, so invalidate session and login again
-                HttpSession session = request.getSession();
                 session.invalidate();
 
                 log.debug("Sessie ongeldig gemaakt. Applicatie heeft niet dezelfde gebruikerscode"
@@ -313,8 +333,6 @@ public class GisPrincipal implements Principal {
 
         if (code != null && code.length() != 0) {
             if (gpCode != null && !code.equals(gpCode)) {
-                // user is using different code, so invalidate session and login again
-                HttpSession session = request.getSession();
                 session.invalidate();
                 log.info("Session invalidated bacause of code change. Old code: "
                         + gpCode + ", new code:" + code);
@@ -324,11 +342,21 @@ public class GisPrincipal implements Principal {
                 gpPassword = null;
             }
         }
-
-        if (gp == null || (flushCache)) { //(flushCache && isAdmin)
-            // log in new principal
+        
+        if (app != null && app.getGebruikersCode() == null && previousLogin == null) {
             SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
-            log.info("Refresh login for user: " + gpUsername + ", code: " + gpCode);
+            
+            log.debug("Applicatie geen gebruikerscode. Ingelogd met: " + gpUsername);
+            
+            gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
+            srw.setUserPrincipal(gp);
+        }
+
+        if (gp == null || (flushCache)) {
+            SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
+            
+            log.debug("Refresh login for user: " + gpUsername + ", code: " + gpCode);
+            
             gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
             srw.setUserPrincipal(gp);
         }
