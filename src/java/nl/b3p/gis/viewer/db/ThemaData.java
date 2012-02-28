@@ -125,4 +125,55 @@ public class ThemaData {
     public void setWaardeType(WaardeTypen waardeType) {
         this.waardeType = waardeType;
     }
+    
+    @Override
+    public Object clone() {
+        ThemaData cloneObj = new ThemaData();
+    
+        if (this.label != null) {
+            cloneObj.label = this.label;
+        }
+        
+        if (this.eenheid != null) {
+            cloneObj.eenheid = this.eenheid;
+        }
+        
+        if (this.omschrijving != null) {
+            cloneObj.omschrijving = this.omschrijving;
+        }
+        
+        cloneObj.basisregel = this.basisregel;
+        
+        if (this.voorbeelden != null) {
+            cloneObj.voorbeelden = this.voorbeelden;
+        }
+        
+        cloneObj.kolombreedte = this.kolombreedte;
+        
+        if (this.waardeType != null) {
+            cloneObj.waardeType = this.waardeType;
+        }
+        
+        if (this.dataType != null) {
+            cloneObj.dataType = this.dataType;
+        }
+        
+        if (this.commando != null) {
+            cloneObj.commando = this.commando;
+        }
+        
+        if (this.kolomnaam != null) {
+            cloneObj.kolomnaam = this.kolomnaam;
+        }
+
+        if (this.dataorder != null) {
+            cloneObj.dataorder = new Integer(this.dataorder);
+        }
+        
+        if (this.gegevensbron != null) {
+            cloneObj.gegevensbron = this.gegevensbron;
+        }
+
+        return cloneObj;
+    }
 }
