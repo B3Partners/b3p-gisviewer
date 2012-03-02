@@ -236,6 +236,8 @@ public class PrintAction extends BaseHibernateAction {
     private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
         String url = FormUtils.nullIfEmpty(request.getParameter("urls"));
         String wkt = FormUtils.nullIfEmpty(request.getParameter("wkts"));
+        String tilings = FormUtils.nullIfEmpty(request.getParameter("tilings"));
+        
         CombineImageSettings settings = new CombineImageSettings();
 
         String[] urls = null;
@@ -250,7 +252,23 @@ public class PrintAction extends BaseHibernateAction {
             wkts = wkt.split(";");
             settings.setWktGeoms(wkts);
         }
-        if (urls == null || urls.length == 0) {
+        
+        /* Tiling settings van POST form:
+         * bbox, resolutions, tileSize, serviceUrl */
+        String[] tilingSettings = null;
+        if (tilings != null) {
+            logFile.debug("TILING: " + tilingSettings);
+            tilingSettings = tilings.split(";");
+            
+            if (tilingSettings != null && tilingSettings.length == 4) {
+                settings.setTilingBbox(tilingSettings[0]);
+                settings.setTilingResolutions(tilingSettings[1]);
+                settings.setTilingTileSize(tilingSettings[2]);
+                settings.setTilingServiceUrl(tilingSettings[3]);
+            }
+        }  
+        
+        if (urls == null || urls.length == 0 && tilingSettings == null) {
             throw new Exception("Er zijn geen paden naar plaatjes gevonden");
         }
 
