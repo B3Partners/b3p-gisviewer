@@ -237,6 +237,7 @@ public class PrintAction extends BaseHibernateAction {
         String url = FormUtils.nullIfEmpty(request.getParameter("urls"));
         String wkt = FormUtils.nullIfEmpty(request.getParameter("wkts"));
         String tilings = FormUtils.nullIfEmpty(request.getParameter("tilings"));
+        String mapsizes = FormUtils.nullIfEmpty(request.getParameter("mapsizes"));
         
         CombineImageSettings settings = new CombineImageSettings();
 
@@ -254,33 +255,38 @@ public class PrintAction extends BaseHibernateAction {
         }
         
         /* Tiling settings van POST form:
-         * bbox, resolutions, tileSize, serviceUrl */
+         * bbox, resolutions, tileWidth, tileHeight, serviceUrl */
         String[] tilingSettings = null;
         if (tilings != null) {
-            logFile.debug("TILING: " + tilingSettings);
             tilingSettings = tilings.split(";");
             
-            if (tilingSettings != null && tilingSettings.length == 4) {
+            if (tilingSettings != null && tilingSettings.length == 5) {
                 settings.setTilingBbox(tilingSettings[0]);
                 settings.setTilingResolutions(tilingSettings[1]);
-                settings.setTilingTileSize(tilingSettings[2]);
-                settings.setTilingServiceUrl(tilingSettings[3]);
+                settings.setTilingTileWidth(new Integer(tilingSettings[2]));
+                settings.setTilingTileHeight(new Integer(tilingSettings[3]));
+                settings.setTilingServiceUrl(tilingSettings[4]);
             }
-        }  
+        }
         
-        if (urls == null || urls.length == 0 && tilingSettings == null) {
-            throw new Exception("Er zijn geen paden naar plaatjes gevonden");
+        if (tilingSettings != null && tilingSettings.length < 5) {
+            throw new Exception("Er zijn niet voldoende parameters voor printen tiling.");
+        }
+        
+        if (urls == null && tilingSettings == null && urls.length == 0 ) {
+            throw new Exception("Er zijn geen verzoeken naar plaatjes gevonden.");
         }
 
         String reqWidth = request.getParameter(OGCRequest.WMS_PARAM_WIDTH);
         String reqHeight = request.getParameter(OGCRequest.WMS_PARAM_HEIGHT);
         String reqBbox = request.getParameter(OGCRequest.WMS_PARAM_BBOX);
+        
         if (reqWidth != null && reqHeight != null && reqBbox != null) {
             // gebruik info uit request
             settings.setWidth(new Integer(reqWidth));
             settings.setHeight(new Integer(reqHeight));
             settings.setBbox(reqBbox);
-        } else {
+        } else if (urls != null) {
             // bereken width, height en bbox uit eerste url,
             // want dit zal voor alle urls hetzelfde moeten zijn
             String url1 = urls[0];
@@ -292,11 +298,25 @@ public class PrintAction extends BaseHibernateAction {
             settings.setHeight(height);
             settings.setBbox(bbox);
         }
+        
+        /* Indien geen wms url beschikbaar om width en height uit te halen pad dan
+         * waardes uit post formulier direct van controller opgehaald */
+        String[] mapSizeSettings = null;
+        if (urls == null && mapsizes != null) {
+            mapSizeSettings = mapsizes.split(";");
+            
+            if (mapSizeSettings != null && mapSizeSettings.length == 3) {
+                settings.setWidth(new Integer(mapSizeSettings[0]));
+                settings.setHeight(new Integer(mapSizeSettings[1]));
+                settings.setBbox(mapSizeSettings[2]);
+            }
+        }
 
         String mimeType = FormUtils.nullIfEmpty(request.getParameter(OGCRequest.WMS_PARAM_FORMAT));
         if (mimeType != null) {
             settings.setMimeType(mimeType);
         }
+        
         return settings;
     }
 
