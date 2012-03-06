@@ -309,6 +309,14 @@ public class PrintAction extends BaseHibernateAction {
                 settings.setWidth(new Integer(mapSizeSettings[0]));
                 settings.setHeight(new Integer(mapSizeSettings[1]));
                 settings.setBbox(mapSizeSettings[2]);
+                
+                /* TODO: Kijken of dit netter kan. Nu wordt er in de createmappdf.js
+                 * een imageSize uit url[0] &width gehaald. Alleen werkt dit niet als
+                 * er geen gewone wms url aanwezig is. Dus als er alleen een tiling laag
+                 * aan staat. */
+                urls = new String[1];
+                urls[0] = "&width=" + mapSizeSettings[0];
+                settings.setUrls(urls);
             }
         }
 
