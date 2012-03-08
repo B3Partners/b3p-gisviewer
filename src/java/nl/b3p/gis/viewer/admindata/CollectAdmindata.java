@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.commons.services.FormUtils;
@@ -297,6 +298,13 @@ public class CollectAdmindata {
         } catch (CQLException cqlEx) {
             logger.error("Fout tijdens filter: ",cqlEx);
 
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
+            
+        } catch (NoSuchElementException nse) {
+            logger.error("Verkeerd element in resultaat objectdata: ", nse);
+            
             if (tx != null && tx.isActive()) {
                 tx.rollback();
             }
