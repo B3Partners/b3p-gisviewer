@@ -273,7 +273,11 @@ public class GisPrincipal implements Principal {
     public static GisPrincipal getGisPrincipal(HttpServletRequest request, boolean flushCache) {        
         /* Controleren of er al een andere gebruiker is ingelogd */
         HttpSession session = request.getSession();        
-        Boolean previousLogin = (Boolean) session.getAttribute("previousLogin");
+        Boolean previousLogin = null;
+        
+        if (session != null) {
+            previousLogin = (Boolean) session.getAttribute("previousLogin");
+        }        
         
         Principal user = request.getUserPrincipal();
         if (!(user instanceof GisPrincipal && request instanceof SecurityRequestWrapper)) {
