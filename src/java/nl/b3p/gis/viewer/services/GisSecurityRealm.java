@@ -171,7 +171,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                 }
                 
             } else {
-                sp = wmscr.getProvider(location, username, password);
+                sp = wmscr.getProvider(location, username, password, ip);
 
                 /* Controleren of provider niet over datum is */
                 expDate = sp.getExpireDate();
