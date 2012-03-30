@@ -1176,7 +1176,7 @@ public class ViewerAction extends BaseGisAction {
     }
 
     private boolean isInCluster(Themas thema, Clusters inCluster) {
-        if (thema.getCluster() == null) {
+        if (thema == null || thema.getCluster() == null) {
             return false;
         } else {
             return isInCluster(thema.getCluster(), inCluster);
