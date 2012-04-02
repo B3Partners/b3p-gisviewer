@@ -273,7 +273,7 @@ public class PrintAction extends BaseHibernateAction {
             throw new Exception("Er zijn niet voldoende parameters voor printen tiling.");
         }
         
-        if (urls == null && tilingSettings == null && urls.length == 0 ) {
+        if ( (urls == null && tilingSettings == null) || (urls != null && urls.length == 0 ) ) {
             throw new Exception("Er zijn geen verzoeken naar plaatjes gevonden.");
         }
 
