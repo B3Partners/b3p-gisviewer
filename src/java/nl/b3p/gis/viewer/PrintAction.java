@@ -315,13 +315,13 @@ public class PrintAction extends BaseHibernateAction {
                  * er geen gewone wms url aanwezig is. Dus als er alleen een tiling laag
                  * aan staat. */
                 urls = new String[1];
-                urls[0] = "&width=" + mapSizeSettings[0];
+                urls[0] = tilingSettings[4] + "&width=" + mapSizeSettings[0];
                 settings.setUrls(urls);
             }
         }
 
         String mimeType = FormUtils.nullIfEmpty(request.getParameter(OGCRequest.WMS_PARAM_FORMAT));
-        if (mimeType != null) {
+        if (mimeType != null && !mimeType.equals("")) {
             settings.setMimeType(mimeType);
         }
         
