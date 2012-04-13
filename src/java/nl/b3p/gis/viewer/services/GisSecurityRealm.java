@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.servlet.http.HttpSession;
 import nl.b3p.commons.security.XmlSecurityDatabase;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.wms.capabilities.ServiceProvider;
@@ -55,6 +56,9 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         String password = FormUtils.nullIfEmpty(request.getParameter(FORM_PASSWORD));
         String code = FormUtils.nullIfEmpty(request.getParameter(FORM_CODE));
 
+        HttpSession session = request.getSession();
+        session.setAttribute("loginForm", true);
+        
         return authenticate(username, password, code, request);
      }
 
@@ -101,7 +105,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             String code, SecurityRequestWrapper request) {
 
         WMSCapabilitiesReader wmscr = new WMSCapabilitiesReader();
-        ServiceProvider sp = null;
+        ServiceProvider sp = null; 
 
         /* TODO: Wat te doen als de Applicatie een gebruikerscode heeft die ongeldig is
         Bijvoorbeeld ABC ? Ik denk dat je dan gewoon niet kunt inloggen. Misschien aan gisviewerconfig
@@ -199,13 +203,6 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         if (sp == null) {
             log.error("No ServiceProvider found, denying login!");
             return null;
-        }
-
-        if (sp.getAllRoles() == null || sp.getAllRoles().isEmpty()) {
-            if (!XmlSecurityDatabase.booleanAuthenticate(username, password)) {
-                log.info("ServiceProvider has no roles");
-                //return null;
-            }
         }
 
         /* code uit service provider gebruiken */

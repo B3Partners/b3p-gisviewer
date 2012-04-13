@@ -35,7 +35,6 @@ import javax.servlet.http.HttpSession;
 import nl.b3p.gis.utils.ConfigListsUtil;
 import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.BaseGisAction;
-import nl.b3p.gis.viewer.ViewerAction;
 import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.wms.capabilities.Layer;
 import nl.b3p.wms.capabilities.Roles;
@@ -270,15 +269,10 @@ public class GisPrincipal implements Principal {
         return getGisPrincipal(request, false);
     }
 
-    public static GisPrincipal getGisPrincipal(HttpServletRequest request, boolean flushCache) {        
-        /* Controleren of er al een andere gebruiker is ingelogd */
-        HttpSession session = request.getSession();        
-        Boolean previousLogin = null;
+    public static GisPrincipal getGisPrincipal(HttpServletRequest request, boolean flushCache) { 
+        HttpSession session = request.getSession();
         
-        if (session != null) {
-            previousLogin = (Boolean) session.getAttribute("previousLogin");
-        }        
-        
+        /* Controleren of er al een andere gebruiker is ingelogd */        
         Principal user = request.getUserPrincipal();
         if (!(user instanceof GisPrincipal && request instanceof SecurityRequestWrapper)) {
             return null;
@@ -294,75 +288,53 @@ public class GisPrincipal implements Principal {
             gpUsername = gp.getName();
             gpPassword = gp.getPassword();
         }
-
-        String code = request.getParameter(BaseGisAction.URL_AUTH);
-
-        /* Indien al ingelogd als iemand anders en de gebruikerscode komt niet overeen
-         * met die van de applicatie dan uitloggen !? */
+        
+        String appCode = request.getParameter(BaseGisAction.APP_AUTH);
+        
         Applicatie app = null;
-        String appCode = request.getParameter(ViewerAction.APPCODE);
         if (appCode != null && appCode.length() > 0) {
             app = KaartSelectieUtil.getApplicatie(appCode);
-        }
-
-        if (app != null && gpCode != null) {
-            String appUserCode = app.getGebruikersCode();
-            
-            /* Bezoeker is al ingelogd maar er is geen gebruikerscode gekoppeld
-             * aan deze Applicatie. Uitloggen en inlog form tonen */
-            if (appUserCode == null && gpCode != null && previousLogin == null) {
-                session.invalidate();
-
-                log.debug("Sessie ongeldig gemaakt. Applicatie heeft geen gebruikerscode. "
-                        + "Opnieuw inloggen. Applicatieid is " + app.getId());
-                
-                return null;
-            }            
-            
-            /* Bezoeker is al ingelogd maar er is een andere gebruikerscode gekoppeld
-             * aan deze Applicatie. Uitloggen en op achtergrond inloggen met
-             * nieuwe gebruiker */
-            if (appUserCode != null && !appUserCode.equals(gpCode)) {
-                session.invalidate();
-
-                log.debug("Sessie ongeldig gemaakt. Applicatie heeft niet dezelfde gebruikerscode"
-                        + " als huidig ingelogde gebruiker. Opnieuw inloggen. Applicatieid is " + app.getId());
-
-                gp = null;
-                gpCode = appUserCode;
-                gpUsername = HibernateUtil.ANONYMOUS_USER;
-                gpPassword = null;
-            }
-        }
-
-        if (code != null && code.length() != 0) {
-            if (gpCode != null && !code.equals(gpCode)) {
-                session.invalidate();
-                log.info("Session invalidated bacause of code change. Old code: "
-                        + gpCode + ", new code:" + code);
-                gp = null;
-                gpCode = code;
-                gpUsername = HibernateUtil.ANONYMOUS_USER;
-                gpPassword = null;
-            }
+        }        
+        
+        Boolean loginForm = (Boolean) session.getAttribute("loginForm");
+        if (loginForm == null) {
+            loginForm = false;
         }
         
-        if (app != null && app.getGebruikersCode() == null && previousLogin == null) {
-            SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
+        /* Applicatie geen gebruikerscode en niet via formulier gekomen */
+        if (app != null && app.getGebruikersCode() == null && !loginForm) {
+            session.invalidate();
             
-            log.debug("Applicatie geen gebruikerscode. Ingelogd met: " + gpUsername);
+            log.debug("Applicatie zonder gebruikerscode. Terug naar login form.");
             
-            gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
-            srw.setUserPrincipal(gp);
+            return null;
         }
-
-        if (gp == null || (flushCache)) {
-            SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
+        
+        /* Gebruikerscode verschilt met huidige inlog. Automatisch inloggen. */
+        if (gp != null && app != null && app.getGebruikersCode() != null && !app.getGebruikersCode().equals(gp.getCode())) {
+            session.invalidate();
             
-            log.debug("Refresh login for user: " + gpUsername + ", code: " + gpCode);
+            gp = null;
+            gpCode = app.getGebruikersCode();
+            gpUsername = HibernateUtil.ANONYMOUS_USER;
+            gpPassword = null;
+            
+            SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
             
             gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
             srw.setUserPrincipal(gp);
+            
+            log.debug("Gebruikerscode verschilt. Automatisch ingelogd met nieuwe gebruiker.");
+        }        
+
+        /* Applicatie geen gebruikerscode. Inloggen met gegevens van formulier. */
+        if (app != null && app.getGebruikersCode() == null && loginForm) {             
+            SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
+            
+            gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
+            srw.setUserPrincipal(gp);
+            
+            log.debug("Applicatie zonder gebruikerscode. Nu ingelogd via formulier.");
         }
 
         return gp;

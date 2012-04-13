@@ -173,22 +173,19 @@ public class ViewerAction extends BaseGisAction {
      *
      * @throws Exception
      */
-    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        //als er geen user principal is (ook geen anoniem) dan forwarden naar de login.
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-
+    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {      
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);        
+        
         /* User is null bij ongeldige inloggegevens, ip check of als de
          * Applicatie geen gebruikerscode heeft gekoppeld. */
         if (user == null) {            
             SecurityFilter.saveRequestInformation(request);
             
-            HttpSession session = request.getSession();
-            session.setAttribute("previousLogin", true);
+            log.debug("Ongeldige gebruiker. Terug naar login form.");
             
-            log.info("Geen user beschikbaar, ook geen anoniem. Forward naar login om te proberen een user te maken met login gegevens.");
             return mapping.findForward(LOGIN);
         }
-
+        
         createLists(dynaForm, request);
 
         Map configMap = (Map) request.getAttribute("configMap");
