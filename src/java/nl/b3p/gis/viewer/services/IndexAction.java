@@ -267,6 +267,9 @@ public class IndexAction extends BaseGisAction {
         createLists(dynaForm, request);
 
         populateTekstblok(request, PAGE_GISVIEWER_HOME);
+        
+        HttpSession session = request.getSession();
+        session.setAttribute("loginForm", false);
 
         return getDefaultForward(mapping, request);
     }
