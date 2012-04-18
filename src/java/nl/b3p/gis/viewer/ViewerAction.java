@@ -374,7 +374,7 @@ public class ViewerAction extends BaseGisAction {
 
         /* Als extent niet aan url is meegegeven kijken of er een is ingesteld voor
          * de Applicatie */
-        if (map != null) {
+        if (map != null && extent == null) {
             String cfgExtent = (String) map.get("extent");
             if (cfgExtent != null && cfgExtent.split(",").length == 4) {
                 extent = cfgExtent;
