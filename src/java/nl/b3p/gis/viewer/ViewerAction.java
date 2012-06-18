@@ -993,21 +993,32 @@ public class ViewerAction extends BaseGisAction {
                         jsonCluster.put("tileHeight", ts.getHeight());
                         jsonCluster.put("tileFormat", ts.getFormat());
                         jsonCluster.put("tileLayers", ts.getLayerString());
-                        jsonCluster.put("tileSrs", ts.getBoundingBox().getSrs());
+                        
+                        if (ts.getBoundingBox() != null) {
+                            jsonCluster.put("tileSrs", ts.getBoundingBox().getSrs());
+                        } else {
+                            jsonCluster.put("tileSrs", "EPSG:28992");
+                        }
+                        
                         jsonCluster.put("tileVersion", sp.getWmsVersion());
                         jsonCluster.put("tileStyles", ts.getStyles());
+                        
                         if (ts.getBoundingBox() != null) {
                             String bbox = "";
                             bbox += ts.getBoundingBox().getMinx() + ",";
                             bbox += ts.getBoundingBox().getMiny() + ",";
                             bbox += ts.getBoundingBox().getMaxx() + ",";
-                            bbox += ts.getBoundingBox().getMaxy();
+                            bbox += ts.getBoundingBox().getMaxy();         
+                            
                             jsonCluster.put("tileBoundingBox", bbox);
-
+                        } else {
+                            jsonCluster.put("tileBoundingBox", "-285401.92,22598.08,595401.9199999999,903401.9199999999");
+                            
                         }
                     }
                 }
             }
+            
             if (th.getMetadata_link() != null) {
                 String metadatalink = th.getMetadata_link();
                 metadatalink = metadatalink.replaceAll("%id%", "" + themaId);
