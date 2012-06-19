@@ -244,4 +244,12 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="privateBase64Key" type="text" column="private_base64_key"/>
         <property name="appCode" column="app_code"/>
     </class>
+    
+    <class name="nl.b3p.gis.viewer.db.ZoekconfiguratieThemas">
+        <id name="id">
+            <generator class="identity"/>
+        </id>        
+        <many-to-one lazy="false" name="zoekconfiguratie"/>
+        <many-to-one lazy="false" name="thema"/>
+    </class>
 </hibernate-mapping>
