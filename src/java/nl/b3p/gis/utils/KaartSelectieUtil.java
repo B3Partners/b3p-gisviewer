@@ -1053,7 +1053,14 @@ public class KaartSelectieUtil {
             log.error("Fout tijdens maken Applicatie code:", ex);
         }
 
-        Integer versie = sourceApp.getVersie() + 1;
+        Integer versie = null;        
+        if (sourceApp.getVersie() != null && userCopy) {
+            versie = sourceApp.getVersie() + 1;
+        } else if (sourceApp.getVersie() != null && !userCopy) {
+            versie = sourceApp.getVersie();
+        } else {
+            versie = 1;
+        }
 
         app.setEmail(sourceApp.getEmail());
         app.setNaam(sourceApp.getNaam());
