@@ -36,6 +36,7 @@ import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.apps.Fop;
 import org.apache.fop.apps.FopFactory;
 import org.apache.fop.apps.MimeConstants;
+import org.xml.sax.SAXException;
 
 /**
  *
@@ -49,6 +50,8 @@ public class PrintServlet extends HttpServlet {
     public static String xsl_A4_Staand = null;
     public static String xsl_A3_Liggend = null;
     public static String xsl_A3_Staand = null;
+    
+    public static String fopConfig = null;
 
     public static CombineImageSettings settings = null;
     private static final int MAX_IMAGE_SIZE_PX = 2048;
@@ -107,7 +110,8 @@ public class PrintServlet extends HttpServlet {
     }
 
     public static void createOutput(PrintInfo info, String mimeType, String template,
-            boolean addJavascript, HttpServletResponse response) throws MalformedURLException, IOException {
+            boolean addJavascript, HttpServletResponse response) 
+            throws MalformedURLException, IOException, SAXException {
 
         File xslFile = new File(template);
         String path = new File(xslFile.getParent()).toURI().toString();
@@ -117,6 +121,8 @@ public class PrintServlet extends HttpServlet {
 
         /* Set BaseUrl so that fop knows paths to images etc... */
         fopFactory.setBaseURL(path);
+        
+        fopFactory.setUserConfig(new File(fopConfig));
 
         /* Setup output stream */
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -231,6 +237,9 @@ public class PrintServlet extends HttpServlet {
             if (config.getInitParameter("xsl_A3_Liggend") != null) {
                 xsl_A3_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A3_Liggend"));
             }
+            
+            fopConfig = getServletContext().getRealPath("/WEB-INF/xsl/fop.xml");
+            
         } catch (Exception e) {
             throw new ServletException(e);
         }

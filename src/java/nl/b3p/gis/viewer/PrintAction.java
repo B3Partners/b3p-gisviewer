@@ -169,7 +169,7 @@ public class PrintAction extends BaseHibernateAction {
 
         /* nu */
         Date now = new Date();
-        SimpleDateFormat df = new SimpleDateFormat("d-M-yyyy", new Locale("NL"));
+        SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
 
         String imageUrl = createImageUrl(request);
 
