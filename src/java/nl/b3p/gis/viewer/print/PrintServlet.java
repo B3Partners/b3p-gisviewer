@@ -52,6 +52,7 @@ public class PrintServlet extends HttpServlet {
     public static String xsl_A3_Staand = null;
     
     public static String fopConfig = null;
+    public static String fontPath = null;
 
     public static CombineImageSettings settings = null;
     private static final int MAX_IMAGE_SIZE_PX = 2048;
@@ -121,6 +122,7 @@ public class PrintServlet extends HttpServlet {
 
         /* Set BaseUrl so that fop knows paths to images etc... */
         fopFactory.setBaseURL(path);
+        fopFactory.getFontManager().setFontBaseURL(fontPath);
         
         fopFactory.setUserConfig(new File(fopConfig));
 
@@ -239,7 +241,7 @@ public class PrintServlet extends HttpServlet {
             }
             
             fopConfig = getServletContext().getRealPath("/WEB-INF/xsl/fop.xml");
-            
+            fontPath = getServletContext().getRealPath("/WEB-INF/xsl/fonts");
         } catch (Exception e) {
             throw new ServletException(e);
         }
