@@ -530,7 +530,7 @@ public class ViewerAction extends BaseGisAction {
                     }
 
                     if (waarde == null) {
-                        waarde = "null";
+                        waarde = "";
                     }
 
                     /* Bij het zoekveld type lijkt op moet er ook %% om de waarde heen
@@ -538,13 +538,13 @@ public class ViewerAction extends BaseGisAction {
                     if (za.getType() == 0) {
                         //waarde = "%" + waarde.trim() + "%";
                     }
-
+                    
                     if (i < 1) {
                         params += waarde;
                     } else {
                         params += "," + waarde;
                     }
-
+                    
                     i++;
                 }
 
