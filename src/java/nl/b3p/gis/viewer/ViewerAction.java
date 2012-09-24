@@ -904,8 +904,13 @@ public class ViewerAction extends BaseGisAction {
             /* user kaartlaag default on zetten */
             if (defaultOn && lagen.size() > 0) {
                 jsonCluster.put("visible", "on");
-            } else if (!defaultOn && lagen.size() > 0) {
+            } else if (!defaultOn && lagen.size() > 0) {   
                 jsonCluster.put("visible", "off");
+                
+                /* Toch nog aanzetten als id is meegegeven in url */
+                if (actieveThemas != null && actieveThemas.contains(themaId)) {
+                    jsonCluster.put("visible", "on");
+                }               
             }
 
             /* Extra property die gebruikt wordt voor highLightThemaObject
