@@ -10,7 +10,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletConfig;
@@ -96,7 +98,6 @@ public class PrintServlet extends HttpServlet {
         CombineImagesHandler.combineImage(out, imageSettings, imageSettings.getMimeType(), 0);
 
         response.setContentType(imageSettings.getMimeType());
-        //response.setHeader("Content-Disposition", "attachment; filename=\"kaart1.png\";");
 
         response.getOutputStream().flush();
 
@@ -161,15 +162,17 @@ public class PrintServlet extends HttpServlet {
             response.setContentLength(out.size());
 			
             /* Set filename and extension */
-            String filename = "Kaart_" + info.getDatum();
+            SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy", new Locale("NL"));    
+            String date = df.format(now);
+            String fileName = "Kaart_" + date;
 
             if (mimeType.equals(MimeConstants.MIME_PDF)) {
-                filename += ".pdf";
+                fileName += ".pdf";
             } else if (mimeType.equals(MimeConstants.MIME_RTF)) {
-                filename += ".rtf";
+                fileName += ".rtf";
             }
-
-            response.setHeader("Content-Disposition", "attachment; filename=" + filename);
+            
+            response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
 
             /* use postprocessing with itext to add Javascript to output */
             if (addJavascript) {

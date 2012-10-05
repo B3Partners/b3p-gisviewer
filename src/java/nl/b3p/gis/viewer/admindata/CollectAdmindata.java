@@ -317,9 +317,11 @@ public class CollectAdmindata {
             }
         }
 
+        /*
         if (bean == null || bean.getRecords() == null) {
             return null;
         }
+        */
 
         return bean;
     }
