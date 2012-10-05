@@ -4,7 +4,7 @@ ALTER TABLE gegevensbron
    ALTER COLUMN editable SET NOT NULL;
    
    
-ALTER TABLE thema_data ADD COLUMN "defaultValues" text;
+ALTER TABLE thema_data ADD COLUMN default_values text;
 
 ALTER TABLE gegevensbron ADD COLUMN geometryeditable boolean;
 update gegevensbron set geometryeditable = false;
