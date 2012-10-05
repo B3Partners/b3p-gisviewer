@@ -1,5 +1,12 @@
 package nl.b3p.gis.viewer.db;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class ThemaData {
 
     private Integer id;
@@ -15,6 +22,8 @@ public class ThemaData {
     private String kolomnaam;
     private Integer dataorder;
     private Gegevensbron gegevensbron;
+    private boolean editable;
+    private String defaultValues;
 
     /**
      * Creates a new instance of ThemaData
@@ -126,6 +135,14 @@ public class ThemaData {
         this.waardeType = waardeType;
     }
     
+    public boolean isEditable() {
+        return editable;
+    }
+
+    public void setEditable(boolean editable) {
+        this.editable = editable;
+    }
+    
     @Override
     public Object clone() {
         ThemaData cloneObj = new ThemaData();
@@ -173,7 +190,40 @@ public class ThemaData {
         if (this.gegevensbron != null) {
             cloneObj.gegevensbron = this.gegevensbron;
         }
+        
+        cloneObj.editable = this.editable;
 
         return cloneObj;
+    }
+
+    public String getDefaultValues() {
+        return defaultValues;
+    }
+
+    public void setDefaultValues(String defaultValues) {
+        this.defaultValues = defaultValues;
+    }
+    
+    /**
+     * Returns the ThemaData object in JSON format:
+     * {
+     *  columnname: String,
+     *  label: String,
+     *  units: String,
+     *  defaultValues: (optional) Array of defaults
+     * }
+     * @return 
+     * @throws JSONException 
+     */
+    public JSONObject toJSON() throws JSONException{
+        JSONObject json = new JSONObject();
+        json.put("columnname", kolomnaam);
+        json.put("label",label);
+        json.put("units",eenheid);
+        if(defaultValues != null){
+            JSONArray defaults = new JSONArray(Arrays.asList(defaultValues.split(",")));
+            json.put("defaultValues",defaults);
+        }
+        return json;
     }
 }

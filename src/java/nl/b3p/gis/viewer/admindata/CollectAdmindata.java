@@ -95,7 +95,8 @@ public class CollectAdmindata {
             
                 bean.setId(gb.getId());
                 bean.setAdminPk(gb.getAdmin_pk());
-                bean.setParentHtmlId(parentHtmlId);            
+                bean.setParentHtmlId(parentHtmlId);
+                bean.setEditable(gb.isEditable());
 
                 Themas thema = null;
                 if (themaId > 0) {
@@ -530,11 +531,6 @@ public class CollectAdmindata {
         }
         if (pkValue == null) {
             return attributeValue.toString();
-        }
-
-        if (attributeName == null || attributeValue == null) {
-            attributeName = adminPk;
-            attributeValue = pkValue;
         }
 
         // De attributeValue ook eerst vooraan erbij zetten om die te kunnen tonen op de admindata pagina - Drie hekjes als scheidingsteken

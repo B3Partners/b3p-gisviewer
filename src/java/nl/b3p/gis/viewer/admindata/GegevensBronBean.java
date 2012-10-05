@@ -21,6 +21,7 @@ public class GegevensBronBean {
     private String parentHtmlId;
     private String layout;
     private Integer order;
+    private Boolean editable;
 
     public Integer getId() {
         return id;
@@ -157,5 +158,13 @@ public class GegevensBronBean {
     }
     public void setOrder(int order) {
         this.order=order;
+    }
+
+    public Boolean getEditable() {
+        return editable;
+    }
+    
+    public void setEditable(Boolean editable) {
+        this.editable = editable;
     }
 }

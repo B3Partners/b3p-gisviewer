@@ -114,6 +114,31 @@ public class ConfigListsUtil {
 
         return l;
     }
+    
+    public static Boolean isBronJDBC(Integer bronId){
+        Boolean b = false;
+        
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Transaction tx = null;
+
+        try {
+            tx = sess.beginTransaction();
+
+            Bron bron = getBron(sess, bronId);
+
+            b = bron.checkType(Bron.TYPE_JDBC);
+
+            tx.commit();
+        } catch (Exception e) {
+            log.error("Fout tijdens ophalen attributen: ", e);
+
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
+        }
+
+        return b;
+    }
 
     /**
      * Maakt een lijst met mogelijke features voor de gegeven wfs connectie en gebruiker

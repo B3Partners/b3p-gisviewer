@@ -301,6 +301,13 @@ public class ConfigKeeper {
             cfg.setSetting(appCode);
             cfg.setType("java.lang.Boolean");
             sess.save(cfg);
+            
+            cfg = new Configuratie();
+            cfg.setProperty("showEditTool");
+            cfg.setPropval("false");
+            cfg.setSetting(appCode);
+            cfg.setType("java.lang.Boolean");
+            sess.save(cfg);
 
             cfg = new Configuratie();
             cfg.setProperty("layerGrouping");

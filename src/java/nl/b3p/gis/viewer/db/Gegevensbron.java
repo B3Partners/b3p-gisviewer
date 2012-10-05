@@ -26,6 +26,8 @@ public class Gegevensbron implements Comparable {
     private String admin_fk;
     private String admin_tabel_opmerkingen;
     private Integer volgordenr;
+    private boolean editable;
+    private boolean geometryeditable;
 
     private Set themaData;
     private Set themas;
@@ -160,4 +162,21 @@ public class Gegevensbron implements Comparable {
     public void setVolgordenr(Integer volgordenr) {
         this.volgordenr = volgordenr;
     }
+
+    public boolean isEditable() {
+        return editable;
+    }
+
+    public void setEditable(boolean editable) {
+        this.editable = editable;
+    }
+
+    public boolean isGeometryeditable() {
+        return geometryeditable;
+    }
+
+    public void setGeometryeditable(boolean geometryeditable) {
+        this.geometryeditable = geometryeditable;
+    }
+    
 }

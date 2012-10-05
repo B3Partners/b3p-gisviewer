@@ -76,6 +76,8 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="eenheid"/>
         <property name="omschrijving"/>
         <property name="basisregel" not-null="true"/>
+        <property name="editable"/>
+        <property name="defaultValues"/>
         <property name="voorbeelden"/>
         <property name="kolombreedte" not-null="true"/>
         <many-to-one lazy="false" name="waardeType"/>
@@ -158,6 +160,8 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="admin_fk"/>
         <property name="admin_tabel_opmerkingen"/>
         <property name="volgordenr"/>
+        <property name="editable"/>
+        <property name="geometryeditable"/>
         <set cascade="all-delete-orphan" lazy="false" name="themaData" order-by="dataorder, basisregel desc, label">
             <key column="gegevensbron"/>
             <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
