@@ -1,4 +1,4 @@
-create table custom_input (
+create table maatregel_custom_input (
         id  bigserial not null,
         index int4,
         value varchar(255),

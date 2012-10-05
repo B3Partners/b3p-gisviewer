@@ -1,5 +1,5 @@
 
-    create table custom_input (
+    create table maatregel_custom_input (
         id number(19,0) not null,
         index number(10,0),
         value varchar2(255 char),
