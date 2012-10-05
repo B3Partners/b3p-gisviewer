@@ -54,7 +54,7 @@
         primary key (id)
     );
 
-    alter table custom_input 
+    alter table maatregel_custom_input 
         add constraint FK2AFA2D7CF3317B25 
         foreign key (maatregel_eigenschap) 
         references maatregel_eigenschap;
@@ -74,7 +74,7 @@
         foreign key (maatregel) 
         references maatregel;
 
-    create sequence custom_input_id_seq;
+    create sequence maatregel_custom_input_id_seq;
 
     create sequence maatregel_eigenschap_id_seq;
 

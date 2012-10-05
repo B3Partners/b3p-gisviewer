@@ -53,7 +53,7 @@ create table maatregel_custom_input (
         primary key (id)
     );
 
-    alter table custom_input 
+    alter table maatregel_custom_input 
         add constraint FK2AFA2D7CF3317B25 
         foreign key (maatregel_eigenschap) 
         references maatregel_eigenschap;
