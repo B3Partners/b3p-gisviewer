@@ -214,7 +214,6 @@ public class MaatregelService {
                 for(int i=0; i < eigenschappen.length(); i++){
                     JSONObject eigenschap = eigenschappen.getJSONObject(i);
                     MaatregelEigenschap me = mapper.readValue(eigenschap.toString(),MaatregelEigenschap.class);
-                    me.setMaatregel(mg);
                     mg.addEigenschap(me);
                 }
             }
