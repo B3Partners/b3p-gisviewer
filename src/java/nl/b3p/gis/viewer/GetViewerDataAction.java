@@ -127,8 +127,16 @@ public class GetViewerDataAction extends BaseGisAction {
             }catch(Exception e){
                 logger.error("Param 'onlyFeaturesInGeom' is not a boolean",e);
             }
-        }            
-        request.setAttribute("onlyFeaturesInGeom",onlyFeaturesInGeom);
+        }  
+        
+        String bookmarkAppcode = null;
+        if (FormUtils.nullIfEmpty(request.getParameter("bookmarkAppcode")) != null){
+            bookmarkAppcode = request.getParameter("bookmarkAppcode");
+        }        
+        
+        request.setAttribute("onlyFeaturesInGeom", onlyFeaturesInGeom);
+        request.setAttribute("bookmarkAppcode", bookmarkAppcode);
+        
         return mapping.findForward(ADMINDATAFW);
     }
 

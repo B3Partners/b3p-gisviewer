@@ -13,15 +13,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.utils.ConfigKeeper;
+import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.ViewerAction;
+import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Clusters;
-import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
@@ -76,7 +76,7 @@ public class CollectAdmindata {
     }*/
 
     public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, 
-            String wkt, String jsonCQL, boolean collectGeom, String parentHtmlId) {
+            String wkt, String jsonCQL, boolean collectGeom, String parentHtmlId, String appCode) {
         GegevensBronBean bean = null;
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -122,7 +122,7 @@ public class CollectAdmindata {
                 GisPrincipal user = GisPrincipal.getGisPrincipal(request);
 
                 String layout = null;
-                layout = findDataAdminLayout(thema, user);
+                layout = findDataAdminLayout(thema, user, appCode);
 
                 if (layout == null) {
                     layout = DEFAULT_LAYOUT;
@@ -703,7 +703,7 @@ public class CollectAdmindata {
         return count;
     }
 
-    static private String findDataAdminLayout(Themas thema, GisPrincipal user) throws Exception {
+    static private String findDataAdminLayout(Themas thema, GisPrincipal user, String appCode) throws Exception {
         /* Bepalen welke jsp (layout) voor admindata gebruikt moet worden
          * 1 = uitgebreide jsp
          * 2 = simpel naast elkaar
@@ -714,75 +714,43 @@ public class CollectAdmindata {
         if (thema == null || user == null) {
             return null;
         }
+        
+        WebContext ctx = WebContextFactory.get();
+        HttpServletRequest request = null;
 
-        /* Default ophalen uit configKeeper */
-        Set roles = user.getRoles();
+        if (ctx != null) {
+            request = ctx.getHttpServletRequest();
+        }
 
-        /* Ophalen rollen in configuratie database */
+        /* Applicatie instellingen ophalen */
+        Applicatie app = null;
+        if (appCode != null && appCode.length() > 0) {
+            app = KaartSelectieUtil.getApplicatie(appCode);
+        }
+
+        if (app == null) {
+            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
+            app = defaultApp;
+        }
+        
         ConfigKeeper configKeeper = new ConfigKeeper();
-        Configuratie rollenPrio = null;
+        Map map = configKeeper.getConfigMap(appCode);
 
-        try {
-            rollenPrio = configKeeper.getConfiguratie("rollenPrio", "rollen");
-        } catch (Exception ex) {
-            logger.debug("Fout bij ophalen configKeeper configuratie: " + ex);
-        }
-
-        /* alleen doen als configuratie tabel bestaat */
-        if (rollenPrio == null || rollenPrio.getPropval() == null) {
-            /* geen config gevonden of ingesteld pak de default */
-            return null;
-        }
-
-        String[] configRollen = rollenPrio.getPropval().split(",");
-
-        /* init loop vars */
-        String rolnaam = "";
-        String inlogRol = "";
-
-        Map map = null;
-        Boolean foundRole = false;
-
-        /* Zoeken of gebruiker een rol heeft die in de rollen
-         * configuratie voorkomt. Hoogste rol wordt geladen */
-        for (int i = 0; i < configRollen.length; i++) {
-
-            if (foundRole) {
-                break;
-            }
-
-            rolnaam = configRollen[i];
-
-            /* per rol uit config database loopen door
-             * toegekende rollen */
-            Iterator iter = roles.iterator();
-
-            while (iter.hasNext()) {
-                inlogRol = iter.next().toString();
-
-                if (rolnaam.equals(inlogRol)) {
-                    map = configKeeper.getConfigMap(rolnaam);
-                    foundRole = true;
-
-                    break;
-                }
-            }
-        }
-
-        /* als gevonden rol geen configuratie records heeft dan defaults laden */
+        /* Indien niet aanwezig dan defaults laden */
         if ((map == null) || (map.size() < 1)) {
-            map = configKeeper.getConfigMap("default");
+            map = configKeeper.getDefaultInstellingen();
         }
-
-        String layoutAdminData = "";
+        
+        String layoutAdminData = (String) map.get("layoutAdminData");
+        
         String themaLayout = thema.getLayoutadmindata();
         if ((themaLayout == null) || themaLayout.equals("")) {
             layoutAdminData = (String) map.get("layoutAdminData");
         } else {
             layoutAdminData = themaLayout;
         }
+        
         return layoutAdminData;
-
     }
 
     static public List collectGegevensbronRecordChilds(HttpServletRequest request, List themas, boolean locatie) throws JSONException {
