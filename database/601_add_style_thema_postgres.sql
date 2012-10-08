@@ -1,1 +1,0 @@
-ALTER TABLE themas ADD COLUMN style VARCHAR(255);

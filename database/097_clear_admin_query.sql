@@ -1,1 +1,0 @@
-UPDATE themas SET admin_query = '';
