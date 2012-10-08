@@ -394,9 +394,11 @@ public class EditFeature {
                 JSONArray readOnlyAttrs = new JSONArray();
                 for (Iterator<ThemaData> it1 = readonlyAttributes.iterator(); it1.hasNext();) {
                     ThemaData themaData = it1.next();
-                    Object attr = sf.getAttribute(themaData.getKolomnaam());
                     JSONObject obj = themaData.toJSON();
-                    obj.put("value", attr);
+                    if(themaData.getKolomnaam() != null){
+                        Object attr = sf.getAttribute(themaData.getKolomnaam());
+                        obj.put("value", attr);
+                    }
                     readOnlyAttrs.put(obj);
                 }
                 feat.put("readonly", readOnlyAttrs);
