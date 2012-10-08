@@ -361,7 +361,7 @@ public class EditFeature {
                 if (themaData.isEditable()) {
                     editables.add(themaData);
                 } else {
-                    if (themaData.isBasisregel()) {
+                    if (themaData.isBasisregel() && (!themaData.getDataType().getNaam().equals("Javascript functie"))) {
                         readonlyAttributes.add(themaData);
                     }
                 }
