@@ -1,12 +1,4 @@
 
-    create table maatregel_custom_input (
-        id number(19,0) not null,
-        index number(10,0),
-        value varchar2(255 char),
-        maatregel_eigenschap number(19,0),
-        primary key (id)
-    );
-
     create table maatregel (
         id varchar2(255 char) not null,
         omschrijving varchar2(255 char),
@@ -29,11 +21,27 @@
         primary key (id)
     );
 
+    create table maatregel_custom_input (
+        id number(19,0) not null,
+        index number(10,0),
+        value varchar2(255 char),
+        maatregel varchar2(255 char),
+        primary key (id)
+    );
+
     create table maatregel_eigenschap (
         id number(19,0) not null,
         deficode varchar2(255 char),
         hoeveelheid number(10,0),
         maatregel number(19,0),
+        primary key (id)
+    );
+
+    create table maatregel_eigenschap_custom_input (
+        id number(19,0) not null,
+        index number(10,0),
+        value varchar2(255 char),
+        maatregel_eigenschap number(19,0),
         primary key (id)
     );
 
@@ -55,14 +63,19 @@
     );
 
     alter table maatregel_custom_input 
-        add constraint FK2AFA2D7CF3317B25 
-        foreign key (maatregel_eigenschap) 
-        references maatregel_eigenschap;
+        add constraint FK8AD3200747824F58 
+        foreign key (maatregel) 
+        references maatregel;
 
     alter table maatregel_eigenschap 
         add constraint FK93ABE6E61A053ED 
         foreign key (maatregel) 
         references maatregel_gepland;
+
+    alter table maatregel_eigenschap_custom_input 
+        add constraint FKD8369635F3317B25 
+        foreign key (maatregel_eigenschap) 
+        references maatregel_eigenschap;
 
     alter table maatregel_gepland 
         add constraint FKD26E8AD247824F58 
@@ -75,6 +88,8 @@
         references maatregel;
 
     create sequence maatregel_custom_input_id_seq;
+
+    create sequence maatregel_eigenschap_custom_input_id_seq;
 
     create sequence maatregel_eigenschap_id_seq;
 
