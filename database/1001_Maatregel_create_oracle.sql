@@ -25,7 +25,7 @@
         id number(19,0) not null,
         index number(10,0),
         value varchar2(255 char),
-        maatregel varchar2(255 char),
+        maatregel number(19,0),
         primary key (id)
     );
 
@@ -63,9 +63,9 @@
     );
 
     alter table maatregel_custom_input 
-        add constraint FK8AD3200747824F58 
+        add constraint FK8AD320071A053ED 
         foreign key (maatregel) 
-        references maatregel;
+        references maatregel_gepland;
 
     alter table maatregel_eigenschap 
         add constraint FK93ABE6E61A053ED 

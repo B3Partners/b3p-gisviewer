@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.StringWriter;
 import java.util.List;
 import nl.b3p.viewer.openbareruimte.entities.Maatregel;
+import nl.b3p.viewer.openbareruimte.entities.MaatregelCustomInput;
 import nl.b3p.viewer.openbareruimte.entities.MaatregelEigenschap;
 import nl.b3p.viewer.openbareruimte.entities.MaatregelGepland;
 import nl.b3p.viewer.openbareruimte.entities.RawCrow;
@@ -201,6 +202,20 @@ public class MaatregelService {
             }
             if (plan.has("bronId")){
                 mg.setBronId(plan.getInt("bronId"));
+            }
+            if (mg.getCustomInputs()!=null){
+                for (MaatregelCustomInput mci : mg.getCustomInputs()){
+                    sess.delete(mci);
+                }
+                mg.setCustomInputs(null);
+                sess.flush();
+            }
+            if (plan.has("customInputs")){
+                JSONArray ciArray = plan.getJSONArray("customInputs");
+                for(int i=0; i < ciArray.length(); i++){
+                    MaatregelCustomInput mci = mapper.readValue(ciArray.get(i).toString(),MaatregelCustomInput.class);
+                    mg.addCustomInput(mci);
+                }                    
             }
             if (mg.getEigenschappen()!=null){
                 for (MaatregelEigenschap eigenschap : mg.getEigenschappen()){
