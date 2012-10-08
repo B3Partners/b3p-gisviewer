@@ -288,8 +288,8 @@ public class GetLocationData {
         String eenheid;
         double analyseFactor;
 
-        eenheid = " [km2]";
-        analyseFactor = 1000000.0;
+        eenheid = " [m2]";
+        analyseFactor = 1.0;
         if (results.get("sumPolygon") != null) {
             double sumPolygon = ((Double) results.get("sumPolygon")).doubleValue();
             sumPolygon = roundOneDigit(sumPolygon / analyseFactor);
@@ -314,8 +314,8 @@ public class GetLocationData {
             results.put("avgPolygonFormatted", "Gemiddeld oppervlak " + themaName + Double.toString(avgPolygon) + eenheid);
             results.remove("avgPolygon");
         }
-        eenheid = " [km]";
-        analyseFactor = 1000.0;
+        eenheid = " [m]";
+        analyseFactor = 1.0;
         if (results.get("sumLineString") != null) {
             double sumLineString = ((Double) results.get("sumLineString")).doubleValue();
             sumLineString = roundOneDigit(sumLineString / analyseFactor);
