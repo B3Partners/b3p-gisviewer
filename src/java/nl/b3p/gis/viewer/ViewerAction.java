@@ -81,6 +81,7 @@ public class ViewerAction extends BaseGisAction {
     protected static final String LIST = "list";
     protected static final String LOGIN = "login";
     protected static final String SIMPLE_VIEWER_FW = "simpleviewer";
+    
     private static final String PAGE_GISVIEWER_TAB = "gisviewer_tab";
 
     /*Mogelijke request waarden*/
@@ -117,7 +118,10 @@ public class ViewerAction extends BaseGisAction {
     /*Einde mogelijke request waarden*/
     public static final String ZOEKCONFIGURATIES = "zoekconfiguraties";
     public static final double squareRootOf2 = Math.sqrt(2);
-    public static final String APPCODE = "appCode";
+    public static final String APPCODE = "appCode";    
+    
+    public static final String A11Y_VIEWER_FW = "a11yViewer";
+    public static final String A11Y = "accessibility";
 
     /**
      * Return een hashmap die een property koppelt aan een Action.
@@ -133,7 +137,7 @@ public class ViewerAction extends BaseGisAction {
         hibProp = new ExtendedMethodProperties(LIST);
         hibProp.setDefaultForwardName(LIST);
         hibProp.setAlternateForwardName(FAILURE);
-        map.put(LIST, hibProp);
+        map.put(LIST, hibProp);      
 
         return map;
     }
@@ -184,6 +188,19 @@ public class ViewerAction extends BaseGisAction {
             log.debug("Ongeldige gebruiker. Terug naar login form.");
             
             return mapping.findForward(LOGIN);
+        }
+        
+        String a11yStr = request.getParameter(ViewerAction.A11Y);
+        
+        if (a11yStr != null && !a11yStr.equals("")) {
+            Integer nr = new Integer(a11yStr);
+            
+            if (nr != null && nr == 1) {
+                String appCode = request.getParameter(ViewerAction.APPCODE);
+                request.setAttribute("appName", appCode);
+                
+                return mapping.findForward(A11Y_VIEWER_FW);
+            }
         }
         
         createLists(dynaForm, request);
