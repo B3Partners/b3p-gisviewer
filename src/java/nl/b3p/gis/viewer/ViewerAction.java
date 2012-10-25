@@ -195,10 +195,7 @@ public class ViewerAction extends BaseGisAction {
         if (a11yStr != null && !a11yStr.equals("")) {
             Integer nr = new Integer(a11yStr);
             
-            if (nr != null && nr == 1) {
-                String appCode = request.getParameter(ViewerAction.APPCODE);
-                request.setAttribute("appName", appCode);
-                
+            if (nr != null && nr == 1) {                
                 return mapping.findForward(A11Y_VIEWER_FW);
             }
         }

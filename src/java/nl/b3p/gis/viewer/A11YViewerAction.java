@@ -22,28 +22,219 @@
  */
 package nl.b3p.gis.viewer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import nl.b3p.commons.struts.ExtendedMethodProperties;
+import nl.b3p.gis.utils.ConfigKeeper;
+import nl.b3p.gis.utils.KaartSelectieUtil;
+import nl.b3p.gis.viewer.db.Applicatie;
+import nl.b3p.gis.viewer.services.HibernateUtil;
+import nl.b3p.zoeker.configuratie.Attribuut;
+import nl.b3p.zoeker.configuratie.ZoekAttribuut;
+import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
+import nl.b3p.zoeker.services.ZoekResultaat;
+import nl.b3p.zoeker.services.Zoeker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
+import org.hibernate.Session;
 
 public class A11YViewerAction extends BaseGisAction {
 
-    private static final Log logger = LogFactory.getLog(A11YViewerAction.class);
+    protected static final String LIST = "list";
+    protected static final String SEARCH = "search";
+    protected static final String RESULTS = "results";
+    private Zoeker zoeker;
     
-    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {        
-        logger.debug("Start A11YViewerAction!");
-        
-        return mapping.findForward(SUCCESS);
+    private static final int MAX_SEARCH_RESULTS = 1000;
+    private static final Log logger = LogFactory.getLog(A11YViewerAction.class);
+
+    protected Map getActionMethodPropertiesMap() {
+        Map map = new HashMap();
+
+        ExtendedMethodProperties hibProp;
+
+        hibProp = new ExtendedMethodProperties(LIST);
+        hibProp.setDefaultForwardName(LIST);
+        hibProp.setAlternateForwardName(FAILURE);
+        map.put(LIST, hibProp);
+
+        hibProp = new ExtendedMethodProperties(SEARCH);
+        hibProp.setDefaultForwardName(SEARCH);
+        hibProp.setAlternateForwardName(FAILURE);
+        map.put(SEARCH, hibProp);
+
+        hibProp = new ExtendedMethodProperties(RESULTS);
+        hibProp.setDefaultForwardName(RESULTS);
+        hibProp.setAlternateForwardName(FAILURE);
+        map.put(RESULTS, hibProp);
+
+        return map;
+    }
+
+    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+
+        zoeker = new Zoeker();
+
+        createLists(dynaForm, request);
+
+        return mapping.findForward(LIST);
+    }
+
+    public ActionForward search(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+
+        showZoekVelden(dynaForm, request);
+
+        return mapping.findForward(SEARCH);
+    }
+
+    public ActionForward results(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+
+        showZoekResults(dynaForm, request);
+
+        return mapping.findForward(RESULTS);
     }
 
     @Override
-    protected Map getActionMethodPropertiesMap() {        
-        return new HashMap();
+    protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request)
+            throws Exception {
+
+        super.createLists(dynaForm, request);
+
+        String appCode = (String) request.getParameter("appCode");
+
+        /* Instellingen ophalen en appCode weer op request plaatsen */
+        Applicatie app;
+        if (appCode != null && appCode.length() > 0) {
+            app = KaartSelectieUtil.getApplicatie(appCode);
+        } else {
+            app = KaartSelectieUtil.getDefaultApplicatie();
+
+        }
+
+        appCode = app.getCode();
+
+        request.setAttribute("appCode", appCode);
+
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Map map = configKeeper.getConfigMap(appCode);
+
+        /* Indien niet aanwezig dan defaults laden */
+        if ((map == null) || (map.size() < 1)) {
+            map = configKeeper.getDefaultInstellingen();
+        }
+
+        /* Zoekers tonen voor deze Applicatie */
+        String zoekConfigIds = (String) map.get("zoekConfigIds");
+        zoekConfigIds = zoekConfigIds.replace("\"", "");
+        String[] ids = zoekConfigIds.split(",");
+
+        List<ZoekConfiguratie> zcs = getZoekConfigs(ids);
+        request.setAttribute("zoekConfigs", zcs);
+    }
+
+    private List<ZoekConfiguratie> getZoekConfigs(String[] zoekerIds) {
+        List<ZoekConfiguratie> zcs = new ArrayList<ZoekConfiguratie>();
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        List<ZoekConfiguratie> results = sess.createQuery("from ZoekConfiguratie"
+                + " order by naam").list();
+
+        for (ZoekConfiguratie zc : results) {
+            for (String id : zoekerIds) {
+                if (zc.getId() == Integer.parseInt(id)) {
+                    zcs.add(zc);
+                }
+            }
+        }
+
+        return zcs;
+    }
+
+    private void showZoekVelden(DynaValidatorForm dynaForm, HttpServletRequest request) {
+        String appCode = (String) request.getParameter("appCode");
+        String searchConfigId = (String) request.getParameter("searchConfigId");
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        ZoekConfiguratie zc = (ZoekConfiguratie) sess.get(ZoekConfiguratie.class, new Integer(searchConfigId));
+
+        Set<ZoekAttribuut> zoekVelden = zc.getZoekVelden();
+        request.setAttribute("zoekVelden", zoekVelden);
+
+        for (ZoekAttribuut attr : zoekVelden) {
+            if (attr.getInputtype() == ZoekAttribuut.SELECT_CONTROL) {
+                List<ZoekResultaat> results = zoeker.zoekMetConfiguratie(attr.getInputzoekconfiguratie(), new String[]{"*"}, MAX_SEARCH_RESULTS, new ArrayList());
+                request.setAttribute("dropdown_" + attr.getLabel(), results);
+            }
+        }
+
+        request.setAttribute("appCode", appCode);
+        request.setAttribute("searchConfigId", searchConfigId);
+    }
+
+    private void showZoekResults(DynaValidatorForm dynaForm, HttpServletRequest request) {
+        String appCode = (String) request.getParameter("appCode");
+        String searchConfigId = (String) request.getParameter("searchConfigId");
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        ZoekConfiguratie zc = (ZoekConfiguratie) sess.get(ZoekConfiguratie.class, new Integer(searchConfigId));
+
+        String[] searchStrings = createZoekStringForZoeker(zc.getZoekVelden(), request);
+
+        List<ZoekResultaat> results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList());
+
+        request.setAttribute("results", results);
+        request.setAttribute("appCode", appCode);
+        request.setAttribute("searchConfigId", searchConfigId);
+    }
+
+    private String[] createZoekStringForZoeker(Set<ZoekAttribuut> zoekVelden, HttpServletRequest request) {
+        List<String> values = new ArrayList<String>();
+        Map params = request.getParameterMap();
+               
+        for (ZoekAttribuut attribuut : zoekVelden) {
+            Boolean lijktOp = false;
+            
+            if (attribuut.getType() == Attribuut.GEEN_TYPE) {
+                lijktOp = true;
+            }
+            
+            Iterator it = params.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pairs = (Map.Entry) it.next();
+
+                String param = (String) pairs.getKey();
+                
+                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam()) ) {
+                    String[] waardes = (String[]) pairs.getValue();                
+                    String value = waardes[0];
+                    
+                    Integer getal = null;
+                    
+                    try {
+                        getal = Integer.parseInt(value);
+                    } catch (NumberFormatException nfex) {}                    
+                    
+                    if (lijktOp && !value.equals("") && getal == null) {
+                        values.add("%" + value + "%");
+                    } else {
+                        values.add(value);
+                    }
+                }    
+            }
+        }
+
+        return values.toArray(new String[0]);
     }
 }
