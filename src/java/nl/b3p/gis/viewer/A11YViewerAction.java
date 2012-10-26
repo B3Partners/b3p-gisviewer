@@ -22,6 +22,8 @@
  */
 package nl.b3p.gis.viewer;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,6 +41,7 @@ import nl.b3p.zoeker.configuratie.Attribuut;
 import nl.b3p.zoeker.configuratie.ZoekAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
 import nl.b3p.zoeker.services.ZoekResultaat;
+import nl.b3p.zoeker.services.ZoekResultaatAttribuut;
 import nl.b3p.zoeker.services.Zoeker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,7 +56,6 @@ public class A11YViewerAction extends BaseGisAction {
     protected static final String SEARCH = "search";
     protected static final String RESULTS = "results";
     private Zoeker zoeker;
-    
     private static final int MAX_SEARCH_RESULTS = 1000;
     private static final Log logger = LogFactory.getLog(A11YViewerAction.class);
 
@@ -172,13 +174,18 @@ public class A11YViewerAction extends BaseGisAction {
         Set<ZoekAttribuut> zoekVelden = zc.getZoekVelden();
         request.setAttribute("zoekVelden", zoekVelden);
 
+        Map results = new HashMap();
         for (ZoekAttribuut attr : zoekVelden) {
             if (attr.getInputtype() == ZoekAttribuut.SELECT_CONTROL) {
-                List<ZoekResultaat> results = zoeker.zoekMetConfiguratie(attr.getInputzoekconfiguratie(), new String[]{"*"}, MAX_SEARCH_RESULTS, new ArrayList());
-                request.setAttribute("dropdown_" + attr.getLabel(), results);
+                List<ZoekResultaat> zr = zoeker.zoekMetConfiguratie(attr.getInputzoekconfiguratie(), new String[]{"*"}, MAX_SEARCH_RESULTS, new ArrayList());
+                results.put(attr.getLabel(), zr);
             }
         }
 
+        Map params = createInputParamsMap(zoekVelden, request);
+        request.setAttribute("params", params);
+
+        request.setAttribute("dropdownResults", results);
         request.setAttribute("appCode", appCode);
         request.setAttribute("searchConfigId", searchConfigId);
     }
@@ -194,47 +201,106 @@ public class A11YViewerAction extends BaseGisAction {
 
         List<ZoekResultaat> results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList());
 
+        if (zc.getParentZoekConfiguratie() != null) {
+            request.setAttribute("nextStep", true);
+            request.setAttribute("searchConfigId", zc.getParentZoekConfiguratie().getId());
+        } else {
+            request.setAttribute("nextStep", false);
+            request.setAttribute("searchConfigId", searchConfigId);
+        }
+        
+        request.setAttribute("count", results.size());
         request.setAttribute("results", results);
         request.setAttribute("appCode", appCode);
-        request.setAttribute("searchConfigId", searchConfigId);
     }
 
     private String[] createZoekStringForZoeker(Set<ZoekAttribuut> zoekVelden, HttpServletRequest request) {
         List<String> values = new ArrayList<String>();
         Map params = request.getParameterMap();
-               
+
         for (ZoekAttribuut attribuut : zoekVelden) {
             Boolean lijktOp = false;
-            
+
             if (attribuut.getType() == Attribuut.GEEN_TYPE) {
                 lijktOp = true;
             }
-            
+
             Iterator it = params.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pairs = (Map.Entry) it.next();
 
                 String param = (String) pairs.getKey();
-                
-                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam()) ) {
-                    String[] waardes = (String[]) pairs.getValue();                
+
+                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())) {
+                    String[] waardes = (String[]) pairs.getValue();
                     String value = waardes[0];
-                    
+
                     Integer getal = null;
-                    
+
                     try {
                         getal = Integer.parseInt(value);
-                    } catch (NumberFormatException nfex) {}                    
-                    
+                    } catch (NumberFormatException nfex) {
+                    }
+
                     if (lijktOp && !value.equals("") && getal == null) {
                         values.add("%" + value + "%");
                     } else {
                         values.add(value);
                     }
-                }    
+                }
             }
         }
 
         return values.toArray(new String[0]);
+    }
+
+    private Map createInputParamsMap(Set<ZoekAttribuut> zoekVelden, HttpServletRequest request) {
+        Map searchParams = new HashMap();
+        Map params = request.getParameterMap();
+
+        for (ZoekAttribuut attribuut : zoekVelden) {
+            Boolean lijktOp = false;
+
+            if (attribuut.getType() == Attribuut.GEEN_TYPE) {
+                lijktOp = true;
+            }
+
+            Iterator it = params.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pairs = (Map.Entry) it.next();
+
+                String param = (String) pairs.getKey();
+
+                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())) {
+                    String[] waardes = (String[]) pairs.getValue();
+                    String value = waardes[0];
+
+                    Integer getal = null;
+
+                    try {
+                        getal = Integer.parseInt(value);
+                    } catch (NumberFormatException nfex) {
+                    }
+
+                    if (lijktOp && !value.equals("") && getal == null) {
+                        searchParams.put(attribuut.getLabel(), "%" + value + "%");
+                    } else {
+                        searchParams.put(attribuut.getLabel(), value);
+                    }
+                }
+            }
+        }
+
+        return searchParams;
+    }
+
+    private String urlEncode(String value) {
+        String str = null;
+        
+        try {
+            str = URLEncoder.encode(value, "UTF-8");
+        } catch (UnsupportedEncodingException ex) {}
+        
+        return str;
     }
 }
