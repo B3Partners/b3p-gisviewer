@@ -38,6 +38,7 @@ import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.zoeker.configuratie.Attribuut;
+import nl.b3p.zoeker.configuratie.ResultaatAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
 import nl.b3p.zoeker.services.ZoekResultaat;
@@ -56,7 +57,9 @@ public class A11YViewerAction extends BaseGisAction {
     protected static final String SEARCH = "search";
     protected static final String RESULTS = "results";
     private Zoeker zoeker;
-    private static final int MAX_SEARCH_RESULTS = 1000;
+    private static int MAX_SEARCH_RESULTS = 1000;
+    private static final int MAX_PAGE_LIMIT = 25;
+    
     private static final Log logger = LogFactory.getLog(A11YViewerAction.class);
 
     protected Map getActionMethodPropertiesMap() {
@@ -144,6 +147,11 @@ public class A11YViewerAction extends BaseGisAction {
 
         List<ZoekConfiguratie> zcs = getZoekConfigs(ids);
         request.setAttribute("zoekConfigs", zcs);
+        
+        Integer maxResults = (Integer) map.get("maxResults");
+        if (maxResults != null && maxResults > 0) {
+            MAX_SEARCH_RESULTS = new Integer(maxResults);
+        }
     }
 
     private List<ZoekConfiguratie> getZoekConfigs(String[] zoekerIds) {
@@ -188,6 +196,7 @@ public class A11YViewerAction extends BaseGisAction {
         request.setAttribute("dropdownResults", results);
         request.setAttribute("appCode", appCode);
         request.setAttribute("searchConfigId", searchConfigId);
+        request.setAttribute("searchName", zc.getNaam());
     }
 
     private void showZoekResults(DynaValidatorForm dynaForm, HttpServletRequest request) {
@@ -199,19 +208,85 @@ public class A11YViewerAction extends BaseGisAction {
 
         String[] searchStrings = createZoekStringForZoeker(zc.getZoekVelden(), request);
 
-        List<ZoekResultaat> results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList());
-
-        if (zc.getParentZoekConfiguratie() != null) {
-            request.setAttribute("nextStep", true);
-            request.setAttribute("searchConfigId", zc.getParentZoekConfiguratie().getId());
+        Integer startIndex;
+        Integer limit;
+        if (request.getParameter("startIndex") != null) {
+            startIndex = new Integer(request.getParameter("startIndex"));
         } else {
-            request.setAttribute("nextStep", false);
-            request.setAttribute("searchConfigId", searchConfigId);
+            startIndex = 0;
+        }        
+        if (request.getParameter("limit") != null) {
+            limit = new Integer(request.getParameter("limit"));
+        } else {
+            limit = MAX_PAGE_LIMIT;
         }
         
-        request.setAttribute("count", results.size());
+        if (startIndex < 0) {
+            startIndex = 0;
+        }
+        
+        if (limit < 0) {
+            limit = 0;
+        }
+        
+        if (limit > MAX_PAGE_LIMIT) {
+            limit = MAX_PAGE_LIMIT;
+        }
+        
+        List<ZoekResultaat> results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList(), true, startIndex, limit);
+
+        request.setAttribute("searchConfigId", searchConfigId);
+        
+        if (zc.getParentZoekConfiguratie() != null) {
+            request.setAttribute("nextStep", true);            
+            request.setAttribute("nextSearchConfigId", zc.getParentZoekConfiguratie().getId());
+        } else {
+            request.setAttribute("nextStep", false);
+        }
+        
+        if (results != null && results.size() > 0) {
+            ZoekResultaat r = (ZoekResultaat)results.get(0);            
+            request.setAttribute("count", r.getCount());
+            
+            if (r.getCount() < limit) {
+                limit = r.getCount();
+            }
+        } else {
+            request.setAttribute("count", 0);
+        }
+        
+        request.setAttribute("startIndex", startIndex);
+        request.setAttribute("limit", limit); 
+        
         request.setAttribute("results", results);
         request.setAttribute("appCode", appCode);
+        request.setAttribute("searchName", zc.getNaam());
+        
+        Map params = createResultParamsMap(zc.getResultaatVelden(), request);
+        request.setAttribute("params", params);
+    }
+    
+    private Map createResultParamsMap(Set<ResultaatAttribuut> velden, HttpServletRequest request) {
+        Map resultParams = new HashMap();
+        Map params = request.getParameterMap();
+
+        for (ResultaatAttribuut attribuut : velden) {
+            Iterator it = params.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pairs = (Map.Entry) it.next();
+
+                String param = (String) pairs.getKey();
+
+                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())) {
+                    String[] waardes = (String[]) pairs.getValue();
+                    String value = waardes[0];
+
+                    resultParams.put(attribuut.getLabel(), value);
+                }
+            }
+        }
+
+        return resultParams;
     }
 
     private String[] createZoekStringForZoeker(Set<ZoekAttribuut> zoekVelden, HttpServletRequest request) {
