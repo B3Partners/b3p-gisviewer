@@ -22,8 +22,6 @@
  */
 package nl.b3p.gis.viewer;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -42,7 +40,6 @@ import nl.b3p.zoeker.configuratie.ResultaatAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
 import nl.b3p.zoeker.services.ZoekResultaat;
-import nl.b3p.zoeker.services.ZoekResultaatAttribuut;
 import nl.b3p.zoeker.services.Zoeker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,7 +84,7 @@ public class A11YViewerAction extends BaseGisAction {
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
-
+        
         zoeker = new Zoeker();
 
         createLists(dynaForm, request);
@@ -263,7 +260,10 @@ public class A11YViewerAction extends BaseGisAction {
         request.setAttribute("searchName", zc.getNaam());
         
         Map params = createResultParamsMap(zc.getResultaatVelden(), request);
-        request.setAttribute("params", params);
+        request.setAttribute("params", params);  
+        
+        Map searchparams = createSearchStringMapForResult(zc.getZoekVelden(), request);
+        request.setAttribute("searchparams", searchparams);  
     }
     
     private Map createResultParamsMap(Set<ResultaatAttribuut> velden, HttpServletRequest request) {
@@ -287,6 +287,35 @@ public class A11YViewerAction extends BaseGisAction {
         }
 
         return resultParams;
+    }
+    
+    private Map createSearchStringMapForResult(Set<ZoekAttribuut> zoekVelden, HttpServletRequest request) {
+        Map values = new HashMap();
+        Map params = request.getParameterMap();
+
+        for (ZoekAttribuut attribuut : zoekVelden) {            
+            Iterator it = params.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pairs = (Map.Entry) it.next();
+
+                String param = (String) pairs.getKey();
+
+                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())) {
+                    String[] waardes = (String[]) pairs.getValue();
+                    String value = waardes[0];
+                    
+                    /* TODO: Deze check moet anders. Indien bijpassend resultaatveld ook van het type
+                     * geom is dan niet in map stoppen */
+                    if ( !value.contains("POLYGON") && !value.contains("POINT") &&
+                            !value.contains("LINE") ) {
+                        
+                        values.put(attribuut.getLabel(), value);
+                    }
+                }
+            }
+        }
+
+        return values;
     }
 
     private String[] createZoekStringForZoeker(Set<ZoekAttribuut> zoekVelden, HttpServletRequest request) {
@@ -367,15 +396,5 @@ public class A11YViewerAction extends BaseGisAction {
         }
 
         return searchParams;
-    }
-
-    private String urlEncode(String value) {
-        String str = null;
-        
-        try {
-            str = URLEncoder.encode(value, "UTF-8");
-        } catch (UnsupportedEncodingException ex) {}
-        
-        return str;
     }
 }
