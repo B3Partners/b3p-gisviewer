@@ -129,16 +129,11 @@ public class GetLocationData {
         try {
             sess = HibernateUtil.getSessionFactory().openSession();
             sess.beginTransaction();
-            Themas t = (Themas) sess.get(Themas.class, new Integer(themaId));
-            if (t == null) {
-                return returnValue;
-            }
 
             WebContext ctx = WebContextFactory.get();
             HttpServletRequest request = ctx.getHttpServletRequest();
 
-            Gegevensbron gb = t.getGegevensbron();
-
+            Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, new Integer(themaId));
             Bron b = gb.getBron(request);
 
             if (b == null) {
@@ -147,7 +142,7 @@ public class GetLocationData {
             DataStore ds = b.toDatastore();
             try {
                 //haal alleen de geometry op.
-                String geometryName = DataStoreUtil.getSchema(ds, t).getGeometryDescriptor().getLocalName();
+                String geometryName = "the_geom";
                 ArrayList<String> propertyNames = new ArrayList();
                 propertyNames.add(geometryName);
                 ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);

@@ -12,6 +12,8 @@ public class RecordValueBean {
     public static final String TYPE_URL = "TYPE_URL";
     public static final String TYPE_QUERY = "TYPE_QUERY";
     public static final String TYPE_FUNCTION = "TYPE_FUNCTION";
+    
+    public static final String JAVASCRIPT_COMMAND_SURFACE_AREA = "surfaceArea";
 
     private String type;
     private String value;

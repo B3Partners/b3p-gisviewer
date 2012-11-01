@@ -3,9 +3,11 @@ package nl.b3p.gis.viewer.admindata;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.LineString;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -66,24 +68,24 @@ public class CollectAdmindata {
     public static final String SEARCHID = "searchId";
     public static final String SEARCHCLUSTERID = "searchClusterId";
     public static final String DEFAULT_LAYOUT = "admindata";
+    private static DecimalFormat threeDBFormat = new DecimalFormat("#.##");
 
     /*je wilt juist wel die geom op kunnen halen met een AJAX verzoek!
      * en aangezien je voor DWR ajax unieke functie namen moet hebben deze verwijderd:
      */
     /*public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, String wkt, String cql, String parentHtmlId) throws Exception {
-        boolean collectGeom = false;
-        return fillGegevensBronBean(gegevensBronId, themaId, wkt, cql, collectGeom, parentHtmlId);
-    }*/
-
-    public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId, 
+     boolean collectGeom = false;
+     return fillGegevensBronBean(gegevensBronId, themaId, wkt, cql, collectGeom, parentHtmlId);
+     }*/
+    public GegevensBronBean fillGegevensBronBean(int gegevensBronId, int themaId,
             String wkt, String jsonCQL, boolean collectGeom, String parentHtmlId, String appCode) {
         GegevensBronBean bean = null;
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Transaction tx = null;
-                
+
         try {
-            JSONObject cqlFilters= new JSONObject(jsonCQL);
+            JSONObject cqlFilters = new JSONObject(jsonCQL);
             tx = sess.beginTransaction();
 
             Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensBronId);
@@ -92,7 +94,7 @@ public class CollectAdmindata {
                 List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId order by volgordenr, naam").setInteger("parentId", gb.getId()).list();
 
                 bean = new GegevensBronBean();
-            
+
                 bean.setId(gb.getId());
                 bean.setAdminPk(gb.getAdmin_pk());
                 bean.setParentHtmlId(parentHtmlId);
@@ -108,7 +110,7 @@ public class CollectAdmindata {
                 } else {
                     bean.setTitle(thema.getNaam());
                 }
-                if (thema!=null){
+                if (thema != null) {
                     bean.setOrder(thema.getBelangnr());
                 }
 
@@ -163,27 +165,29 @@ public class CollectAdmindata {
 
                 if (b != null) {
                     Geometry geom = null;
-                    if (wkt!=null)
+                    if (wkt != null) {
                         geom = DataStoreUtil.createGeomFromWKTString(wkt);
+                    }
 
                     List<String> propnames = bean.getKolomNamenList();
                     Filter parentCqlFilter = null;
                     //haal het cql filter op voor de (parent)gegevens bron.
-                    String cql=null;
-                    if (cqlFilters.has(""+gb.getId()))
-                        cql=cqlFilters.getString(""+gb.getId());
-                    if (cql!=null && cql.length()>0) {
+                    String cql = null;
+                    if (cqlFilters.has("" + gb.getId())) {
+                        cql = cqlFilters.getString("" + gb.getId());
+                    }
+                    if (cql != null && cql.length() > 0) {
                         parentCqlFilter = CQL.toFilter(cql);
                     }
-                    
+
                     List<Feature> features = null;
                     features = DataStoreUtil.getFeatures(b, gb, geom, parentCqlFilter, propnames, null, collectGeom);
                     //featuretype waarmee gekeken kan worden of er een geometry in de feature zit. 
-                    DataStore tempDatastore=b.toDatastore();
-                    SimpleFeatureType featureType=null;
-                    try{
-                        featureType= DataStoreUtil.getSchema(tempDatastore, gb);
-                    }finally{
+                    DataStore tempDatastore = b.toDatastore();
+                    SimpleFeatureType featureType = null;
+                    try {
+                        featureType = DataStoreUtil.getSchema(tempDatastore, gb);
+                    } finally {
                         tempDatastore.dispose();
                     }
                     if (features != null && !features.isEmpty()) {
@@ -192,7 +196,7 @@ public class CollectAdmindata {
                             Feature f = (Feature) featureIter.next();
 
                             RecordBean record = null;
-                            record = getRecordBean(f, gb, bean.getLabels());
+                            record = getRecordBean(f, gb, bean.getLabels(), wkt);
 
                             if (record == null) {
                                 continue;
@@ -202,21 +206,21 @@ public class CollectAdmindata {
                              * Als er geen geometry is opgehaald (collectGeom==false)
                              * kijk dan of het feature type wel een geometryDescriptor heeft.
                              */
-                            if (collectGeom){                                
+                            if (collectGeom) {
                                 GeometryAttribute attrib = f.getDefaultGeometryProperty();
-                                if  (attrib!=null){                                
-                                    record.setShowMagicWand(true); 
-                                }else if (attrib == null) {                                    
+                                if (attrib != null) {
+                                    record.setShowMagicWand(true);
+                                } else if (attrib == null) {
                                     record.setShowMagicWand(false);
                                 }
-                            }else{
-                                if (featureType!=null && featureType.getGeometryDescriptor()!=null){
+                            } else {
+                                if (featureType != null && featureType.getGeometryDescriptor() != null) {
                                     record.setShowMagicWand(true);
-                                } else{
+                                } else {
                                     record.setShowMagicWand(false);
                                 }
                             }
-                            
+
                             Iterator iter4 = childBronnen.iterator();
 
                             while (iter4.hasNext()) {
@@ -228,10 +232,11 @@ public class CollectAdmindata {
                                 Filter childFilter = null;
                                 ArrayList<Filter> filters = new ArrayList();
                                 //Haal het stukje CQL op voor de child gegevensbron.
-                                String childCql=null;
-                                if (cqlFilters.has(""+child.getId()))
-                                    childCql=cqlFilters.getString(""+child.getId());
-                                if (childCql!=null && childCql.length()>0) {                                    
+                                String childCql = null;
+                                if (cqlFilters.has("" + child.getId())) {
+                                    childCql = cqlFilters.getString("" + child.getId());
+                                }
+                                if (childCql != null && childCql.length() > 0) {
                                     Filter childCqlFilter = CQL.toFilter(childCql);
                                     filters.add(childCqlFilter);
                                 }
@@ -251,23 +256,23 @@ public class CollectAdmindata {
                                 if (filters.size() > 1) {
                                     childFilter = filterFac.and(filters);
                                 }
-                                
-                                SimpleFeatureImpl feature = (SimpleFeatureImpl)f;
+
+                                SimpleFeatureImpl feature = (SimpleFeatureImpl) f;
                                 int count = 0;
-                                Geometry featureGeom=null;
+                                Geometry featureGeom = null;
                                 //geen count doen, is erg traag.
                                 /*if (feature.getDefaultGeometry()!=null)
-                                    featureGeom=(Geometry) feature.getDefaultGeometry();*/
-                                
-                                
+                                 featureGeom=(Geometry) feature.getDefaultGeometry();*/
+
+
                                 //count = getAantalChildRecords(child, childFilter, featureGeom);
                                 //altijd childs tonen.
                                 count = 1;
-                                JSONObject childCQL= new JSONObject(cqlFilters.toString());
+                                JSONObject childCQL = new JSONObject(cqlFilters.toString());
                                 //voeg het child filter toe aan het json object zodat het de volgende keer gebruikt kan worden.
-                                if (childCQL!=null){
-                                    
-                                    childCQL.put(""+child.getId(), CQL.toCQL(childFilter));
+                                if (childCQL != null) {
+
+                                    childCQL.put("" + child.getId(), CQL.toCQL(childFilter));
                                 }
                                 if (count > 0) {
                                     RecordChildBean childBean = new RecordChildBean();
@@ -277,13 +282,13 @@ public class CollectAdmindata {
                                     childBean.setAantalRecords(count);
                                     childBean.setThemaId(new Integer(themaId).toString());
                                     //childBean.setCql(CQL.toCQL(attrFilter));
-                                    childBean.setCql(childCQL.toString());                                    
+                                    childBean.setCql(childCQL.toString());
                                     childBean.setWkt(wkt);
 
                                     record.addChild(childBean);
                                 }
                             }
-                            
+
                             bean.addRecord(record);
                         }
 
@@ -297,15 +302,15 @@ public class CollectAdmindata {
             tx.commit();
 
         } catch (CQLException cqlEx) {
-            logger.error("Fout tijdens filter: ",cqlEx);
+            logger.error("Fout tijdens filter: ", cqlEx);
 
             if (tx != null && tx.isActive()) {
                 tx.rollback();
             }
-            
+
         } catch (NoSuchElementException nse) {
             logger.error("Verkeerd element in resultaat objectdata: ", nse);
-            
+
             if (tx != null && tx.isActive()) {
                 tx.rollback();
             }
@@ -318,15 +323,17 @@ public class CollectAdmindata {
         }
 
         /*
-        if (bean == null || bean.getRecords() == null) {
-            return null;
-        }
-        */
+         if (bean == null || bean.getRecords() == null) {
+         return null;
+         }
+         */
 
         return bean;
     }
 
-    protected RecordBean getRecordBean(Feature f, Gegevensbron gb, List<LabelBean> label_bean_items) throws SQLException, UnsupportedEncodingException, Exception {
+    protected RecordBean getRecordBean(Feature f, Gegevensbron gb, List<LabelBean> label_bean_items,
+            String wkt) throws SQLException, UnsupportedEncodingException, Exception {
+
         RecordBean rb = new RecordBean();
 
         String adminPk = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
@@ -343,6 +350,7 @@ public class CollectAdmindata {
         Iterator it = label_bean_items.iterator();
         while (it.hasNext()) {
             LabelBean lb = (LabelBean) it.next();
+
             RecordValueBean rvb = new RecordValueBean();
 
             rvb.setType(lb.getType());
@@ -362,7 +370,7 @@ public class CollectAdmindata {
             if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
                 attributeValue = f.getProperty(kolomnaam).getValue();
                 //Kijk of er in de waarde van de kolomnaam een komma zit. Zoja, splits het dan op.
-                if(commando != null && (commando.contains(kolomnaam) || lb.getType().equals(RecordValueBean.TYPE_URL))){
+                if (commando != null && (commando.contains(kolomnaam) || lb.getType().equals(RecordValueBean.TYPE_URL))) {
                     attributeValueList = splitObject(attributeValue, ",");
                 }
             }
@@ -405,8 +413,8 @@ public class CollectAdmindata {
                 }
             } else if (lb.getType().equals(RecordValueBean.TYPE_QUERY)) {
                 HashMap fhm = toHashMap(f);
-                if (attributeValue!=null){
-                    resultValue= attributeValue.toString();
+                if (attributeValue != null) {
+                    resultValue = attributeValue.toString();
                 }
                 //resultValue = createQuery(kolomnaam, attributeValue, commando, fhm);
 
@@ -424,16 +432,34 @@ public class CollectAdmindata {
                 }
 
             } else if (lb.getType().equals(RecordValueBean.TYPE_FUNCTION)) {
-                resultValue = createFunction(kolomnaam, attributeValue, adminPk, pkValue, ggbId, commando, eenheid);
 
-                if (attributeValueList != null && attributeValueList.size() > 1) {
-                    for (int i = 0; i < attributeValueList.size(); i++) {
-                        Object localValue = attributeValueList.get(i);
-                        String lFunction = createFunction(kolomnaam, localValue, adminPk, pkValue, ggbId, commando, eenheid);
-                        resultList.add(lFunction);
+                /* Indien commando surfaceArea dan verschil geom en getekende polygon berekenen */
+                if (lb.getCommando().contains(RecordValueBean.JAVASCRIPT_COMMAND_SURFACE_AREA)) {
+                    if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
+                        rvb.setType(RecordValueBean.TYPE_DATA);
+
+                        Geometry recordGeom = (Geometry) f.getProperty(kolomnaam).getValue();
+                        String result = calcSurfaceAreaDifference(recordGeom, wkt);
+
+                        if (result != null) {
+                            resultValue = result;
+                        } else {
+                            resultValue = "-";
+                        }
+                    }
+                } else {
+                    resultValue = createFunction(kolomnaam, attributeValue, adminPk, pkValue, ggbId, commando, eenheid);
+
+                    if (attributeValueList != null && attributeValueList.size() > 1) {
+                        for (int i = 0; i < attributeValueList.size(); i++) {
+                            Object localValue = attributeValueList.get(i);
+                            String lFunction = createFunction(kolomnaam, localValue, adminPk, pkValue, ggbId, commando, eenheid);
+                            resultList.add(lFunction);
+                        }
                     }
                 }
             }
+
             rvb.setValue(resultValue);
             rvb.setValueList(resultList);
 
@@ -443,11 +469,36 @@ public class CollectAdmindata {
         return rb;
     }
 
+    private String calcSurfaceAreaDifference(Geometry geom, String wkt) {
+        String result = null;
+
+        try {
+            Geometry mapPoly = DataStoreUtil.createGeomFromWKTString(wkt);
+            Geometry intersection = mapPoly.intersection(geom);
+
+            intersection.setSRID(28992);
+            if (intersection != null) {
+                if (intersection instanceof LineString) {
+                    Double len = intersection.getLength() / 1000;
+                    result = threeDBFormat.format(len) + " km";
+                } else {
+                    Double area = intersection.getArea() / 1000000;
+                    result = threeDBFormat.format(area) + " km2";
+                }
+            }
+        } catch (Exception ex) {
+            logger.error("Fout tijden berekenen oppervlakte verschil:", ex);
+        }
+
+        return result;
+    }
+
     /**
      * In het eerste geval, wanneer het gaat om data, betreft dit de kolomnaam.
      * Als deze kolomnaam ingevuld staat hoeft deze alleen opgehaald te worden
      * en aan de arraylist regel toegevoegd te worden.
-     * */
+     *
+     */
     private String createData(Object attributeValue) {
         if (attributeValue == null) {
             return null;
@@ -456,9 +507,9 @@ public class CollectAdmindata {
     }
 
     /**
-     * In het tweede geval dient de informatie in de thema data als link naar een andere
-     * informatiebron. Deze link zal enigszins aangepast moeten worden om tot 
-     * werkende link te komen.
+     * In het tweede geval dient de informatie in de thema data als link naar
+     * een andere informatiebron. Deze link zal enigszins aangepast moeten
+     * worden om tot werkende link te komen.
      */
     private String createUrl(String attributeName, Object attributeValue, String adminPk, Object pkValue, String ggbIdName, String ggbId, String commando) {
         StringBuffer url;
@@ -499,8 +550,8 @@ public class CollectAdmindata {
     }
 
     /**
-     * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu een
-     * een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
+     * De laatste mogelijkheid betreft een query. Vanuit de themadata wordt nu
+     * een een commando url opgehaald en deze wordt met de kolomnaam aangevuld.
      */
     private String createQuery(String attributeName, Object attributeValue, String commando, HashMap fhm) {
         if (commando == null) {
@@ -508,7 +559,7 @@ public class CollectAdmindata {
         }
         if (commando.contains("[") && commando.contains("]")) {
             //vervang de eventuele csv in 1 waarde van die csv
-            if (attributeName != null && attributeValue!=null) {
+            if (attributeName != null && attributeValue != null) {
                 fhm.put(attributeName, attributeValue);
             }
             String newCommando = null;
@@ -631,10 +682,12 @@ public class CollectAdmindata {
         }
         return url.toString();
     }
+
     /**
-     * Maak een count op de kinderen. Als er een geometry wordt meegegeven wordt er ook gekeken
-     * of de kinderen in de geometry liggen (vaak van de parent). Als je ze niet mee geeft dan 
-     * worden de kinderen bepaalt aan de hand van de foreign key.
+     * Maak een count op de kinderen. Als er een geometry wordt meegegeven wordt
+     * er ook gekeken of de kinderen in de geometry liggen (vaak van de parent).
+     * Als je ze niet mee geeft dan worden de kinderen bepaalt aan de hand van
+     * de foreign key.
      */
     protected int getAantalChildRecords(Gegevensbron childGb, Filter filter, Geometry geom) throws Exception {
         int count = -1;
@@ -714,7 +767,7 @@ public class CollectAdmindata {
         if (thema == null || user == null) {
             return null;
         }
-        
+
         WebContext ctx = WebContextFactory.get();
         HttpServletRequest request = null;
 
@@ -732,7 +785,7 @@ public class CollectAdmindata {
             Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
             app = defaultApp;
         }
-        
+
         ConfigKeeper configKeeper = new ConfigKeeper();
         Map map = configKeeper.getConfigMap(appCode);
 
@@ -740,23 +793,23 @@ public class CollectAdmindata {
         if ((map == null) || (map.size() < 1)) {
             map = configKeeper.getDefaultInstellingen();
         }
-        
+
         String layoutAdminData = (String) map.get("layoutAdminData");
-        
+
         String themaLayout = thema.getLayoutadmindata();
         if ((themaLayout == null) || themaLayout.equals("")) {
             layoutAdminData = (String) map.get("layoutAdminData");
         } else {
             layoutAdminData = themaLayout;
         }
-        
+
         return layoutAdminData;
     }
 
     static public List collectGegevensbronRecordChilds(HttpServletRequest request, List themas, boolean locatie) throws JSONException {
         Geometry geom = getGeometry(request);
-        String wkt=null;
-        if (geom!=null){
+        String wkt = null;
+        if (geom != null) {
             wkt = geom.toText();
         }
 
@@ -766,7 +819,7 @@ public class CollectAdmindata {
         Iterator iter = themas.iterator();
         while (iter.hasNext()) {
             Themas thema = (Themas) iter.next();
-            logger.debug("checking thema: " + thema==null?"<null>":thema.getNaam() );
+            logger.debug("checking thema: " + thema == null ? "<null>" : thema.getNaam());
             if (locatie && !thema.isLocatie_thema()) {
                 continue;
             }
@@ -784,28 +837,29 @@ public class CollectAdmindata {
                 if (filter != null) {
                     gbCQL = CQL.toCQL(filter);
                 }
-                JSONObject cqlFilters= new JSONObject();
+                JSONObject cqlFilters = new JSONObject();
                 //Haal het extra CQL filter op als die is meegegeven.
-                if (FormUtils.nullIfEmpty(request.getParameter("extraCriteria"))!=null){
-                    try{
-                        cqlFilters=new JSONObject(request.getParameter("extraCriteria"));
+                if (FormUtils.nullIfEmpty(request.getParameter("extraCriteria")) != null) {
+                    try {
+                        cqlFilters = new JSONObject(request.getParameter("extraCriteria"));
                         String cql = null;
-                        if (cqlFilters.has(""+gbId))
-                            cql=cqlFilters.getString(""+gbId);
-                        if (FormUtils.nullIfEmpty(cql)!=null){
-                            if (gbCQL==null){
-                                gbCQL="";
-                            }else{
-                                gbCQL+=" && ";
-                            }
-                            gbCQL+=cql;
+                        if (cqlFilters.has("" + gbId)) {
+                            cql = cqlFilters.getString("" + gbId);
                         }
-                    }catch (JSONException je){
-                        cqlFilters= new JSONObject();
+                        if (FormUtils.nullIfEmpty(cql) != null) {
+                            if (gbCQL == null) {
+                                gbCQL = "";
+                            } else {
+                                gbCQL += " && ";
+                            }
+                            gbCQL += cql;
+                        }
+                    } catch (JSONException je) {
+                        cqlFilters = new JSONObject();
                         logger.error("Fout bij converteren ExtraCriteria(JSON) naar een JSONObject");
                     }
-                }                
-                cqlFilters.put(""+gbId, gbCQL);
+                }
+                cqlFilters.put("" + gbId, gbCQL);
 
                 RecordChildBean childBean = new RecordChildBean();
                 childBean.setId(gbId);
@@ -834,9 +888,9 @@ public class CollectAdmindata {
         } else {
             GeometryFactory gf = new GeometryFactory();
             double[] coords = getCoords(request);
-            if (coords==null){
-                geometry=null;
-            }else if (coords.length == 2) {
+            if (coords == null) {
+                geometry = null;
+            } else if (coords.length == 2) {
                 geometry = gf.createPoint(new Coordinate(coords[0], coords[1]));
             } else if (coords.length == 10) {
                 Coordinate[] coordinates = new Coordinate[5];
@@ -915,10 +969,10 @@ public class CollectAdmindata {
     static public Filter getExtraFilter(Themas t, HttpServletRequest request) {
         ArrayList<Filter> extraFilters = new ArrayList<Filter>();
         //controleer of er een extra sld filter meegegeven is en of die op dit thema moet worden toegepast.
-        Filter sldFilter = createSldFilter(t, request);    
-        if (sldFilter!=null){
+        Filter sldFilter = createSldFilter(t, request);
+        if (sldFilter != null) {
             extraFilters.add(sldFilter);
-        }        
+        }
         //controleer of er een organization code is voor dit thema
         //TODO: Dit moet er echt uit. Dit doen zoals hierboven. In een CQL stoppen!
         String organizationcodekey = t.getOrganizationcodekey();
@@ -928,10 +982,12 @@ public class CollectAdmindata {
             Filter organizationFilter = FilterBuilder.createEqualsFilter(organizationcodekey, organizationcode);
             extraFilters.add(organizationFilter);
         }
-        if (extraFilters.size()==0)
+        if (extraFilters.size() == 0) {
             return null;
-        if (extraFilters.size()==1)
-            return extraFilters.get(0);        
+        }
+        if (extraFilters.size() == 1) {
+            return extraFilters.get(0);
+        }
         //groter dan 1 dus 'and' doen:
         return FilterBuilder.getFactory().and(extraFilters);
     }
