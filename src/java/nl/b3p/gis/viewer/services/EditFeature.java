@@ -318,6 +318,7 @@ public class EditFeature {
             fc = fs.getFeatures(filter);
 
             List<Point> multiPoints = new ArrayList<Point>();
+            List<LineString> multiLines = new ArrayList<LineString>();
             featureIt = fc.iterator();
             JSONArray features = new JSONArray();
             while (featureIt.hasNext()) {
@@ -367,6 +368,11 @@ public class EditFeature {
                             Point p = (Point) geom.getGeometryN(i);
                             multiPoints.add(p);
                         }
+                    } else if (geom instanceof MultiLineString) {                        
+                        for (int i =0; i < geom.getNumGeometries(); i++) {
+                            LineString l = (LineString) geom.getGeometryN(i);
+                            multiLines.add(l);
+                        }
                     } else {
                         feat.put("geom", geom.toText());
                     }
@@ -377,6 +383,11 @@ public class EditFeature {
                 if (multiPoints != null && multiPoints.size() > 0) {
                     for (Point p : multiPoints) {
                         feat.put("geom", p.toText());
+                        features.put(feat);
+                    }
+                } else if (multiLines != null && multiLines.size() > 0) {
+                    for (LineString l : multiLines) {
+                        feat.put("geom", l.toText());
                         features.put(feat);
                     }
                 } else {
@@ -463,6 +474,15 @@ public class EditFeature {
                             GeometryFactory factory = JTSFactoryFinder.getGeometryFactory(null);
                             Point[] points = new Point[] {(Point)g};
                             g = (MultiPoint) factory.createMultiPoint(points);
+                        }
+                    }
+                    
+                    if (ad.getType().getBinding() == MultiLineString.class) {
+                        int num = g.getNumGeometries();
+                        if (num == 1) {
+                            GeometryFactory factory = JTSFactoryFinder.getGeometryFactory(null);
+                            LineString[] lines = new LineString[] {(LineString)g};
+                            g = (MultiLineString) factory.createMultiLineString(lines);
                         }
                     }
 
