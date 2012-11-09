@@ -196,6 +196,12 @@ public class PrintAction extends BaseHibernateAction {
         info.setBbox(bbox);
         info.setOpmerking(remark);
         info.setKwaliteit(kwaliteit);
+        
+        String[] legendUrls = new String[2];
+        legendUrls[0] = "http://192.168.1.15:8084/kaartenbalie/services/e84fd9f44587683512f2c00ff36d243f?SERVICE=PROXY&PURL=P%2BadfyTb58FFOO9nDeKBou%2BRW3ZDMPovT4h7MY09sbvy%2BWIFCgr3HrYX4TQLZ1ZyqEH8yh5LUARG5sMOGT3D3e3PjNoGi6udSSEbhIuurNtMGiUu6uUABe2UtcPKL74WaKPKuMaW%2Fvsvd%2B6yrBbvyeNdbQu2%2FBYaGTEFme1Y4XDQP03b3lucMj1GF4c5BcYUmbZsglLh1qrWmn1hlULaFezRZ3FWQSBLNJmtBmnuSVwj6ktOjTsqA0ybsvzrYgzG";
+        legendUrls[1] = "http://192.168.1.15:8084/kaartenbalie/services/e84fd9f44587683512f2c00ff36d243f?SERVICE=PROXY&PURL=P%2BadfyTb58FFOO9nDeKBou%2BRW3ZDMPovT4h7MY09sbvy%2BWIFCgr3HrYX4TQLZ1ZyqEH8yh5LUARfvR5aZNz5iT9PgpCCqTB4BAZEGAF2RL8yjYXF8C2BgEEod%2FySPv7trJ%2FxL%2F3FwjG7f5vwgwOdrCbu4O98FsPJFwDpq%2BsrSL6BsvXCMpTepMGpQwWYKkXgXrDxhypRaaT4oeRm57KnDOzRZ3FWQSBLNJmtBmnuSVwj6ktOjTsqA0ybsvzrYgzG";
+        
+        info.setLegendUrls(legendUrls);
 
         /* doorgeven mimetype en template */
         String mimeType = null;
