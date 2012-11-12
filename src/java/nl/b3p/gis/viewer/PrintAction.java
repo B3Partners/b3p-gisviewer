@@ -24,8 +24,10 @@ package nl.b3p.gis.viewer;
 
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -50,7 +52,6 @@ import org.apache.struts.validator.DynaValidatorForm;
 public class PrintAction extends BaseHibernateAction {
 
     private static final Log logFile = LogFactory.getLog(PrintAction.class);
-
     protected static final String PRINT = "print";
     protected static final String IMAGE = "image";
     private static final String METADATA_TITLE = "Kaartexport B3P Gisviewer";
@@ -90,10 +91,16 @@ public class PrintAction extends BaseHibernateAction {
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         CombineImageSettings settings = getCombineImageSettings(request);
-        
+
         String imageId = CombineImagesServlet.uniqueName("");
         request.getSession().setAttribute(imageId, settings);
         dynaForm.set("imageId", imageId);
+
+        /* Legenda items klaarzetten voor jsp. Deze legenda urls zijn door de viewer.js 
+         via een formulier gesubmit. In de getCombineImageSettings worden deze gesplit
+         en in een Map<laag naam, legenda url> settings gestopt. De gebruiker kan in
+         het printvoorbeeld nog kiezen welke legenda plaatjes in de print moeten komen. */
+        request.getSession().setAttribute("legendItems", settings.getLegendMap());
 
         return mapping.findForward(SUCCESS);
     }
@@ -196,13 +203,28 @@ public class PrintAction extends BaseHibernateAction {
         info.setBbox(bbox);
         info.setOpmerking(remark);
         info.setKwaliteit(kwaliteit);
-        
-        String[] legendUrls = new String[2];
-        legendUrls[0] = "http://192.168.1.15:8084/kaartenbalie/services/e84fd9f44587683512f2c00ff36d243f?SERVICE=PROXY&PURL=P%2BadfyTb58FFOO9nDeKBou%2BRW3ZDMPovT4h7MY09sbvy%2BWIFCgr3HrYX4TQLZ1ZyqEH8yh5LUARG5sMOGT3D3e3PjNoGi6udSSEbhIuurNtMGiUu6uUABe2UtcPKL74WaKPKuMaW%2Fvsvd%2B6yrBbvyeNdbQu2%2FBYaGTEFme1Y4XDQP03b3lucMj1GF4c5BcYUmbZsglLh1qrWmn1hlULaFezRZ3FWQSBLNJmtBmnuSVwj6ktOjTsqA0ybsvzrYgzG";
-        legendUrls[1] = "http://192.168.1.15:8084/kaartenbalie/services/e84fd9f44587683512f2c00ff36d243f?SERVICE=PROXY&PURL=P%2BadfyTb58FFOO9nDeKBou%2BRW3ZDMPovT4h7MY09sbvy%2BWIFCgr3HrYX4TQLZ1ZyqEH8yh5LUARfvR5aZNz5iT9PgpCCqTB4BAZEGAF2RL8yjYXF8C2BgEEod%2FySPv7trJ%2FxL%2F3FwjG7f5vwgwOdrCbu4O98FsPJFwDpq%2BsrSL6BsvXCMpTepMGpQwWYKkXgXrDxhypRaaT4oeRm57KnDOzRZ3FWQSBLNJmtBmnuSVwj6ktOjTsqA0ybsvzrYgzG";
-        
-        info.setLegendUrls(legendUrls);
 
+        /* Legenda urls klaarzetten. Hier worden de aangevinkte laagnamen
+         vergeleken met de keys die al klaargezet waren in de 
+         Map<laag naam, legenda url> settings. De bijbehornede legenda url wordt
+         in een List gestopt en doorgegeven aan de xsl. */
+        String[] arr = (String[]) dynaForm.get("legendItems");
+        List<String> legendUrlsList = new ArrayList<String>();
+        if (arr != null && arr.length > 0) {
+            Map legendMap = settings.getLegendMap();            
+            
+            for (int i = 0; i < arr.length; i++) {
+                String keyStr = arr[i];
+
+                if (legendMap != null && legendMap.containsKey(keyStr)) {
+                    String url = (String) legendMap.get(keyStr);
+                    legendUrlsList.add(url);
+                }
+            }
+        }
+
+        info.setLegendUrls(legendUrlsList);
+        
         /* doorgeven mimetype en template */
         String mimeType = null;
 
@@ -231,7 +253,7 @@ public class PrintAction extends BaseHibernateAction {
         String requestUrl = request.getRequestURL().toString();
 
         int lastIndex = requestUrl.lastIndexOf("/");
-        
+
         String basePart = requestUrl.substring(0, lastIndex);
         String servletPart = "/services/PrintServlet?";
         String imageUrl = basePart + servletPart;
@@ -244,7 +266,8 @@ public class PrintAction extends BaseHibernateAction {
         String wkt = FormUtils.nullIfEmpty(request.getParameter("wkts"));
         String tilings = FormUtils.nullIfEmpty(request.getParameter("tilings"));
         String mapsizes = FormUtils.nullIfEmpty(request.getParameter("mapsizes"));
-        
+        String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
+
         CombineImageSettings settings = new CombineImageSettings();
 
         String[] urls = null;
@@ -259,13 +282,26 @@ public class PrintAction extends BaseHibernateAction {
             wkts = wkt.split(";");
             settings.setWktGeoms(wkts);
         }
-        
+
+        Map legendMap = new HashMap();
+        if (legendUrls != null) {
+            logFile.debug("legendUrls: " + legendUrls);
+            String[] arr = legendUrls.split(";");
+
+            for (int i = 0; i < arr.length; i++) {
+                String[] legendUrlsArr = arr[i].split("#");
+                legendMap.put(legendUrlsArr[0], legendUrlsArr[1]);
+            }
+
+            settings.setLegendMap(legendMap);
+        }
+
         /* Tiling settings van POST form:
          * bbox, resolutions, tileWidth, tileHeight, serviceUrl */
         String[] tilingSettings = null;
         if (tilings != null) {
             tilingSettings = tilings.split(";");
-            
+
             if (tilingSettings != null && tilingSettings.length == 5) {
                 settings.setTilingBbox(tilingSettings[0]);
                 settings.setTilingResolutions(tilingSettings[1]);
@@ -274,19 +310,19 @@ public class PrintAction extends BaseHibernateAction {
                 settings.setTilingServiceUrl(tilingSettings[4]);
             }
         }
-        
+
         if (tilingSettings != null && tilingSettings.length < 5) {
             throw new Exception("Er zijn niet voldoende parameters voor printen tiling.");
         }
-        
-        if ( (urls == null && tilingSettings == null) || (urls != null && urls.length == 0 ) ) {
+
+        if ((urls == null && tilingSettings == null) || (urls != null && urls.length == 0)) {
             throw new Exception("Er zijn geen verzoeken naar plaatjes gevonden.");
         }
 
         String reqWidth = request.getParameter(OGCRequest.WMS_PARAM_WIDTH);
         String reqHeight = request.getParameter(OGCRequest.WMS_PARAM_HEIGHT);
         String reqBbox = request.getParameter(OGCRequest.WMS_PARAM_BBOX);
-        
+
         if (reqWidth != null && reqHeight != null && reqBbox != null) {
             // gebruik info uit request
             settings.setWidth(new Integer(reqWidth));
@@ -304,18 +340,18 @@ public class PrintAction extends BaseHibernateAction {
             settings.setHeight(height);
             settings.setBbox(bbox);
         }
-        
+
         /* Indien geen wms url beschikbaar om width en height uit te halen pad dan
          * waardes uit post formulier direct van controller opgehaald */
         String[] mapSizeSettings = null;
         if (urls == null && mapsizes != null) {
             mapSizeSettings = mapsizes.split(";");
-            
+
             if (mapSizeSettings != null && mapSizeSettings.length == 3) {
                 settings.setWidth(new Integer(mapSizeSettings[0]));
                 settings.setHeight(new Integer(mapSizeSettings[1]));
                 settings.setBbox(mapSizeSettings[2]);
-                
+
                 /* TODO: Kijken of dit netter kan. Nu wordt er in de createmappdf.js
                  * een imageSize uit url[0] &width gehaald. Alleen werkt dit niet als
                  * er geen gewone wms url aanwezig is. Dus als er alleen een tiling laag
@@ -330,8 +366,7 @@ public class PrintAction extends BaseHibernateAction {
         if (mimeType != null && !mimeType.equals("")) {
             settings.setMimeType(mimeType);
         }
-        
+
         return settings;
     }
-
 }

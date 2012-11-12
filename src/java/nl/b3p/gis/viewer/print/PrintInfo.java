@@ -1,5 +1,6 @@
 package nl.b3p.gis.viewer.print;
 
+import java.util.List;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
@@ -13,7 +14,7 @@ public class PrintInfo {
     private String bbox;
     private String opmerking;
     private int kwaliteit;
-    private String[] legendUrls;
+    private List<String> legendUrls;
 
     public PrintInfo() {
     }    
@@ -73,11 +74,11 @@ public class PrintInfo {
     }
 
     @XmlElement(name="legendUrls")
-    public String[] getLegendUrls() {
+    public List<String> getLegendUrls() {
         return legendUrls;
     }
 
-    public void setLegendUrls(String[] legendUrls) {
+    public void setLegendUrls(List<String> legendUrls) {
         this.legendUrls = legendUrls;
     }
 }
