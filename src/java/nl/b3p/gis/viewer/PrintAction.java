@@ -40,6 +40,7 @@ import nl.b3p.gis.viewer.print.PrintServlet;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.struts.BaseHibernateAction;
 import nl.b3p.imagetool.CombineImageSettings;
+import nl.b3p.imagetool.CombineImageSettings.Bbox;
 import nl.b3p.imagetool.CombineImagesHandler;
 import nl.b3p.ogc.utils.OGCRequest;
 import org.apache.commons.logging.Log;
@@ -101,7 +102,10 @@ public class PrintAction extends BaseHibernateAction {
          en in een Map<laag naam, legenda url> settings gestopt. De gebruiker kan in
          het printvoorbeeld nog kiezen welke legenda plaatjes in de print moeten komen. */
         request.getSession().setAttribute("legendItems", settings.getLegendMap());
-
+        
+        Integer currentScale = calcCurrentScale(settings);
+        dynaForm.set("scale", currentScale);
+        
         return mapping.findForward(SUCCESS);
     }
 
@@ -149,6 +153,47 @@ public class PrintAction extends BaseHibernateAction {
 
         return null;
     }
+    
+    private Integer calcCurrentScale(CombineImageSettings settings) { 
+        Double newMapWidth = settings.getBbox().getMaxx() - settings.getBbox().getMinx();        
+        Double scale = newMapWidth / (settings.getWidth() * 0.00028);
+        
+        return scale.intValue();
+    }
+    
+    private String calculateBboxForScale(CombineImageSettings settings, Integer scale) {  
+        logFile.debug("SCALE: " + scale);  
+        
+        Integer mapWidth = settings.getWidth();
+        Integer mapHeight = settings.getHeight();
+        
+        Double newMapWidth = Math.ceil( scale * (mapWidth * 0.00028));
+        Double newMapHeight = Math.ceil( scale * (mapHeight * 0.00028));
+        
+        logFile.debug("NEW MAP WIDTH: " + newMapWidth);     
+        logFile.debug("NEW MAP HEIGHT: " + newMapHeight); 
+        
+        double minx = settings.getBbox().getMinx();
+        double miny = settings.getBbox().getMiny();        
+        double maxx = settings.getBbox().getMaxx();
+        double maxy = settings.getBbox().getMaxy();
+        
+        logFile.debug("CURRENT BBOX: " + minx + "," + miny + "," + maxx + "," + maxy);
+        
+        double centerX = (maxx - minx) / 2 + minx;
+        double centerY = (maxy - miny) / 2 + miny;
+        
+        logFile.debug("CENTER X: " + centerX + " CENTER Y: " + centerY);
+        
+        String newMinX = Double.toString(centerX - (newMapWidth / 2));
+        String newMaxX = Double.toString(centerX + (newMapWidth / 2));
+        String newMinY = Double.toString(centerY - (newMapHeight / 2));
+        String newMaxY = Double.toString(centerY + (newMapHeight / 2));
+        
+        logFile.debug("NEW BBOX: " + newMinX + "," + newMinY + "," + newMaxX + "," + newMaxY);
+        
+        return newMinX + "," + newMinY + "," + newMaxX + "," + newMaxY;
+    }
 
     public ActionForward print(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
@@ -166,7 +211,7 @@ public class PrintAction extends BaseHibernateAction {
 
         /* huidige CombineImageSettings ophalen */
         CombineImageSettings settings = (CombineImageSettings) request.getSession().getAttribute(imageId);
-
+        
         /* bbox klaarzetten voor xsl */
         String minx = Double.toString(settings.getBbox().getMinx());
         String miny = Double.toString(settings.getBbox().getMiny());
@@ -203,6 +248,18 @@ public class PrintAction extends BaseHibernateAction {
         info.setBbox(bbox);
         info.setOpmerking(remark);
         info.setKwaliteit(kwaliteit);
+        
+        /* Indien schhaal ingevuld in printvoorbeeld de bbox opnieuw berekenen. */
+        Integer currentScale = calcCurrentScale(settings);
+        String oldBBox = calculateBboxForScale(settings, currentScale);  
+        
+        Integer newScale = (Integer) dynaForm.get("scale");    
+        String newBbox = null;
+        if (newScale != null & newScale > 0) {
+            newBbox = calculateBboxForScale(settings, newScale);            
+            info.setBbox(newBbox);
+            settings.setBbox(newBbox);
+        }
 
         /* Legenda urls klaarzetten. Hier worden de aangevinkte laagnamen
          vergeleken met de keys die al klaargezet waren in de 
