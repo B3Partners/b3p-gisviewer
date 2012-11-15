@@ -161,36 +161,29 @@ public class PrintAction extends BaseHibernateAction {
         return scale.intValue();
     }
     
-    private String calculateBboxForScale(CombineImageSettings settings, Integer scale) {  
-        logFile.debug("SCALE: " + scale);  
-        
+    private String calculateBboxForScale(CombineImageSettings settings, Integer scale) {         
         Integer mapWidth = settings.getWidth();
         Integer mapHeight = settings.getHeight();
         
+        /* Calculate new width in map units assuming a default 
+         * pixel on screen of 0.28mm */
         Double newMapWidth = Math.ceil( scale * (mapWidth * 0.00028));
         Double newMapHeight = Math.ceil( scale * (mapHeight * 0.00028));
-        
-        logFile.debug("NEW MAP WIDTH: " + newMapWidth);     
-        logFile.debug("NEW MAP HEIGHT: " + newMapHeight); 
         
         double minx = settings.getBbox().getMinx();
         double miny = settings.getBbox().getMiny();        
         double maxx = settings.getBbox().getMaxx();
         double maxy = settings.getBbox().getMaxy();
         
-        logFile.debug("CURRENT BBOX: " + minx + "," + miny + "," + maxx + "," + maxy);
-        
+        /* Calculate center of current bounding box */
         double centerX = (maxx - minx) / 2 + minx;
         double centerY = (maxy - miny) / 2 + miny;
         
-        logFile.debug("CENTER X: " + centerX + " CENTER Y: " + centerY);
-        
+        /* Calculate new bounding box for scale */
         String newMinX = Double.toString(centerX - (newMapWidth / 2));
         String newMaxX = Double.toString(centerX + (newMapWidth / 2));
         String newMinY = Double.toString(centerY - (newMapHeight / 2));
         String newMaxY = Double.toString(centerY + (newMapHeight / 2));
-        
-        logFile.debug("NEW BBOX: " + newMinX + "," + newMinY + "," + newMaxX + "," + newMaxY);
         
         return newMinX + "," + newMinY + "," + newMaxX + "," + newMaxY;
     }
@@ -259,6 +252,7 @@ public class PrintAction extends BaseHibernateAction {
             newBbox = calculateBboxForScale(settings, newScale);            
             info.setBbox(newBbox);
             settings.setBbox(newBbox);
+            info.setScale(newScale);
         }
 
         /* Legenda urls klaarzetten. Hier worden de aangevinkte laagnamen

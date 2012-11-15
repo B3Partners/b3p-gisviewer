@@ -6,7 +6,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
 @XmlRootElement(name="info")
-@XmlType(propOrder = {"titel","datum","imageUrl","bbox","opmerking","kwaliteit","legendUrls"})
+@XmlType(propOrder = {"titel","datum","imageUrl","bbox","opmerking","kwaliteit","legendUrls","scale"})
 public class PrintInfo {
     private String titel;
     private String datum;
@@ -15,6 +15,7 @@ public class PrintInfo {
     private String opmerking;
     private int kwaliteit;
     private List<String> legendUrls;
+    private Integer scale;
 
     public PrintInfo() {
     }    
@@ -80,5 +81,14 @@ public class PrintInfo {
 
     public void setLegendUrls(List<String> legendUrls) {
         this.legendUrls = legendUrls;
+    }
+
+    @XmlElement(name="scale")
+    public Integer getScale() {
+        return scale;
+    }
+
+    public void setScale(Integer scale) {
+        this.scale = scale;
     }
 }
