@@ -40,7 +40,6 @@ import nl.b3p.gis.viewer.print.PrintServlet;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.struts.BaseHibernateAction;
 import nl.b3p.imagetool.CombineImageSettings;
-import nl.b3p.imagetool.CombineImageSettings.Bbox;
 import nl.b3p.imagetool.CombineImagesHandler;
 import nl.b3p.ogc.utils.OGCRequest;
 import org.apache.commons.logging.Log;
@@ -187,6 +186,34 @@ public class PrintAction extends BaseHibernateAction {
         
         return newMinX + "," + newMinY + "," + newMaxX + "," + newMaxY;
     }
+    
+    private float calcPixelSizeForResolution(Integer ppi) {  
+        float ratio = (float) 1 / ppi;
+        float pixelSize = (float) ratio * 25.4f;
+        
+        return (float) pixelSize / 1000;
+    }
+    
+    private Integer calcNewMapWidthFromPPI(Integer ppi, Double paperWidthInInches) {
+        Double w = Math.ceil(ppi * paperWidthInInches);
+        
+        return w.intValue();
+    }
+    
+    /**
+     * Calculate new scale given a ppi, map width and paper size
+     * @see http://www.britishideas.com/2009/09/22/map-scales-and-printing-with-mapnik/
+    **/
+    private Integer calcScaleForHigherPPI(Integer ppi, Integer mapWidthInMeters, 
+            Double paperWidthInInches) {
+        
+        float pixelSize = calcPixelSizeForResolution(ppi);
+        Integer newMapWidth = calcNewMapWidthFromPPI(ppi, paperWidthInInches);        
+        
+        Double schaal = Math.ceil( mapWidthInMeters / (newMapWidth * pixelSize) );
+        
+        return schaal.intValue();
+    }    
 
     public ActionForward print(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
@@ -254,6 +281,30 @@ public class PrintAction extends BaseHibernateAction {
             settings.setBbox(newBbox);
             info.setScale(newScale);
         }
+        
+        /* 
+         * Test voor grotere print resoluties
+        
+        Integer newWidthPx = calcNewMapWidthFromPPI(300, 7.5);
+        double maxX = settings.getBbox().getMaxx();
+        double minX = settings.getBbox().getMinx();
+        
+        Double bla = Math.ceil(maxX - minX);
+        Integer currentWidth = bla.intValue();
+        
+        Integer schaalEnzo = calcScaleForHigherPPI(300, currentWidth, 7.5);
+        if (schaalEnzo != null & schaalEnzo > 0) {
+            newBbox = calculateBboxForScale(settings, schaalEnzo);      
+            settings.setBbox(newBbox);
+            info.setBbox(newBbox);            
+            info.setScale(schaalEnzo);  
+            info.setKwaliteit(newWidthPx);
+            
+            logFile.debug("NEW BBOX: " + newBbox);
+            logFile.debug("NEW SCALE: " + schaalEnzo);
+            logFile.debug("NEW MAP SIZE PX: " + newWidthPx);            
+        }
+        */
 
         /* Legenda urls klaarzetten. Hier worden de aangevinkte laagnamen
          vergeleken met de keys die al klaargezet waren in de 
