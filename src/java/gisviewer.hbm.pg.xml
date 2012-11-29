@@ -156,6 +156,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property column="toonurl" name="toonUrl" type="boolean"/>
         <property name="pagina" not-null="true" type="string"/>
         <property column="volgordenr" name="volgordeNr" type="integer"/>
+        <property name="kleur" type="string"/>
         <property name="auteur" type="string"/>
         <property name="cdate" not-null="true" type="timestamp"/>
     </class>

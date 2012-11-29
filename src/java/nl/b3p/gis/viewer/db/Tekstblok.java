@@ -14,6 +14,7 @@ public class Tekstblok {
     private Boolean toonUrl;
     private String pagina;
     private Integer volgordeNr;
+    private String kleur;
     private String auteur;
     private Date cdate;
 
@@ -88,4 +89,13 @@ public class Tekstblok {
     public void setVolgordeNr(Integer volgordeNr) {
         this.volgordeNr = volgordeNr;
     }
+
+    public String getKleur() {
+        return kleur;
+    }
+
+    public void setKleur(String kleur) {
+        this.kleur = kleur;
+    }
+
 }
