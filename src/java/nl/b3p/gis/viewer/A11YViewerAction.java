@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.utils.KaartSelectieUtil;
@@ -40,6 +41,7 @@ import nl.b3p.zoeker.configuratie.ResultaatAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
 import nl.b3p.zoeker.services.ZoekResultaat;
+import nl.b3p.zoeker.services.ZoekResultaatAttribuut;
 import nl.b3p.zoeker.services.Zoeker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,6 +54,7 @@ public class A11YViewerAction extends BaseGisAction {
 
     protected static final String LIST = "list";
     protected static final String SEARCH = "search";
+    protected static final String START_LOCATIE = "startLocation";
     protected static final String RESULTS = "results";
     private Zoeker zoeker;
     private static int MAX_SEARCH_RESULTS = 1000;
@@ -78,6 +81,11 @@ public class A11YViewerAction extends BaseGisAction {
         hibProp.setDefaultForwardName(RESULTS);
         hibProp.setAlternateForwardName(FAILURE);
         map.put(RESULTS, hibProp);
+        
+        hibProp = new ExtendedMethodProperties(START_LOCATIE);
+        hibProp.setDefaultForwardName(START_LOCATIE);
+        hibProp.setAlternateForwardName(FAILURE);
+        map.put(START_LOCATIE, hibProp);
 
         return map;
     }
@@ -106,6 +114,29 @@ public class A11YViewerAction extends BaseGisAction {
         showZoekResults(dynaForm, request);
 
         return mapping.findForward(RESULTS);
+    }
+    
+    public ActionForward startLocation(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+        
+        /*
+        String appCode = (String) request.getParameter("appCode");
+        String searchConfigId = (String) request.getParameter("searchConfigId");
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        ZoekConfiguratie zc = (ZoekConfiguratie) sess.get(ZoekConfiguratie.class, new Integer(searchConfigId));
+        */
+        
+        String startGeom = (String) request.getParameter("start_geom");
+        
+        if (startGeom != null && !startGeom.equals("")) {
+            HttpSession session = request.getSession(true);
+            session.setAttribute("startGeom", startGeom);
+            
+            request.setAttribute("startGeom", startGeom);
+        }
+        
+        return mapping.findForward(START_LOCATIE);
     }
 
     @Override
@@ -248,6 +279,15 @@ public class A11YViewerAction extends BaseGisAction {
             if (r.getCount() < limit) {
                 limit = r.getCount();
             }
+            
+            boolean startLocation = false;
+            for (ZoekResultaatAttribuut attr : r.getAttributen()) {
+                if (attr.getType() == Attribuut.START_GEOMETRY_TYPE) {
+                    startLocation = true;
+                }
+            }
+            
+            request.setAttribute("startLocation", startLocation);           
         } else {
             request.setAttribute("count", 0);
         }
