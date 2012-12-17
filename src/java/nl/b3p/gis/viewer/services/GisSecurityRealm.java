@@ -48,7 +48,6 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     private static final String FORM_PASSWORD = "j_password";
     private static final String FORM_CODE = "j_code";
     private static final String CAPABILITIES_QUERYSTRING = "REQUEST=GetCapabilities&VERSION=1.1.1&SERVICE=WMS";
-
     static protected Map<String, ServiceProvider> perUserNameSPCache = new HashMap();
 
     public Principal authenticate(SecurityRequestWrapper request) {
@@ -58,9 +57,9 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
 
         HttpSession session = request.getSession();
         session.setAttribute("loginForm", true);
-        
+
         return authenticate(username, password, code, request);
-     }
+    }
 
     public Principal getAuthenticatedPrincipal(String username, String password) {
         return authenticate(username, password);
@@ -105,13 +104,13 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             String code, SecurityRequestWrapper request) {
 
         WMSCapabilitiesReader wmscr = new WMSCapabilitiesReader();
-        ServiceProvider sp = null; 
+        ServiceProvider sp = null;
 
         /* TODO: Wat te doen als de Applicatie een gebruikerscode heeft die ongeldig is
-        Bijvoorbeeld ABC ? Ik denk dat je dan gewoon niet kunt inloggen. Misschien aan gisviewerconfig
-        kant controleren of ingevulde gebruikerscode bij opslaan van een Applicatie wel
-        geldig is ?
-        */
+         Bijvoorbeeld ABC ? Ik denk dat je dan gewoon niet kunt inloggen. Misschien aan gisviewerconfig
+         kant controleren of ingevulde gebruikerscode bij opslaan van een Applicatie wel
+         geldig is ?
+         */
 
         /* Indien via code ingelogd cachen met code */
         String key = "";
@@ -161,7 +160,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                  * de gecachte serviceprovider is gezet en houden we die tegen het
                  * ingevulde wachtwoord aan.
                  */
-                if (username != null && username.length() > 0 && sp.getPassword() != null ) {
+                if (username != null && username.length() > 0 && sp.getPassword() != null) {
                     if (!sp.getPassword().equals(password)) {
                         return null;
                     }
@@ -173,7 +172,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                     log.info("EXPIRED: Login for " + sp.getUserName() + " has expired on " + df.format(expDate));
                     return null;
                 }
-                
+
             } else {
                 sp = wmscr.getProvider(location, username, password, ip);
 
@@ -184,7 +183,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                     log.info("EXPIRED: Login for " + sp.getUserName() + " has expired on " + df.format(expDate));
                     return null;
 
-                } else {                    
+                } else {
                     if (username != null && password != null && password.length() > 0) {
                         sp.setPassword(password);
                     }
@@ -213,20 +212,20 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         if (sp.getUserName() != null) {
             username = sp.getUserName();
         }
-        
+
         if (username == null || username.length() < 1) {
-             username = HibernateUtil.ANONYMOUS_USER;
+            username = HibernateUtil.ANONYMOUS_USER;
         }
 
         log.debug("Login for user: " + username);
-        
+
         return new GisPrincipal(username, password, code, sp);
     }
 
     private static boolean isExpired(Date expireDate) {
         Date now = new Date();
 
-        if (expireDate.before(now)) {
+        if (expireDate != null && expireDate.before(now)) {
             return true;
         }
 
@@ -282,7 +281,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
 
     public static synchronized ServiceProvider getFromSPCache(String userName) {
 
-        return (ServiceProvider)perUserNameSPCache.get(userName);
+        return (ServiceProvider) perUserNameSPCache.get(userName);
     }
 
     public static synchronized void flushSPCache() {
