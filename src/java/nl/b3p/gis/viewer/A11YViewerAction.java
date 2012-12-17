@@ -59,7 +59,6 @@ public class A11YViewerAction extends BaseGisAction {
     private Zoeker zoeker;
     private static int MAX_SEARCH_RESULTS = 1000;
     private static final int MAX_PAGE_LIMIT = 25;
-    
     private static final Log logger = LogFactory.getLog(A11YViewerAction.class);
 
     protected Map getActionMethodPropertiesMap() {
@@ -81,7 +80,7 @@ public class A11YViewerAction extends BaseGisAction {
         hibProp.setDefaultForwardName(RESULTS);
         hibProp.setAlternateForwardName(FAILURE);
         map.put(RESULTS, hibProp);
-        
+
         hibProp = new ExtendedMethodProperties(START_LOCATIE);
         hibProp.setDefaultForwardName(START_LOCATIE);
         hibProp.setAlternateForwardName(FAILURE);
@@ -92,7 +91,7 @@ public class A11YViewerAction extends BaseGisAction {
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
-        
+
         zoeker = new Zoeker();
 
         createLists(dynaForm, request);
@@ -115,27 +114,22 @@ public class A11YViewerAction extends BaseGisAction {
 
         return mapping.findForward(RESULTS);
     }
-    
+
     public ActionForward startLocation(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
-        
-        /*
-        String appCode = (String) request.getParameter("appCode");
-        String searchConfigId = (String) request.getParameter("searchConfigId");
 
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        ZoekConfiguratie zc = (ZoekConfiguratie) sess.get(ZoekConfiguratie.class, new Integer(searchConfigId));
-        */
-        
+        String appCode = (String) request.getParameter("appCode");
+        request.setAttribute("appCode", appCode);
+
         String startGeom = (String) request.getParameter("start_geom");
-        
+
         if (startGeom != null && !startGeom.equals("")) {
             HttpSession session = request.getSession(true);
             session.setAttribute("startGeom", startGeom);
-            
+
             request.setAttribute("startGeom", startGeom);
         }
-        
+
         return mapping.findForward(START_LOCATIE);
     }
 
@@ -175,7 +169,7 @@ public class A11YViewerAction extends BaseGisAction {
 
         List<ZoekConfiguratie> zcs = getZoekConfigs(ids);
         request.setAttribute("zoekConfigs", zcs);
-        
+
         Integer maxResults = (Integer) map.get("maxResults");
         if (maxResults != null && maxResults > 0) {
             MAX_SEARCH_RESULTS = new Integer(maxResults);
@@ -242,70 +236,76 @@ public class A11YViewerAction extends BaseGisAction {
             startIndex = new Integer(request.getParameter("startIndex"));
         } else {
             startIndex = 0;
-        }        
+        }
         if (request.getParameter("limit") != null) {
             limit = new Integer(request.getParameter("limit"));
         } else {
             limit = MAX_PAGE_LIMIT;
         }
-        
+
         if (startIndex < 0) {
             startIndex = 0;
         }
-        
+
         if (limit < 0) {
             limit = 0;
         }
-        
+
         if (limit > MAX_PAGE_LIMIT) {
             limit = MAX_PAGE_LIMIT;
         }
-        
-        List<ZoekResultaat> results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList(), true, startIndex, limit);
+
+        List<ZoekResultaat> results = new ArrayList<ZoekResultaat>();
+
+        if (zoeker == null) {
+            zoeker = new Zoeker();
+        }
+
+        results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList(), true, startIndex, limit);
 
         request.setAttribute("searchConfigId", searchConfigId);
-        
+
         if (zc.getParentZoekConfiguratie() != null) {
-            request.setAttribute("nextStep", true);            
+            request.setAttribute("nextStep", true);
             request.setAttribute("nextSearchConfigId", zc.getParentZoekConfiguratie().getId());
         } else {
             request.setAttribute("nextStep", false);
         }
-        
+
         if (results != null && results.size() > 0) {
-            ZoekResultaat r = (ZoekResultaat)results.get(0);            
+            ZoekResultaat r = (ZoekResultaat) results.get(0);
             request.setAttribute("count", r.getCount());
-            
+
             if (r.getCount() < limit) {
                 limit = r.getCount();
             }
-            
+
             boolean startLocation = false;
             for (ZoekResultaatAttribuut attr : r.getAttributen()) {
                 if (attr.getType() == Attribuut.START_GEOMETRY_TYPE) {
                     startLocation = true;
                 }
             }
-            
-            request.setAttribute("startLocation", startLocation);           
+
+            request.setAttribute("startLocation", startLocation);
         } else {
             request.setAttribute("count", 0);
         }
-        
+
         request.setAttribute("startIndex", startIndex);
-        request.setAttribute("limit", limit); 
-        
+        request.setAttribute("limit", limit);
+
         request.setAttribute("results", results);
         request.setAttribute("appCode", appCode);
         request.setAttribute("searchName", zc.getNaam());
-        
+
         Map params = createResultParamsMap(zc.getResultaatVelden(), request);
-        request.setAttribute("params", params);  
-        
+        request.setAttribute("params", params);
+
         Map searchparams = createSearchStringMapForResult(zc.getZoekVelden(), request);
-        request.setAttribute("searchparams", searchparams);  
+        request.setAttribute("searchparams", searchparams);
     }
-    
+
     private Map createResultParamsMap(Set<ResultaatAttribuut> velden, HttpServletRequest request) {
         Map resultParams = new HashMap();
         Map params = request.getParameterMap();
@@ -328,12 +328,12 @@ public class A11YViewerAction extends BaseGisAction {
 
         return resultParams;
     }
-    
+
     private Map createSearchStringMapForResult(Set<ZoekAttribuut> zoekVelden, HttpServletRequest request) {
         Map values = new HashMap();
         Map params = request.getParameterMap();
 
-        for (ZoekAttribuut attribuut : zoekVelden) {            
+        for (ZoekAttribuut attribuut : zoekVelden) {
             Iterator it = params.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pairs = (Map.Entry) it.next();
@@ -343,12 +343,12 @@ public class A11YViewerAction extends BaseGisAction {
                 if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())) {
                     String[] waardes = (String[]) pairs.getValue();
                     String value = waardes[0];
-                    
+
                     /* TODO: Deze check moet anders. Indien bijpassend resultaatveld ook van het type
                      * geom is dan niet in map stoppen */
-                    if ( !value.contains("POLYGON") && !value.contains("POINT") &&
-                            !value.contains("LINE") ) {
-                        
+                    if (!value.contains("POLYGON") && !value.contains("POINT")
+                            && !value.contains("LINE")) {
+
                         values.put(attribuut.getLabel(), value);
                     }
                 }
