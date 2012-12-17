@@ -11,10 +11,10 @@
         deficode varchar2(255 char),
         eenheid varchar2(255 char),
         regelnr number(10,0),
-        release varchar2(255 char),
+        "release" varchar2(255 char),
         swc number(10,0),
         tekst clob,
-        type varchar2(255 char),
+        "type" varchar2(255 char),
         volgnr number(10,0),
         vrij varchar2(255 char),
         wc number(10,0),
@@ -23,8 +23,8 @@
 
     create table maatregel_custom_input (
         id number(19,0) not null,
-        index number(10,0),
-        value varchar2(255 char),
+        "index" number(10,0),
+        "value" varchar2(255 char),
         maatregel number(19,0),
         primary key (id)
     );
@@ -37,10 +37,10 @@
         primary key (id)
     );
 
-    create table maatregel_eigenschap_custom_input (
+    create table mrl_eigenschap_custom_in (
         id number(19,0) not null,
-        index number(10,0),
-        value varchar2(255 char),
+        "index" number(10,0),
+        "value" varchar2(255 char),
         maatregel_eigenschap number(19,0),
         primary key (id)
     );
@@ -72,7 +72,7 @@
         foreign key (maatregel) 
         references maatregel_gepland;
 
-    alter table maatregel_eigenschap_custom_input 
+    alter table mrl_eigenschap_custom_in
         add constraint FKD8369635F3317B25 
         foreign key (maatregel_eigenschap) 
         references maatregel_eigenschap;
@@ -87,9 +87,11 @@
         foreign key (maatregel) 
         references maatregel;
 
+	create sequence maatregel_acties_id_seq;
+	
     create sequence maatregel_custom_input_id_seq;
 
-    create sequence maatregel_eigenschap_custom_input_id_seq;
+    create sequence mrl_eigenschap_custom_in_id_sq;
 
     create sequence maatregel_eigenschap_id_seq;
 
