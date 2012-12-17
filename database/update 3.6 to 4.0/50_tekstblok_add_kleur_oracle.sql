@@ -1,0 +1,1 @@
+ALTER TABLE tekstblok ADD COLUMN kleur varchar2(255 char);
