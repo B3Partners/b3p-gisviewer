@@ -23,6 +23,7 @@
 package nl.b3p.gis.viewer;
 
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -114,6 +115,23 @@ public class A11YViewerAction extends BaseGisAction {
 
         return mapping.findForward(RESULTS);
     }
+    
+    /* TODO: Create Pojo to hold map of searchresults with corresponding searchconfig. Display
+     * above searches and results pages
+     */
+    private Map createStartResultMap(HttpServletRequest request) {
+        Map map = new HashMap();
+
+        Enumeration attrs = request.getParameterNames();
+        while (attrs.hasMoreElements()) {            
+            String key = (String) attrs.nextElement();            
+            String value = (String) request.getParameter(key);
+            
+            map.put(key, value);
+        }
+
+        return map;
+    }
 
     public ActionForward startLocation(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
@@ -122,7 +140,6 @@ public class A11YViewerAction extends BaseGisAction {
         request.setAttribute("appCode", appCode);
 
         String startGeom = (String) request.getParameter("start_geom");
-
         if (startGeom != null && !startGeom.equals("")) {
             HttpSession session = request.getSession(true);
             session.setAttribute("startGeom", startGeom);
