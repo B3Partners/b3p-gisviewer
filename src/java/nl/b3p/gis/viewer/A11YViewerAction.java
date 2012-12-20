@@ -41,6 +41,7 @@ import nl.b3p.zoeker.configuratie.Attribuut;
 import nl.b3p.zoeker.configuratie.ResultaatAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
+import nl.b3p.zoeker.services.A11YResult;
 import nl.b3p.zoeker.services.ZoekResultaat;
 import nl.b3p.zoeker.services.ZoekResultaatAttribuut;
 import nl.b3p.zoeker.services.Zoeker;
@@ -99,10 +100,21 @@ public class A11YViewerAction extends BaseGisAction {
 
         return mapping.findForward(LIST);
     }
+    
+    private void setBreadCrumb(HttpServletRequest request) {
+        HttpSession session = request.getSession(true);
+        A11YResult a11yResult = (A11YResult) session.getAttribute("a11yResult");
+        
+        if (a11yResult != null) {
+            request.setAttribute("a11yResultMap", a11yResult.getResultMap());
+        }
+    }
 
     public ActionForward search(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
 
+        setBreadCrumb(request);
+        
         showZoekVelden(dynaForm, request);
 
         return mapping.findForward(SEARCH);
@@ -115,23 +127,6 @@ public class A11YViewerAction extends BaseGisAction {
 
         return mapping.findForward(RESULTS);
     }
-    
-    /* TODO: Create Pojo to hold map of searchresults with corresponding searchconfig. Display
-     * above searches and results pages
-     */
-    private Map createStartResultMap(HttpServletRequest request) {
-        Map map = new HashMap();
-
-        Enumeration attrs = request.getParameterNames();
-        while (attrs.hasMoreElements()) {            
-            String key = (String) attrs.nextElement();            
-            String value = (String) request.getParameter(key);
-            
-            map.put(key, value);
-        }
-
-        return map;
-    }
 
     public ActionForward startLocation(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
@@ -139,15 +134,50 @@ public class A11YViewerAction extends BaseGisAction {
         String appCode = (String) request.getParameter("appCode");
         request.setAttribute("appCode", appCode);
 
-        String startGeom = (String) request.getParameter("start_geom");
-        if (startGeom != null && !startGeom.equals("")) {
+        A11YResult a11yResult = createA11YResult(request);
+        
+        if (a11yResult != null) {
             HttpSession session = request.getSession(true);
-            session.setAttribute("startGeom", startGeom);
-
-            request.setAttribute("startGeom", startGeom);
+            session.setAttribute("a11yResult", a11yResult);
         }
 
         return mapping.findForward(START_LOCATIE);
+    }
+    
+    /* This pojo holds the search results with the hidden form fields keys, values
+     * in the Map and some other search attributes like appCode and searchConfigId.
+     */
+    private A11YResult createA11YResult(HttpServletRequest request) {
+        A11YResult result = new A11YResult();
+
+        Enumeration attrs = request.getParameterNames();
+        while (attrs.hasMoreElements()) {            
+            String key = (String) attrs.nextElement();            
+            String value = (String) request.getParameter(key);
+            
+            if (key.equals("startGeom")) {
+                result.setStartWkt(value);
+            }            
+            if (key.equals("nextStep")) {
+                result.setHasNextStep(true);
+            }            
+            if (key.equals("appCode")) {
+                result.setAppCode(value);
+            }            
+            if (key.equals("searchConfigId") && !value.equals("")) {
+                result.setSearchConfigId(new Integer(value));
+            }
+            
+            if ( !key.equals("startGeom") && !key.equals("nextStep") && !key.equals("appCode")
+                && !key.equals("searchConfigId") && !key.equals("startLocation") ) {
+                
+                result.addResult(key, value);
+            }      
+            
+            logger.debug("REQUEST PARAM: " + key + "=" + value);
+        }
+
+        return result;
     }
 
     @Override
