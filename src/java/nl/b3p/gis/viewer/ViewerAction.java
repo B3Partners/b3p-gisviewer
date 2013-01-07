@@ -24,10 +24,12 @@ package nl.b3p.gis.viewer;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
+import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.PrecisionModel;
+import com.vividsolutions.jts.io.WKTReader;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -63,6 +65,7 @@ import nl.b3p.wms.capabilities.SrsBoundingBox;
 import nl.b3p.wms.capabilities.TileSet;
 import nl.b3p.zoeker.configuratie.ZoekAttribuut;
 import nl.b3p.zoeker.configuratie.ZoekConfiguratie;
+import nl.b3p.zoeker.services.A11YResult;
 import nl.b3p.zoeker.services.Zoeker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -81,7 +84,6 @@ public class ViewerAction extends BaseGisAction {
     protected static final String LIST = "list";
     protected static final String LOGIN = "login";
     protected static final String SIMPLE_VIEWER_FW = "simpleviewer";
-    
     private static final String PAGE_GISVIEWER_TAB = "gisviewer_tab";
 
     /*Mogelijke request waarden*/
@@ -118,8 +120,7 @@ public class ViewerAction extends BaseGisAction {
     /*Einde mogelijke request waarden*/
     public static final String ZOEKCONFIGURATIES = "zoekconfiguraties";
     public static final double squareRootOf2 = Math.sqrt(2);
-    public static final String APPCODE = "appCode";    
-    
+    public static final String APPCODE = "appCode";
     public static final String A11Y_VIEWER_FW = "a11yViewer";
     public static final String A11Y = "accessibility";
 
@@ -137,7 +138,7 @@ public class ViewerAction extends BaseGisAction {
         hibProp = new ExtendedMethodProperties(LIST);
         hibProp.setDefaultForwardName(LIST);
         hibProp.setAlternateForwardName(FAILURE);
-        map.put(LIST, hibProp);      
+        map.put(LIST, hibProp);
 
         return map;
     }
@@ -177,29 +178,29 @@ public class ViewerAction extends BaseGisAction {
      *
      * @throws Exception
      */
-    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {      
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);        
-        
+    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+
         /* User is null bij ongeldige inloggegevens, ip check of als de
          * Applicatie geen gebruikerscode heeft gekoppeld. */
-        if (user == null) {            
+        if (user == null) {
             SecurityFilter.saveRequestInformation(request);
-            
+
             log.debug("Ongeldige gebruiker. Terug naar login form.");
-            
+
             return mapping.findForward(LOGIN);
         }
-        
+
         String a11yStr = request.getParameter(ViewerAction.A11Y);
-        
+
         if (a11yStr != null && !a11yStr.equals("")) {
             Integer nr = new Integer(a11yStr);
-            
-            if (nr != null && nr == 1) {                
+
+            if (nr != null && nr == 1) {
                 return mapping.findForward(A11Y_VIEWER_FW);
             }
         }
-        
+
         createLists(dynaForm, request);
 
         Map configMap = (Map) request.getAttribute("configMap");
@@ -237,7 +238,7 @@ public class ViewerAction extends BaseGisAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         /* Als app nog steeds null is dan is er geen default app en is er geen geldige
-        appcode meegegeven. Dan een default app maken en opslaan */
+         appcode meegegeven. Dan een default app maken en opslaan */
         if (app == null) {
             app = KaartSelectieUtil.getNewApplicatie();
             app.setDefault_app(true);
@@ -313,15 +314,15 @@ public class ViewerAction extends BaseGisAction {
         if ((map == null) || (map.size() < 1)) {
             map = configKeeper.getDefaultInstellingen();
         }
-        
+
         /* Kijken of er een dropdown gemaakt moet worden voor user wms lijst 
          * in kaartselectiescherm */
         Boolean useUserWmsDropdown = (Boolean) map.get("useUserWmsDropdown");
-        
+
         if (useUserWmsDropdown != null) {
             HttpSession session = request.getSession(true);
             session.setAttribute("useUserWmsDropdown", useUserWmsDropdown);
-        }  
+        }
 
         request.setAttribute("configMap", map);
 
@@ -537,7 +538,7 @@ public class ViewerAction extends BaseGisAction {
                         String upper = veldNaam.toUpperCase();
                         waarde = request.getParameter(upper);
                     }
-                    
+
                     if (waarde == null) {
                         String lower = veldNaam.toLowerCase();
                         waarde = request.getParameter(lower);
@@ -548,17 +549,17 @@ public class ViewerAction extends BaseGisAction {
                     }
 
                     /* Bij het zoekveld type lijkt op moet er ook %% om de waarde heen
-                    anders vind de back-end niets */
+                     anders vind de back-end niets */
                     if (za.getType() == 0) {
                         //waarde = "%" + waarde.trim() + "%";
                     }
-                    
+
                     if (i < 1) {
                         params += waarde;
                     } else {
                         params += "," + waarde;
                     }
-                    
+
                     i++;
                 }
 
@@ -608,6 +609,24 @@ public class ViewerAction extends BaseGisAction {
         //get tekstblokken
         List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_TAB);
         request.setAttribute("tekstBlokken", tekstBlokken);
+
+        /* Set search result with startlocation on request. Used in search tab 
+         * and placing a location marker on map */
+        HttpSession session = request.getSession(true);
+        A11YResult a11yResult = (A11YResult) session.getAttribute("a11yResult");
+
+        if (a11yResult != null && a11yResult.getStartWkt() != null) {
+            request.setAttribute("a11yResultMap", a11yResult.getResultMap());
+
+            Geometry startGeom = createGeomFromWkt(a11yResult.getStartWkt());
+            if (startGeom != null && startGeom.getCentroid() != null) {
+                Double startLocationX = startGeom.getCentroid().getX();
+                Double startLocationY = startGeom.getCentroid().getY();
+
+                request.setAttribute("startLocationX", startLocationX);
+                request.setAttribute("startLocationY", startLocationY);
+            }
+        }
     }
 
     private Coordinate[] getCoordinateArray(double minx, double miny, double maxx, double maxy) {
@@ -728,7 +747,7 @@ public class ViewerAction extends BaseGisAction {
             Clusters cluster = (Clusters) clMap.get("cluster");
 
             /* Cluster hoeft niet getoond te worden als er eigen kaartlagen
-            aangezet zijn maar hier hoort het cluster niet bij */
+             aangezet zijn maar hier hoort het cluster niet bij */
             boolean showCluster = false;
             for (UserKaartlaag laag : userlagen) {
 
@@ -918,13 +937,13 @@ public class ViewerAction extends BaseGisAction {
             /* user kaartlaag default on zetten */
             if (defaultOn && lagen.size() > 0) {
                 jsonCluster.put("visible", "on");
-            } else if (!defaultOn && lagen.size() > 0) {   
+            } else if (!defaultOn && lagen.size() > 0) {
                 jsonCluster.put("visible", "off");
-                
+
                 /* Toch nog aanzetten als id is meegegeven in url */
                 if (actieveThemas != null && actieveThemas.contains(themaId)) {
                     jsonCluster.put("visible", "on");
-                }               
+                }
             }
 
             /* Extra property die gebruikt wordt voor highLightThemaObject
@@ -1012,32 +1031,32 @@ public class ViewerAction extends BaseGisAction {
                         jsonCluster.put("tileHeight", ts.getHeight());
                         jsonCluster.put("tileFormat", ts.getFormat());
                         jsonCluster.put("tileLayers", ts.getLayerString());
-                        
+
                         if (ts.getBoundingBox() != null) {
                             jsonCluster.put("tileSrs", ts.getBoundingBox().getSrs());
                         } else {
                             jsonCluster.put("tileSrs", "EPSG:28992");
                         }
-                        
+
                         jsonCluster.put("tileVersion", sp.getWmsVersion());
                         jsonCluster.put("tileStyles", ts.getStyles());
-                        
+
                         if (ts.getBoundingBox() != null) {
                             String bbox = "";
                             bbox += ts.getBoundingBox().getMinx() + ",";
                             bbox += ts.getBoundingBox().getMiny() + ",";
                             bbox += ts.getBoundingBox().getMaxx() + ",";
-                            bbox += ts.getBoundingBox().getMaxy();         
-                            
+                            bbox += ts.getBoundingBox().getMaxy();
+
                             jsonCluster.put("tileBoundingBox", bbox);
                         } else {
                             jsonCluster.put("tileBoundingBox", "-285401.92,22598.08,595401.9199999999,903401.9199999999");
-                            
+
                         }
                     }
                 }
             }
-            
+
             if (th.getMetadata_link() != null) {
                 String metadatalink = th.getMetadata_link();
                 metadatalink = metadatalink.replaceAll("%id%", "" + themaId);
@@ -1220,5 +1239,17 @@ public class ViewerAction extends BaseGisAction {
             return isInCluster(cluster.getParent(), inCluster);
         }
 
+    }
+
+    private Geometry createGeomFromWkt(String wkt) {
+        WKTReader wktreader = new WKTReader(new GeometryFactory(new PrecisionModel(), 28992));
+        Geometry geom = null;
+        try {
+            geom = wktreader.read(wkt);
+        } catch (Exception e) {
+            log.error("Fout bij parsen wkt geometry", e);
+        }
+
+        return geom;
     }
 }
