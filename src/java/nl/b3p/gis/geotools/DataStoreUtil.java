@@ -409,7 +409,10 @@ public class DataStoreUtil {
             // wij maken er een leeg schema van
             //FeatureTypeBuilder ftb = FeatureTypeBuilder.newInstance(ftName.getLocalPart());
             SimpleFeatureTypeBuilder sftb = new SimpleFeatureTypeBuilder();
-            sftb.setName(ftName.getLocalPart());
+            
+            if (ftName != null) {
+                sftb.setName(ftName.getLocalPart());
+            }
             
             return sftb.buildFeatureType();
             //  throw e;

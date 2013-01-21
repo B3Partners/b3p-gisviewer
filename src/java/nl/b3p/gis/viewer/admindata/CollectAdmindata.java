@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.servlet.http.HttpServletRequest;
+import javax.xml.namespace.QName;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
@@ -335,8 +336,16 @@ public class CollectAdmindata {
             String wkt) throws SQLException, UnsupportedEncodingException, Exception {
 
         RecordBean rb = new RecordBean();
-
-        String adminPk = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
+        String adminPk = null;
+        
+        if (gb.getAdmin_pk() != null) {
+            QName qName = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk());
+            
+            if (qName != null) {
+                adminPk = qName.getLocalPart();
+            }
+        }
+        
         if (adminPk != null) {
             rb.setId(f.getProperty(adminPk).getValue());
         }
