@@ -37,19 +37,19 @@ import org.geotools.data.DataStore;
 import org.geotools.data.DataStoreFinder;
 import org.geotools.data.DefaultQuery;
 import org.geotools.data.FeatureSource;
-import org.geotools.data.ows.FeatureSetDescription;
-import org.geotools.data.ows.WFSCapabilities;
 import org.geotools.data.store.DataFeatureCollection;
 import org.geotools.data.wfs.WFSDataStore;
 import org.geotools.data.wfs.WFSDataStoreFactory;
+import org.geotools.data.wfs.v1_0_0.FeatureSetDescription;
+import org.geotools.data.wfs.v1_0_0.WFSCapabilities;
 import org.geotools.data.wfs.v1_0_0.WFS_1_0_0_DataStore;
 import org.geotools.data.wfs.v1_1_0.WFS_1_1_0_DataStore;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
-import org.geotools.feature.FeatureTypeBuilder;
 import org.geotools.feature.NameImpl;
+import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.feature.type.GeometryTypeImpl;
 import org.geotools.filter.FilterCapabilities;
 import org.geotools.filter.FilterTransformer;
@@ -407,9 +407,11 @@ public class DataStoreUtil {
 
             // NPE indien schema niet opgehaald kan worden,
             // wij maken er een leeg schema van
-            FeatureTypeBuilder ftb = FeatureTypeBuilder.newInstance(ftName.getLocalPart());
-            ftb.setName(ftName.getLocalPart());
-            return ftb.getFeatureType();
+            //FeatureTypeBuilder ftb = FeatureTypeBuilder.newInstance(ftName.getLocalPart());
+            SimpleFeatureTypeBuilder sftb = new SimpleFeatureTypeBuilder();
+            sftb.setName(ftName.getLocalPart());
+            
+            return sftb.buildFeatureType();
             //  throw e;
         }
     }

@@ -539,7 +539,14 @@ public class ConfigKeeper {
 
         cfg = new Configuratie();
         cfg.setProperty("maxResults");
-        cfg.setPropval("25");
+        cfg.setPropval("500");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.Integer");
+        sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("defaultSearchRadius");
+        cfg.setPropval("10000");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Integer");
         sess.save(cfg);

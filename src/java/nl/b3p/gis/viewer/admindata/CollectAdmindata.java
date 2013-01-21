@@ -434,7 +434,7 @@ public class CollectAdmindata {
             } else if (lb.getType().equals(RecordValueBean.TYPE_FUNCTION)) {
 
                 /* Indien commando surfaceArea dan verschil geom en getekende polygon berekenen */
-                if (lb.getCommando().contains(RecordValueBean.JAVASCRIPT_COMMAND_SURFACE_AREA)) {
+                if (lb.getCommando() != null && lb.getCommando().contains(RecordValueBean.JAVASCRIPT_COMMAND_SURFACE_AREA)) {
                     if (kolomnaam != null && f.getProperty(kolomnaam) != null) {
                         rvb.setType(RecordValueBean.TYPE_DATA);
 

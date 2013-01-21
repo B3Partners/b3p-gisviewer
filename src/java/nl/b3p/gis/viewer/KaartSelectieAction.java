@@ -552,20 +552,22 @@ public class KaartSelectieAction extends BaseGisAction {
         */
 
         /* WMS Service layers ophalen met Geotools */
-        String wmsUrl = checkWmsUrl(serviceUrl.trim());
+        OGCRequest wmsUrl = checkWmsUrl(serviceUrl.trim());
 
         URL url = null;
         try {
-            url = new URL(wmsUrl);
+            url = new URL(wmsUrl.getUrl());
         } catch (MalformedURLException mfex) {
             //will not happen
         }
-
+        
         WebMapServer wms = null;
         org.geotools.data.ows.Layer[] layers = null;
         try {
-            wms = new WebMapServer(url);
-            layers = WMSUtils.getNamedLayers(wms.getCapabilities());
+            URL testUrl = new URL("http://192.168.1.15:8585/cgi-bin/mapserv.exe?map=C:/srv/maps/boy/cbs_gem_2009.map&VERSION=1.1.1&REQUEST=GetCapabilities&service=WMS");
+            
+            wms = new WebMapServer(testUrl);
+            layers = WMSUtils.getNamedLayers(wms.getCapabilities());            
         } catch (IOException ioex) {
             log.error("Kan geen verbinding maken naar de WMS Service.", ioex);
 
@@ -1419,35 +1421,7 @@ public class KaartSelectieAction extends BaseGisAction {
         return false;
     }
 
-    private String checkWmsUrl(String url) throws Exception {
-        OGCRequest ogcrequest = new OGCRequest(url);
-
-        if (ogcrequest.containsParameter(OGCConstants.WMS_REQUEST)
-                && !OGCConstants.WMS_REQUEST_GetCapabilities.equalsIgnoreCase(ogcrequest.getParameter(OGCConstants.WMS_REQUEST))) {
-            log.error(KBConfiguration.UNSUPPORTED_REQUEST);
-            throw new Exception(KBConfiguration.UNSUPPORTED_REQUEST);
-        } else {
-            ogcrequest.addOrReplaceParameter(OGCConstants.WMS_REQUEST, OGCConstants.WMS_REQUEST_GetCapabilities);
-        }
-
-        if (ogcrequest.containsParameter(OGCConstants.WMS_SERVICE)
-                && !OGCConstants.WMS_SERVICE_WMS.equalsIgnoreCase(ogcrequest.getParameter(OGCConstants.WMS_SERVICE))) {
-            log.error(KBConfiguration.UNSUPPORTED_SERVICE);
-            throw new Exception(KBConfiguration.UNSUPPORTED_SERVICE);
-        } else {
-            ogcrequest.addOrReplaceParameter(OGCConstants.WMS_SERVICE, OGCConstants.WMS_SERVICE_WMS);
-        }
-
-        if (ogcrequest.containsParameter(OGCConstants.WMS_VERSION)
-        && !OGCConstants.WMS_VERSION_111.equalsIgnoreCase(ogcrequest.getParameter(OGCConstants.WMS_VERSION))) {
-        log.error(KBConfiguration.UNSUPPORTED_VERSION);
-        throw new Exception(KBConfiguration.UNSUPPORTED_VERSION);
-        } else {
-        ogcrequest.addOrReplaceParameter(OGCConstants.WMS_VERSION, OGCConstants.WMS_VERSION_111);
-        }
-
-        return ogcrequest.getUrl();
-    }
+    
     
     
     private Set<Style> getSldStylesSet(List<SldNamedLayer> allNamedLayers, UserLayer layer)
@@ -1498,5 +1472,33 @@ public class KaartSelectieAction extends BaseGisAction {
             return getUniqueStyleName(styles, name, tries);
         }
         return newName;
+    }
+    
+    protected OGCRequest checkWmsUrl(String url) throws Exception {
+        OGCRequest ogcrequest = new OGCRequest(url);
+        if (ogcrequest.containsParameter(OGCConstants.WMS_REQUEST)
+                && !OGCConstants.WMS_REQUEST_GetCapabilities.equalsIgnoreCase(ogcrequest.getParameter(OGCConstants.WMS_REQUEST))) {
+            log.error(KBConfiguration.UNSUPPORTED_REQUEST);
+            throw new Exception(KBConfiguration.UNSUPPORTED_REQUEST);
+        } else {
+            ogcrequest.addOrReplaceParameter(OGCConstants.WMS_REQUEST, OGCConstants.WMS_REQUEST_GetCapabilities);
+        }
+        if (ogcrequest.containsParameter(OGCConstants.WMS_SERVICE)
+                && !OGCConstants.WMS_SERVICE_WMS.equalsIgnoreCase(ogcrequest.getParameter(OGCConstants.WMS_SERVICE))) {
+            log.error(KBConfiguration.UNSUPPORTED_SERVICE);
+            throw new Exception(KBConfiguration.UNSUPPORTED_SERVICE);
+        } else {
+            ogcrequest.addOrReplaceParameter(OGCConstants.WMS_SERVICE, OGCConstants.WMS_SERVICE_WMS);
+        }
+
+        if (ogcrequest.containsParameter(OGCConstants.WMS_VERSION)
+                && !OGCConstants.WMS_VERSION_111.equalsIgnoreCase(ogcrequest.getParameter(OGCConstants.WMS_VERSION))) {
+            log.error(KBConfiguration.UNSUPPORTED_VERSION);
+            throw new Exception(KBConfiguration.UNSUPPORTED_VERSION);
+        } else {
+            ogcrequest.addOrReplaceParameter(OGCConstants.WMS_VERSION, OGCConstants.WMS_VERSION_111);
+        }
+
+        return ogcrequest;
     }
 }
