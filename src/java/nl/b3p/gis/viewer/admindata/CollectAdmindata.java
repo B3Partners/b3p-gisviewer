@@ -489,10 +489,10 @@ public class CollectAdmindata {
             if (intersection != null) {
                 if (intersection instanceof LineString) {
                     Double len = intersection.getLength() / 1000;
-                    result = threeDBFormat.format(len) + " km";
+                    result = threeDBFormat.format(len);
                 } else {
                     Double area = intersection.getArea() / 1000000;
-                    result = threeDBFormat.format(area) + " km2";
+                    result = threeDBFormat.format(area);
                 }
             }
         } catch (Exception ex) {
