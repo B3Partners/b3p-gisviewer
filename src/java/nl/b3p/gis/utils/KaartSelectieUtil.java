@@ -1066,7 +1066,7 @@ public class KaartSelectieUtil {
         app.setNaam(sourceApp.getNaam());
         app.setCode(newCode);
         app.setGebruikersCode(sourceApp.getGebruikersCode());
-        app.setParent(sourceApp);
+        app.setParent(null);
         app.setDatum_gebruikt(new Date());
         app.setRead_only(readOnly);
         app.setUser_copy(userCopy);
