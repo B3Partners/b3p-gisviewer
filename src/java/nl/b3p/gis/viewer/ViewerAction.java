@@ -625,6 +625,14 @@ public class ViewerAction extends BaseGisAction {
 
                 request.setAttribute("startLocationX", startLocationX);
                 request.setAttribute("startLocationY", startLocationY);
+                
+                if (map != null) {
+                    Integer defaultSearchRadius = (Integer) map.get("defaultSearchRadius");
+                    if (defaultSearchRadius != null && defaultSearchRadius > 0) {
+                        request.setAttribute("defaultSearchRadius", defaultSearchRadius);
+                        session.setAttribute("defaultSearchRadius", defaultSearchRadius);
+                    }
+                }
             }
         }
     }
