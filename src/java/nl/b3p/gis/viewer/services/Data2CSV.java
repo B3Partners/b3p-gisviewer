@@ -50,7 +50,7 @@ public class Data2CSV extends HttpServlet {
         String seperator = request.getParameter("seperator");
 
         if (seperator == null || seperator.length() != 1) {
-            seperator = ",";
+            seperator = ";";
         }
         char sep = seperator.charAt(0);
         CsvOutputStream cos=null;
@@ -66,14 +66,7 @@ public class Data2CSV extends HttpServlet {
             if (user == null) {
                 writeErrorMessage(response, "Kan de data niet ophalen omdat u niet bent ingelogd.");
                 return;
-            }
-            /*
-            if (!themaAllowed(thema, user)) {
-                writeErrorMessage(response, out, "U heeft geen rechten op dit thema.");
-                return;
-            }
-
-            */
+            }            
 
             Bron b = gb.getBron(request);
 
@@ -122,7 +115,11 @@ public class Data2CSV extends HttpServlet {
             ThemaData td = (ThemaData) it.next();
             if (td.getKolomnaam() != null) {
                 if (!columns.contains(td.getKolomnaam())) {
-                    columns.add(td.getKolomnaam());
+                    
+                    if (!td.getKolomnaam().equalsIgnoreCase("the_geom") &&
+                            !td.getKolomnaam().equalsIgnoreCase("geometry")) {
+                        columns.add(td.getKolomnaam());
+                    }
                 }
             }
         }
