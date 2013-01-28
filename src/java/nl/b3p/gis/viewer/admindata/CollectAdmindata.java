@@ -488,11 +488,24 @@ public class CollectAdmindata {
             intersection.setSRID(28992);
             if (intersection != null) {
                 if (intersection instanceof LineString) {
-                    Double len = intersection.getLength() / 1000;
-                    result = threeDBFormat.format(len);
+                    Double len = intersection.getLength();
+                    
+                    if (len >= 1000) {
+                        len /= 1000;
+                        result = threeDBFormat.format(len) + " km";
+                    } else {
+                        result = threeDBFormat.format(len) + " m";
+                    }
+                    
                 } else {
-                    Double area = intersection.getArea() / 1000000;
-                    result = threeDBFormat.format(area);
+                    Double area = intersection.getArea();
+                    
+                    if (area >= 1000000) {
+                        area /= 1000000;
+                        result = threeDBFormat.format(area) + " km2";
+                    } else {
+                        result = threeDBFormat.format(area) + " m2";
+                    }
                 }
             }
         } catch (Exception ex) {
