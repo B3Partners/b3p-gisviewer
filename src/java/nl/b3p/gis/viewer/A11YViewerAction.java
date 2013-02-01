@@ -346,29 +346,53 @@ public class A11YViewerAction extends BaseGisAction {
         request.setAttribute("appCode", appCode);
         request.setAttribute("searchName", zc.getNaam());
 
-        Map params = createResultParamsMap(zc.getResultaatVelden(), request);
+        Map params = createResultParamsMap(zc.getResultaatVelden(), zc.getZoekVelden(), request);
         request.setAttribute("params", params);
 
         Map searchparams = createSearchStringMapForResult(zc.getZoekVelden(), request);
         request.setAttribute("searchparams", searchparams);
     }
 
-    private Map createResultParamsMap(Set<ResultaatAttribuut> velden, HttpServletRequest request) {
+    private Map createResultParamsMap(Set<ResultaatAttribuut> velden, Set<ZoekAttribuut> zoekVelden, HttpServletRequest request) {
         Map resultParams = new HashMap();
+        
         Map params = request.getParameterMap();
 
+        /* Controleren of een url param voorkomt in de resultaatvelden */
         for (ResultaatAttribuut attribuut : velden) {
             Iterator it = params.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pairs = (Map.Entry) it.next();
 
-                String param = (String) pairs.getKey();
-
-                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())) {
+                String param = (String) pairs.getKey(); 
+                if ( param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())
+                        || param.equalsIgnoreCase(attribuut.getAttribuutnaam()) ) {
+                    
                     String[] waardes = (String[]) pairs.getValue();
                     String value = waardes[0];
 
-                    resultParams.put(attribuut.getLabel(), value);
+                    resultParams.put(param, value);
+                }
+            }
+        }
+        
+        /* Controleren of een url param voorkomt in de zoekvelden. Alleen param en waarde
+         toevoegen als deze nog niet in Map zit */
+        for (ZoekAttribuut attribuut : zoekVelden) {
+            Iterator it = params.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pairs = (Map.Entry) it.next();
+
+                String param = (String) pairs.getKey(); 
+                if ( param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())
+                        || param.equalsIgnoreCase(attribuut.getAttribuutnaam()) ) {
+                    
+                    String[] waardes = (String[]) pairs.getValue();
+                    String value = waardes[0];
+                    
+                    if (!resultParams.containsKey(param)) {
+                        resultParams.put(param, value);
+                    }
                 }
             }
         }
