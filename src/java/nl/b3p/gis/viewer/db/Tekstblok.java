@@ -17,6 +17,7 @@ public class Tekstblok {
     private String kleur;
     private String auteur;
     private Date cdate;
+    private Boolean inlogIcon;
 
     public String getAuteur() {
         return auteur;
@@ -96,6 +97,14 @@ public class Tekstblok {
 
     public void setKleur(String kleur) {
         this.kleur = kleur;
+    }
+    
+    public Boolean getInlogIcon() {
+        return inlogIcon;
+    }
+
+    public void setInlogIcon(Boolean inlogIcon) {
+        this.inlogIcon = inlogIcon;
     }
 
 }
