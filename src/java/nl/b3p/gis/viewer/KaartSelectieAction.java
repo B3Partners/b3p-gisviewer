@@ -167,7 +167,12 @@ public class KaartSelectieAction extends BaseGisAction {
             }
             
             dynaForm.set("gebruikerEmail", email);
-            request.setAttribute("gebruikerEmail", email);            
+            request.setAttribute("gebruikerEmail", email);  
+            
+            /* versie zetten */
+            if (app.getVersie() != null) {
+                request.setAttribute("appVersion", app.getVersie());
+            }
         }
         
         if (useUserWmsDropdown != null) {
