@@ -22,7 +22,7 @@ public class ThemaData {
     private String kolomnaam;
     private Integer dataorder;
     private Gegevensbron gegevensbron;
-    private boolean editable;
+    private Boolean editable;
     private String defaultValues;
 
     /**
@@ -135,11 +135,11 @@ public class ThemaData {
         this.waardeType = waardeType;
     }
     
-    public boolean isEditable() {
+    public Boolean isEditable() {
         return editable;
     }
 
-    public void setEditable(boolean editable) {
+    public void setEditable(Boolean editable) {
         this.editable = editable;
     }
     
