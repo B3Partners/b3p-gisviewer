@@ -24,10 +24,8 @@ package nl.b3p.gis.viewer;
 
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -306,26 +304,22 @@ public class PrintAction extends BaseHibernateAction {
         }
         */
 
-        /* Legenda urls klaarzetten. Hier worden de aangevinkte laagnamen
-         vergeleken met de keys die al klaargezet waren in de 
-         Map<laag naam, legenda url> settings. De bijbehornede legenda url wordt
-         in een List gestopt en doorgegeven aan de xsl. */
+        /* Legenda Map klaarzetten voor in xsl <kaartnaam, url> */
         String[] arr = (String[]) dynaForm.get("legendItems");
-        List<String> legendUrlsList = new ArrayList<String>();
         if (arr != null && arr.length > 0) {
-            Map legendMap = settings.getLegendMap();            
+            Map legendItemsMap = new HashMap();
             
             for (int i = 0; i < arr.length; i++) {
-                String keyStr = arr[i];
+                String key = arr[i];
 
-                if (legendMap != null && legendMap.containsKey(keyStr)) {
-                    String url = (String) legendMap.get(keyStr);
-                    legendUrlsList.add(url);
+                if (settings.getLegendMap() != null && settings.getLegendMap().containsKey(key)) {                    
+                    String url = (String) settings.getLegendMap().get(key);
+                    legendItemsMap.put(key, url);
                 }
             }
+            
+            info.setLegendItems(legendItemsMap);
         }
-
-        info.setLegendUrls(legendUrlsList);
         
         /* doorgeven mimetype en template */
         String mimeType = null;
