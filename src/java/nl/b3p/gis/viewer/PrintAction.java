@@ -279,30 +279,6 @@ public class PrintAction extends BaseHibernateAction {
             settings.setBbox(newBbox);
             info.setScale(newScale);
         }
-        
-        /* 
-         * Test voor grotere print resoluties
-        
-        Integer newWidthPx = calcNewMapWidthFromPPI(300, 7.5);
-        double maxX = settings.getBbox().getMaxx();
-        double minX = settings.getBbox().getMinx();
-        
-        Double bla = Math.ceil(maxX - minX);
-        Integer currentWidth = bla.intValue();
-        
-        Integer schaalEnzo = calcScaleForHigherPPI(300, currentWidth, 7.5);
-        if (schaalEnzo != null & schaalEnzo > 0) {
-            newBbox = calculateBboxForScale(settings, schaalEnzo);      
-            settings.setBbox(newBbox);
-            info.setBbox(newBbox);            
-            info.setScale(schaalEnzo);  
-            info.setKwaliteit(newWidthPx);
-            
-            logFile.debug("NEW BBOX: " + newBbox);
-            logFile.debug("NEW SCALE: " + schaalEnzo);
-            logFile.debug("NEW MAP SIZE PX: " + newWidthPx);            
-        }
-        */
 
         /* Legenda Map klaarzetten voor in xsl <kaartnaam, url> */
         String[] arr = (String[]) dynaForm.get("legendItems");

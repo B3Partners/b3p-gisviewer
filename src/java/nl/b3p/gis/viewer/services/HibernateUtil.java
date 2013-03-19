@@ -41,6 +41,7 @@ public class HibernateUtil extends HttpServlet {
     public static String BEHEERDERS_ROL = "beheerder";
     public static String ANONYMOUS_USER = "anoniem";
     private static String kburl = null;
+    private static String internalKbUrl = null;
     private static boolean checkLoginKaartenbalie = true;
     private static String kaartenbalieCluster = "Extra";
     private static boolean useKaartenbalieCluster = true;
@@ -73,8 +74,34 @@ public class HibernateUtil extends HttpServlet {
     public static String createPersonalKbUrl(String code) {
         if (code != null && code.startsWith("http://")) {
             return code;
+        }        
+        
+        String url = getKbUrl();        
+        
+        url = url.trim();
+        if (code != null && code.length()>0) {
+            String reqparam = "?";
+            int pos = url.indexOf("?");
+            if (pos>=0) {
+                reqparam = url.substring(pos);
+                url = url.substring(0,pos);
+            }
+            if (url.lastIndexOf('/') == url.length() - 1) {
+                url += code + reqparam;
+            } else {
+                url += '/' + code + reqparam;
+            }
         }
-        String url = getKbUrl();
+        return url;
+    }
+    
+    public static String createInternalKbUrl(String code) {
+        if (code != null && code.startsWith("http://")) {
+            return code;
+        }        
+        
+        String url = getInternalKbUrl();        
+        
         url = url.trim();
         if (code != null && code.length()>0) {
             String reqparam = "?";
@@ -124,8 +151,17 @@ public class HibernateUtil extends HttpServlet {
         useKaartenbalieCluster = aUseKaartenbalieCluster;
     }
 
+    public static String getInternalKbUrl() {
+        return internalKbUrl;
+    }
+
+    public static void setInternalKbUrl(String internalKbUrl) {
+        HibernateUtil.internalKbUrl = internalKbUrl;
+    }
+
     /** Initializes the servlet.
      */
+    @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
 
@@ -133,7 +169,11 @@ public class HibernateUtil extends HttpServlet {
             String value = config.getInitParameter("kburl");
             if (value != null && value.length() > 0) {
                 kburl = value;
-            }
+            }            
+            value = config.getInitParameter("internalKbUrl");
+            if (value != null && value.length() > 0) {
+                internalKbUrl = value;
+            }            
             value = config.getInitParameter("check_login_kaartenbalie");
             if (value != null && value.equalsIgnoreCase("false")) {
                 checkLoginKaartenbalie = false;

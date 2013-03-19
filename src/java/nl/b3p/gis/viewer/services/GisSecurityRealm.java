@@ -88,6 +88,32 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         } else {
             url += "&" + CAPABILITIES_QUERYSTRING;
         }
+        
+        log.debug("Using external kb url: " + url);
+        
+        return url;
+    }
+    
+    public static String createInternalCapabilitiesURL(String code) {
+        String url = HibernateUtil.createInternalKbUrl(code);
+        
+        if (url == null || url.equals("")) {
+            url = HibernateUtil.createPersonalKbUrl(code);
+        }
+        
+        if (url.indexOf('?') == -1) {
+            url += "?";
+        }
+        if (url.indexOf('?') == url.length() - 1) {
+            url += CAPABILITIES_QUERYSTRING;
+        } else if (url.lastIndexOf('&') == url.length() - 1) {
+            url += CAPABILITIES_QUERYSTRING;
+        } else {
+            url += "&" + CAPABILITIES_QUERYSTRING;
+        }
+        
+        log.debug("Using internal kb url: " + url);
+        
         return url;
     }
 
@@ -103,6 +129,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     public static GisPrincipal authenticateHttp(String location, String username, String password,
             String code, SecurityRequestWrapper request) {
 
+        log.debug("Start authenticateHttp()");
+        
         WMSCapabilitiesReader wmscr = new WMSCapabilitiesReader();
         ServiceProvider sp = null;
 
@@ -144,6 +172,9 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         }
 
         key = key + "_" + ip;
+        
+        log.debug("Key: " + key);
+        
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         Date expDate = null;
 
@@ -173,7 +204,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                     return null;
                 }
 
-            } else {
+            } else {                
                 sp = wmscr.getProvider(location, username, password, ip);
 
                 /* Controleren of provider niet over datum is */
@@ -242,7 +273,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         if (!HibernateUtil.isCheckLoginKaartenbalie()) {
             return authenticateFake(username);
         }
-        String url = createCapabilitiesURL(code);
+        String url = createInternalCapabilitiesURL(code);
         return authenticateHttp(url, username, password, code, null);
     }
 
@@ -253,7 +284,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         if (!HibernateUtil.isCheckLoginKaartenbalie()) {
             return authenticateFake(username);
         }
-        String url = createCapabilitiesURL(code);
+        String url = createInternalCapabilitiesURL(code);
         return authenticateHttp(url, username, password, code, request);
     }
 
