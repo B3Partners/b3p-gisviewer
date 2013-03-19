@@ -62,11 +62,11 @@ public class HibernateUtil extends HttpServlet {
 
     /**
      * http://www.kaartenbalie.nl/kaartenbalie/service/0c462abe62b69b2f05d1e72862f251f6
-     * kburl: http://www.kaartenbalie.nl/kaartenbalie/service/
-     * code:  0c462abe62b69b2f05d1e72862f251f6
+     * kburl: http://www.kaartenbalie.nl/kaartenbalie/service/ code:
+     * 0c462abe62b69b2f05d1e72862f251f6
      *
-     * Code kan alleen worden toegevoegd indien de kaartenbalie url eindigt
-     * op een /. Er wordt een / toegevoegd indien dit niet het geval is.
+     * Code kan alleen worden toegevoegd indien de kaartenbalie url eindigt op
+     * een /. Er wordt een / toegevoegd indien dit niet het geval is.
      *
      * @param code
      * @return
@@ -74,17 +74,17 @@ public class HibernateUtil extends HttpServlet {
     public static String createPersonalKbUrl(String code) {
         if (code != null && code.startsWith("http://")) {
             return code;
-        }        
-        
-        String url = getKbUrl();        
-        
+        }
+
+        String url = getKbUrl();
+
         url = url.trim();
-        if (code != null && code.length()>0) {
+        if (code != null && code.length() > 0) {
             String reqparam = "?";
             int pos = url.indexOf("?");
-            if (pos>=0) {
+            if (pos >= 0) {
                 reqparam = url.substring(pos);
-                url = url.substring(0,pos);
+                url = url.substring(0, pos);
             }
             if (url.lastIndexOf('/') == url.length() - 1) {
                 url += code + reqparam;
@@ -94,28 +94,31 @@ public class HibernateUtil extends HttpServlet {
         }
         return url;
     }
-    
+
     public static String createInternalKbUrl(String code) {
         if (code != null && code.startsWith("http://")) {
             return code;
-        }        
-        
-        String url = getInternalKbUrl();        
-        
-        url = url.trim();
-        if (code != null && code.length()>0) {
-            String reqparam = "?";
-            int pos = url.indexOf("?");
-            if (pos>=0) {
-                reqparam = url.substring(pos);
-                url = url.substring(0,pos);
-            }
-            if (url.lastIndexOf('/') == url.length() - 1) {
-                url += code + reqparam;
-            } else {
-                url += '/' + code + reqparam;
+        }
+
+        String url = getInternalKbUrl();
+
+        if (url != null) {
+            url = url.trim();
+            if (code != null && code.length() > 0) {
+                String reqparam = "?";
+                int pos = url.indexOf("?");
+                if (pos >= 0) {
+                    reqparam = url.substring(pos);
+                    url = url.substring(0, pos);
+                }
+                if (url.lastIndexOf('/') == url.length() - 1) {
+                    url += code + reqparam;
+                } else {
+                    url += '/' + code + reqparam;
+                }
             }
         }
+
         return url;
     }
 
@@ -159,7 +162,8 @@ public class HibernateUtil extends HttpServlet {
         HibernateUtil.internalKbUrl = internalKbUrl;
     }
 
-    /** Initializes the servlet.
+    /**
+     * Initializes the servlet.
      */
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -169,11 +173,11 @@ public class HibernateUtil extends HttpServlet {
             String value = config.getInitParameter("kburl");
             if (value != null && value.length() > 0) {
                 kburl = value;
-            }            
+            }
             value = config.getInitParameter("internalKbUrl");
             if (value != null && value.length() > 0) {
                 internalKbUrl = value;
-            }            
+            }
             value = config.getInitParameter("check_login_kaartenbalie");
             if (value != null && value.equalsIgnoreCase("false")) {
                 checkLoginKaartenbalie = false;
