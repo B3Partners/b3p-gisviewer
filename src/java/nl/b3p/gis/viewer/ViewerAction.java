@@ -123,6 +123,7 @@ public class ViewerAction extends BaseGisAction {
     public static final String APPCODE = "appCode";
     public static final String A11Y_VIEWER_FW = "a11yViewer";
     public static final String A11Y = "accessibility";
+    public static final String FORCEVIEWER = "forceViewer";
 
     /**
      * Return een hashmap die een property koppelt aan een Action.
@@ -210,6 +211,19 @@ public class ViewerAction extends BaseGisAction {
                 return mapping.findForward(SIMPLE_VIEWER_FW);
             }
         }
+        
+        String forceViewer = request.getParameter(ViewerAction.FORCEVIEWER);
+        
+        if(forceViewer != null && !forceViewer.equals("")){
+            boolean viewer = new Boolean(forceViewer);
+            
+            if(!viewer){
+                 return mapping.findForward(A11Y_VIEWER_FW);
+            }
+        }else{
+             return mapping.findForward(A11Y_VIEWER_FW);
+        }
+        
         return mapping.findForward(SUCCESS);
     }
 
