@@ -139,6 +139,7 @@ public class MaatregelService {
                     c.add(Restrictions.eq("swc", swc));
                     c.add(Restrictions.eq("volgnr", volgnr));
                     c.addOrder(Order.asc("deficode"));
+                    c.addOrder(Order.desc("type"));
                     c.addOrder(Order.asc("regelnr"));
                     List<RawCrow> list = c.list();
                     
