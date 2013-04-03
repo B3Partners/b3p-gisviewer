@@ -143,6 +143,10 @@ public class ThemaData {
         this.editable = editable;
     }
     
+    public Boolean getEditable(){
+        return editable;
+    }
+    
     @Override
     public Object clone() {
         ThemaData cloneObj = new ThemaData();
