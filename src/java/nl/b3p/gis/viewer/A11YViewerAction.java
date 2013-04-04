@@ -231,8 +231,8 @@ public class A11YViewerAction extends BaseGisAction {
                 + " order by naam").list();
 
         for (ZoekConfiguratie zc : results) {
-            for (String id : zoekerIds) {
-                if (zc.getId() == Integer.parseInt(id)) {
+            for (String id : zoekerIds) {                
+                if (id != null && !id.equals("") && zc.getId() == Integer.parseInt(id)) {
                     zcs.add(zc);
                 }
             }
