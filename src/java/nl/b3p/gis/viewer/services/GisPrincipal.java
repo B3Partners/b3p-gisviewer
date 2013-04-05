@@ -42,6 +42,7 @@ import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.wms.capabilities.Style;
 import nl.b3p.wms.capabilities.StyleDomainResource;
 import nl.b3p.zoeker.configuratie.Bron;
+import nl.b3p.zoeker.services.A11YResult;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.securityfilter.filter.SecurityRequestWrapper;
@@ -264,15 +265,15 @@ public class GisPrincipal implements Principal {
     public static GisPrincipal getGisPrincipal(HttpServletRequest request) {
         return getGisPrincipal(request, false);
     }
-    
+
     public static GisPrincipal getGisPrincipal(HttpServletRequest request, HttpServletResponse response) {
         return getGisPrincipal(request, false);
     }
 
-    public static GisPrincipal getGisPrincipal(HttpServletRequest request, boolean flushCache) { 
+    public static GisPrincipal getGisPrincipal(HttpServletRequest request, boolean flushCache) {
         HttpSession session = request.getSession();
-        
-        /* Controleren of er al een andere gebruiker is ingelogd */        
+
+        /* Controleren of er al een andere gebruiker is ingelogd */
         Principal user = request.getUserPrincipal();
         if (!(user instanceof GisPrincipal && request instanceof SecurityRequestWrapper)) {
             return null;
@@ -288,52 +289,61 @@ public class GisPrincipal implements Principal {
             gpUsername = gp.getName();
             gpPassword = gp.getPassword();
         }
-        
+
         String appCode = request.getParameter(BaseGisAction.APP_AUTH);
-        
+
         Applicatie app = null;
         if (appCode != null && appCode.length() > 0) {
             app = KaartSelectieUtil.getApplicatie(appCode);
-        }        
-        
+        }
+
         Boolean loginForm = (Boolean) session.getAttribute("loginForm");
         if (loginForm == null) {
             loginForm = false;
         }
-        
+
         /* Applicatie geen gebruikerscode en niet via formulier gekomen */
         if (app != null && app.getGebruikersCode() == null && !loginForm) {
             session.invalidate();
-            
+
             log.debug("Applicatie zonder gebruikerscode. Terug naar login form.");
-            
+
             return null;
         }
-        
+
         /* Gebruikerscode verschilt met huidige inlog. Automatisch inloggen. */
         if (gp != null && app != null && app.getGebruikersCode() != null && !app.getGebruikersCode().equals(gp.getCode())) {
+            A11YResult a11yResult = (A11YResult) session.getAttribute("a11yResult");
+
             session.invalidate();
-            
+
             gp = null;
             gpCode = app.getGebruikersCode();
             gpUsername = HibernateUtil.ANONYMOUS_USER;
             gpPassword = null;
-            
+
             SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
-            
+
             gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
             srw.setUserPrincipal(gp);
-            
+
+            /* Fix zodat gekozen startlocatie ook werkt voor nieuwe sessie als er als andere
+             * user wordt ingelogd. */
+            if (a11yResult != null) {
+                HttpSession newSession = request.getSession(true);
+                newSession.setAttribute("a11yResult", a11yResult);
+            }
+
             log.debug("Gebruikerscode verschilt. Automatisch ingelogd met nieuwe gebruiker.");
-        }        
+        }
 
         /* Applicatie geen gebruikerscode. Inloggen met gegevens van formulier. */
-        if (app != null && app.getGebruikersCode() == null && loginForm) {             
+        if (app != null && app.getGebruikersCode() == null && loginForm) {
             SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
-            
+
             gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
             srw.setUserPrincipal(gp);
-            
+
             log.debug("Applicatie zonder gebruikerscode. Nu ingelogd via formulier.");
         }
 

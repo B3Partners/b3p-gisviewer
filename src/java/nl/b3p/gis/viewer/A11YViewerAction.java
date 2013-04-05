@@ -100,11 +100,11 @@ public class A11YViewerAction extends BaseGisAction {
 
         return mapping.findForward(LIST);
     }
-    
+
     private void setBreadCrumb(HttpServletRequest request) {
         HttpSession session = request.getSession(true);
         A11YResult a11yResult = (A11YResult) session.getAttribute("a11yResult");
-        
+
         if (a11yResult != null) {
             request.setAttribute("a11yResultMap", a11yResult.getResultMap());
         }
@@ -114,7 +114,7 @@ public class A11YViewerAction extends BaseGisAction {
             throws Exception {
 
         setBreadCrumb(request);
-        
+
         showZoekVelden(dynaForm, request);
 
         return mapping.findForward(SEARCH);
@@ -135,7 +135,7 @@ public class A11YViewerAction extends BaseGisAction {
         request.setAttribute("appCode", appCode);
 
         A11YResult a11yResult = createA11YResult(request);
-        
+
         if (a11yResult != null) {
             HttpSession session = request.getSession(true);
             session.setAttribute("a11yResult", a11yResult);
@@ -143,7 +143,7 @@ public class A11YViewerAction extends BaseGisAction {
 
         return mapping.findForward(START_LOCATIE);
     }
-    
+
     /* This pojo holds the search results with the hidden form fields keys, values
      * in the Map and some other search attributes like appCode and searchConfigId.
      */
@@ -151,29 +151,29 @@ public class A11YViewerAction extends BaseGisAction {
         A11YResult result = new A11YResult();
 
         Enumeration attrs = request.getParameterNames();
-        while (attrs.hasMoreElements()) {            
-            String key = (String) attrs.nextElement();            
+        while (attrs.hasMoreElements()) {
+            String key = (String) attrs.nextElement();
             String value = (String) request.getParameter(key);
-            
-            if (key.equals("startGeom")) {
+
+            if (key.equalsIgnoreCase("startGeom")) {
                 result.setStartWkt(value);
-            }            
-            if (key.equals("nextStep")) {
+            }
+            if (key.equalsIgnoreCase("nextStep")) {
                 result.setHasNextStep(true);
-            }            
-            if (key.equals("appCode")) {
+            }
+            if (key.equalsIgnoreCase("appCode")) {
                 result.setAppCode(value);
-            }            
-            if (key.equals("searchConfigId") && !value.equals("")) {
+            }
+            if (key.equalsIgnoreCase("searchConfigId") && !value.equals("")) {
                 result.setSearchConfigId(new Integer(value));
             }
-            
-            if ( !key.equals("startGeom") && !key.equals("nextStep") && !key.equals("appCode")
-                && !key.equals("searchConfigId") && !key.equals("startLocation") ) {
-                
+
+            if (!key.equalsIgnoreCase("startGeom") && !key.equalsIgnoreCase("nextStep") && !key.equalsIgnoreCase("appCode")
+                    && !key.equalsIgnoreCase("searchConfigId") && !key.equalsIgnoreCase("startLocation")) {
+
                 result.addResult(key, value);
-            }      
-            
+            }
+
             logger.debug("REQUEST PARAM: " + key + "=" + value);
         }
 
@@ -231,7 +231,7 @@ public class A11YViewerAction extends BaseGisAction {
                 + " order by naam").list();
 
         for (ZoekConfiguratie zc : results) {
-            for (String id : zoekerIds) {                
+            for (String id : zoekerIds) {
                 if (id != null && !id.equals("") && zc.getId() == Integer.parseInt(id)) {
                     zcs.add(zc);
                 }
@@ -355,7 +355,7 @@ public class A11YViewerAction extends BaseGisAction {
 
     private Map createResultParamsMap(Set<ResultaatAttribuut> velden, Set<ZoekAttribuut> zoekVelden, HttpServletRequest request) {
         Map resultParams = new HashMap();
-        
+
         Map params = request.getParameterMap();
 
         /* Controleren of een url param voorkomt in de resultaatvelden */
@@ -364,10 +364,10 @@ public class A11YViewerAction extends BaseGisAction {
             while (it.hasNext()) {
                 Map.Entry pairs = (Map.Entry) it.next();
 
-                String param = (String) pairs.getKey(); 
-                if ( param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())
-                        || param.equalsIgnoreCase(attribuut.getAttribuutnaam()) ) {
-                    
+                String param = (String) pairs.getKey();
+                if (param.equalsIgnoreCase(attribuut.getLabel()) || param.equalsIgnoreCase(attribuut.getNaam())
+                        || param.equalsIgnoreCase(attribuut.getAttribuutnaam())) {
+
                     String[] waardes = (String[]) pairs.getValue();
                     String value = waardes[0];
 
@@ -375,7 +375,7 @@ public class A11YViewerAction extends BaseGisAction {
                 }
             }
         }
-        
+
         /* Controleren of een url param voorkomt in de zoekvelden. Alleen param en waarde
          toevoegen als deze nog niet in Map zit */
         for (ZoekAttribuut attribuut : zoekVelden) {
@@ -383,13 +383,13 @@ public class A11YViewerAction extends BaseGisAction {
             while (it.hasNext()) {
                 Map.Entry pairs = (Map.Entry) it.next();
 
-                String param = (String) pairs.getKey(); 
-                if ( param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())
-                        || param.equalsIgnoreCase(attribuut.getAttribuutnaam()) ) {
-                    
+                String param = (String) pairs.getKey();
+                if (param.equalsIgnoreCase(attribuut.getLabel()) || param.equalsIgnoreCase(attribuut.getNaam())
+                        || param.equalsIgnoreCase(attribuut.getAttribuutnaam())) {
+
                     String[] waardes = (String[]) pairs.getValue();
                     String value = waardes[0];
-                    
+
                     if (!resultParams.containsKey(param)) {
                         resultParams.put(param, value);
                     }
@@ -411,7 +411,7 @@ public class A11YViewerAction extends BaseGisAction {
 
                 String param = (String) pairs.getKey();
 
-                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())) {
+                if (param.equalsIgnoreCase(attribuut.getLabel()) || param.equalsIgnoreCase(attribuut.getNaam())) {
                     String[] waardes = (String[]) pairs.getValue();
                     String value = waardes[0];
 
@@ -446,7 +446,7 @@ public class A11YViewerAction extends BaseGisAction {
 
                 String param = (String) pairs.getKey();
 
-                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())) {
+                if (param.equalsIgnoreCase(attribuut.getLabel()) || param.equalsIgnoreCase(attribuut.getNaam())) {
                     String[] waardes = (String[]) pairs.getValue();
                     String value = waardes[0];
 
