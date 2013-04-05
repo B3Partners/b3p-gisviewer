@@ -630,7 +630,7 @@ public class ViewerAction extends BaseGisAction {
         A11YResult a11yResult = (A11YResult) session.getAttribute("a11yResult");
 
         if (a11yResult != null && a11yResult.getStartWkt() != null) {
-            request.setAttribute("a11yResultMap", a11yResult.getResultMap());
+            request.setAttribute("a11yStartWkt", a11yResult.getStartWkt());
 
             Geometry startGeom = createGeomFromWkt(a11yResult.getStartWkt());
             if (startGeom != null && startGeom.getCentroid() != null) {
