@@ -18,6 +18,7 @@ public class Tekstblok {
     private String auteur;
     private Date cdate;
     private Boolean inlogIcon;
+    private Integer hoogte;
 
     public String getAuteur() {
         return auteur;
@@ -105,6 +106,14 @@ public class Tekstblok {
 
     public void setInlogIcon(Boolean inlogIcon) {
         this.inlogIcon = inlogIcon;
+    }
+
+    public Integer getHoogte() {
+        return hoogte;
+    }
+
+    public void setHoogte(Integer hoogte) {
+        this.hoogte = hoogte;
     }
 
 }

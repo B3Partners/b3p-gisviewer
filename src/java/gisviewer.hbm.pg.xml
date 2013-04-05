@@ -160,6 +160,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="auteur" type="string"/>
         <property name="cdate" not-null="true" type="timestamp"/>
         <property column="inlogicon" name="inlogIcon" type="boolean"/>
+        <property name="hoogte" type="integer"/>
     </class>
 
     <class name="nl.b3p.gis.viewer.db.UserKaartgroep">
