@@ -486,7 +486,7 @@ public class A11YViewerAction extends BaseGisAction {
 
                 String param = (String) pairs.getKey();
 
-                if (param.equals(attribuut.getLabel()) || param.equals(attribuut.getNaam())) {
+                if (param.equalsIgnoreCase(attribuut.getLabel()) || param.equalsIgnoreCase(attribuut.getNaam())) {
                     String[] waardes = (String[]) pairs.getValue();
                     String value = waardes[0];
 
@@ -497,11 +497,7 @@ public class A11YViewerAction extends BaseGisAction {
                     } catch (NumberFormatException nfex) {
                     }
 
-                    if (lijktOp && !value.equals("") && getal == null) {
-                        searchParams.put(attribuut.getLabel(), "%" + value + "%");
-                    } else {
-                        searchParams.put(attribuut.getLabel(), value);
-                    }
+                    searchParams.put(attribuut.getLabel(), value);
                 }
             }
         }
