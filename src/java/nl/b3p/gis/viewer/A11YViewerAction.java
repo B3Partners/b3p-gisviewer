@@ -307,8 +307,15 @@ public class A11YViewerAction extends BaseGisAction {
         if (zoeker == null) {
             zoeker = new Zoeker();
         }
+        
+        HttpSession session = request.getSession(true);
+        A11YResult a11yResult = (A11YResult) session.getAttribute("a11yResult");
 
-        results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList(), true, startIndex, limit);
+        if (a11yResult != null) {
+            results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList(), true, startIndex, limit, a11yResult);
+        } else {
+            results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList(), true, startIndex, limit);
+        }
 
         request.setAttribute("searchConfigId", searchConfigId);
 
