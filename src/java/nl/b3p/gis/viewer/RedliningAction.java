@@ -251,9 +251,10 @@ public class RedliningAction extends ViewerCrudAction {
                     if (obj != null) {
                         newFeature.setAttribute(i, obj);
                     }
+                    
                     i++;
                 }
-
+                
                 writer.write();
             }
         } finally {
@@ -410,7 +411,8 @@ public class RedliningAction extends ViewerCrudAction {
         rl.setOpmerking(opmerking);
 
         try {
-            Geometry geom = DataStoreUtil.createGeomFromWKTString(dynaForm.getString("wkt"));
+            String wkt = dynaForm.getString("wkt");            
+            Geometry geom = DataStoreUtil.createGeomFromWKTString(wkt);            
             rl.setThe_geom(geom);
         } catch (Exception ex) {
             logger.error("Fout tijdens omzetten wkt voor redlining: ", ex);
