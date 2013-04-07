@@ -316,6 +316,10 @@ public class A11YViewerAction extends BaseGisAction {
         } else {
             results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList(), true, startIndex, limit);
         }
+        
+        if (a11yResult != null) {
+            request.setAttribute("a11yResultMap", a11yResult.getResultMap());
+        }
 
         request.setAttribute("searchConfigId", searchConfigId);
 
