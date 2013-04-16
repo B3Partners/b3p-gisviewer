@@ -403,7 +403,7 @@ public class KaartSelectieAction extends BaseGisAction {
             String servletpath = request.getRequestURL().toString();
             servletpath = servletpath.substring(0,servletpath.lastIndexOf("/"));
             
-            String url = servletpath + "/viewer.do?appCode=" + code;
+            String url = servletpath + "/viewer.do?appCode=" + code + "&forceViewer=true";
             sendEmail(kaartNaam, gebruikerEmail, url);        
         }
 
