@@ -313,6 +313,8 @@ public class PrintAction extends BaseHibernateAction {
         if (outputType != null && outputType.equals(OUTPUT_PDF_PRINT)) {
             addJavascript = true;
         }
+        
+        logFile.debug("Print url: " + info.getImageUrl());
 
         /* Maak de output */
         PrintServlet.setSettings(settings);

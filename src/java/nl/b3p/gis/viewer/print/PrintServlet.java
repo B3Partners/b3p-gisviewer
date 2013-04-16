@@ -9,6 +9,7 @@ import com.lowagie.text.pdf.PdfWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.MalformedURLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -124,7 +125,6 @@ public class PrintServlet extends HttpServlet {
         /* Set BaseUrl so that fop knows paths to images etc... */
         fopFactory.setBaseURL(path);
         fopFactory.getFontManager().setFontBaseURL(fontPath);
-        
         fopFactory.setUserConfig(new File(fopConfig));
 
         /* Setup output stream */
@@ -148,14 +148,21 @@ public class PrintServlet extends HttpServlet {
 
             /* Setup xslt */
             Source xsltSrc = new StreamSource(xslFile);
-            //xsltSrc.setSystemId(path);
+            
+            String proxyHost = System.getProperty("http.proxyHost");      
+            if (proxyHost != null && !proxyHost.equals("")) {
+                logFile.debug("Printing behind proxy: " + proxyHost + " using path: " + path);
+                xsltSrc.setSystemId(path);
+            }            
 
             TransformerFactory factory = TransformerFactory.newInstance();
             Transformer transformer = factory.newTransformer(xsltSrc);
 
             Result res = new SAXResult(fop.getDefaultHandler());
 
-            transformer.transform(src, res);
+            if (transformer != null) {
+                transformer.transform(src, res);
+            }
 
             /* Setup response */
             response.setContentType(mimeType);
@@ -182,7 +189,6 @@ public class PrintServlet extends HttpServlet {
             }
             
             response.getOutputStream().flush();
-
         } catch (Exception ex) {
             logFile.error("Fout tijdens print output: ", ex);
         } finally {
