@@ -323,16 +323,20 @@ public class PrintAction extends BaseHibernateAction {
         return null;
     }
 
-    private String createImageUrl(HttpServletRequest request) {
-        String requestUrl = request.getRequestURL().toString();
+    private String createImageUrl(HttpServletRequest request) {        
+        if (PrintServlet.baseImageUrl != null) {
+            return PrintServlet.baseImageUrl;
+            
+        } else {
+            String requestUrl = request.getRequestURL().toString();
 
-        int lastIndex = requestUrl.lastIndexOf("/");
+            int lastIndex = requestUrl.lastIndexOf("/");
 
-        String basePart = requestUrl.substring(0, lastIndex);
-        String servletPart = "/services/PrintServlet?";
-        String imageUrl = basePart + servletPart;
-
-        return imageUrl;
+            String basePart = requestUrl.substring(0, lastIndex);
+            String servletPart = "/services/PrintServlet?";
+            
+            return basePart + servletPart;            
+        }
     }
 
     private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {

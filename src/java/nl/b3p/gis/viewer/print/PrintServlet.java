@@ -56,8 +56,11 @@ public class PrintServlet extends HttpServlet {
     
     public static String fopConfig = null;
     public static String fontPath = null;
+    
+    public static String baseImageUrl = null;
 
     public static CombineImageSettings settings = null;
+    
     private static final int MAX_IMAGE_SIZE_PX = 2048;
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -148,12 +151,7 @@ public class PrintServlet extends HttpServlet {
 
             /* Setup xslt */
             Source xsltSrc = new StreamSource(xslFile);
-            
-            String proxyHost = System.getProperty("http.proxyHost");      
-            if (proxyHost != null && !proxyHost.equals("")) {
-                logFile.debug("Printing behind proxy: " + proxyHost + " using path: " + path);
-                xsltSrc.setSystemId(path);
-            }            
+            // xsltSrc.setSystemId(path);
 
             TransformerFactory factory = TransformerFactory.newInstance();
             Transformer transformer = factory.newTransformer(xsltSrc);
@@ -247,6 +245,9 @@ public class PrintServlet extends HttpServlet {
             }
             if (config.getInitParameter("xsl_A3_Liggend") != null) {
                 xsl_A3_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A3_Liggend"));
+            }
+            if (config.getInitParameter("baseImageUrl") != null) {
+                baseImageUrl = config.getInitParameter("baseImageUrl");
             }
             
             fopConfig = getServletContext().getRealPath("/WEB-INF/xsl/fop.xml");
