@@ -51,6 +51,7 @@ import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
+import nl.b3p.gis.viewer.db.Tekstblok;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.db.UserKaartgroep;
 import nl.b3p.gis.viewer.db.UserKaartlaag;
@@ -622,7 +623,8 @@ public class ViewerAction extends BaseGisAction {
 
         //get tekstblokken
         List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_TAB);
-        request.setAttribute("tekstBlokken", tekstBlokken);
+        JSONArray jsonBlokken = getTekstBlokkenJson(tekstBlokken);
+        request.setAttribute("tekstBlokken", jsonBlokken);
 
         /* Set search result with startlocation on request. Used in search tab 
          * and placing a location marker on map */
@@ -1273,5 +1275,19 @@ public class ViewerAction extends BaseGisAction {
         }
 
         return geom;
+    }
+
+    private JSONArray getTekstBlokkenJson(List tekstBlokken) {
+        Iterator it = tekstBlokken.iterator();
+        JSONArray jsonBlokken = new JSONArray();
+        while (it.hasNext()) {
+            Tekstblok tb = (Tekstblok) it.next();
+            try {
+                jsonBlokken.put(tb.toJson());
+            } catch(JSONException e) {
+                log.error("Fout bij converteren van tekstblok naar Json", e);
+            }
+        }
+        return jsonBlokken;
     }
 }

@@ -1,6 +1,8 @@
 package nl.b3p.gis.viewer.db;
 
 import java.util.Date;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  *
@@ -114,6 +116,23 @@ public class Tekstblok {
 
     public void setHoogte(Integer hoogte) {
         this.hoogte = hoogte;
+    }
+
+    public JSONObject toJson() throws JSONException {
+        JSONObject me = new JSONObject();
+        me.put("id", this.getId());
+        me.put("titel", this.getTitel());
+        me.put("tekst", this.getTekst());
+        me.put("url", this.getUrl());
+        me.put("toonUrl", this.getToonUrl());
+        me.put("pagina", this.getPagina());
+        me.put("volgordeNr", this.getVolgordeNr());
+        me.put("kleur", this.getKleur());
+        me.put("auteur", this.getAuteur());
+        me.put("cdate", this.getCdate());
+        me.put("inlogIcon", this.getInlogIcon());
+        me.put("hoogte", this.getHoogte());
+        return me;
     }
 
 }
