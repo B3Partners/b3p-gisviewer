@@ -307,4 +307,18 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <many-to-one lazy="false" name="zoekconfiguratie"/>
         <many-to-one lazy="false" name="thema"/>
     </class>
+    
+    <class name="nl.b3p.gis.viewer.db.CMSPagina">
+        <id name="id" type="int">
+            <column name="id" not-null="true"/>
+            <generator class="sequence">
+                <param name="sequence">cms_pagina_id_seq</param>
+            </generator>
+        </id>
+        <property name="titel" not-null="true" type="string"/>
+        <property name="tekst" type="materialized_clob"/>
+        <property name="thema" type="string"/>
+        <property name="cdate" not-null="true" type="timestamp"/>
+    </class>
+    
 </hibernate-mapping>
