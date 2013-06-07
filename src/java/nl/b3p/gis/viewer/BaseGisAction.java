@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.viewer.admindata.CollectAdmindata;
+import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
@@ -440,5 +441,15 @@ public abstract class BaseGisAction extends BaseHibernateAction {
                 + " order by volgordenr, cdate").setParameter("pagina", pagina).list();
 
         return tekstBlokken;
+    }
+    
+    protected CMSPagina getCMSPage(Integer pageID) {
+        if (pageID == null || pageID < 1) {
+            return null;
+        }
+        
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        return (CMSPagina) sess.get(CMSPagina.class, pageID);
     }
 }

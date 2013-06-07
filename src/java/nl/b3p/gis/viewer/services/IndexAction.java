@@ -93,6 +93,8 @@ public class IndexAction extends BaseGisAction {
         createLists(dynaForm, request);
 
         populateTekstblok(request, PAGE_GISVIEWER_HOME);
+        
+        request.setAttribute("theme", "");
 
         return mapping.findForward(SUCCESS);
     }
