@@ -154,13 +154,14 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="tekst" type="text"/>
         <property name="url" type="string"/>
         <property column="toonurl" name="toonUrl" type="boolean"/>
-        <property name="pagina" not-null="true" type="string"/>
+        <!-- <property name="pagina" not-null="true" type="string"/> -->
         <property column="volgordenr" name="volgordeNr" type="integer"/>
         <property name="kleur" type="string"/>
         <property name="auteur" type="string"/>
         <property name="cdate" not-null="true" type="timestamp"/>
         <property column="inlogicon" name="inlogIcon" type="boolean"/>
         <property name="hoogte" type="integer"/>
+        <property column="cms_pagina" name="cmsPagina" type="integer" />
     </class>
 
     <class name="nl.b3p.gis.viewer.db.UserKaartgroep">

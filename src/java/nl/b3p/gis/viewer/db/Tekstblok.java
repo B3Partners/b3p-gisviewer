@@ -14,13 +14,14 @@ public class Tekstblok {
     private String tekst;
     private String url;
     private Boolean toonUrl;
-    private String pagina;
+    //private String pagina;
     private Integer volgordeNr;
     private String kleur;
     private String auteur;
     private Date cdate;
     private Boolean inlogIcon;
     private Integer hoogte;
+    private Integer cmsPagina;
 
     public String getAuteur() {
         return auteur;
@@ -44,14 +45,6 @@ public class Tekstblok {
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public String getPagina() {
-        return pagina;
-    }
-
-    public void setPagina(String pagina) {
-        this.pagina = pagina;
     }
 
     public String getTekst() {
@@ -118,6 +111,14 @@ public class Tekstblok {
         this.hoogte = hoogte;
     }
 
+    public Integer getCmsPagina() {
+        return cmsPagina;
+    }
+
+    public void setCmsPagina(Integer cmsPagina) {
+        this.cmsPagina = cmsPagina;
+    }
+
     public JSONObject toJson() throws JSONException {
         JSONObject me = new JSONObject();
         me.put("id", this.getId());
@@ -125,13 +126,15 @@ public class Tekstblok {
         me.put("tekst", this.getTekst());
         me.put("url", this.getUrl());
         me.put("toonUrl", this.getToonUrl());
-        me.put("pagina", this.getPagina());
+        //me.put("pagina", this.getPagina());
         me.put("volgordeNr", this.getVolgordeNr());
         me.put("kleur", this.getKleur());
         me.put("auteur", this.getAuteur());
         me.put("cdate", this.getCdate());
         me.put("inlogIcon", this.getInlogIcon());
         me.put("hoogte", this.getHoogte());
+        me.put("cmsPagina", this.getCmsPagina());
+        
         return me;
     }
 
