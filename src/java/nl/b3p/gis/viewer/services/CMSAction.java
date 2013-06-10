@@ -45,13 +45,16 @@ public class CMSAction extends BaseGisAction {
         }        
         
         populateCMSPage(request, cmsPageId);
-        populateTekstblok(request, PAGE_GISVIEWER_HOME);
+        
+        if (cmsPageId != null && cmsPageId > 0) {
+            populateTekstblok(request, cmsPageId);
+        }        
 
         return mapping.findForward(SUCCESS);
     }
 
-    private void populateTekstblok(HttpServletRequest request, String page) {
-        List tekstBlokken = getTekstBlokken(page);
+    private void populateTekstblok(HttpServletRequest request, Integer cmsPageId) {
+        List tekstBlokken = getTekstBlokken(cmsPageId);
         request.setAttribute("tekstBlokken", tekstBlokken);
     }
     
