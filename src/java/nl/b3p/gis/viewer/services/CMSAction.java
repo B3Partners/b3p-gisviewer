@@ -59,11 +59,15 @@ public class CMSAction extends BaseGisAction {
     }
     
     private void populateCMSPage(HttpServletRequest request, Integer pageID) {        
-        if (pageID != null && pageID > 0) {
-            CMSPagina cmsPage = getCMSPage(pageID);
+        CMSPagina cmsPage = null;
         
-            request.setAttribute("cmsPage", cmsPage);
-            request.setAttribute("theme", cmsPage.getThema());
+        if (pageID != null && pageID > 0) {
+            cmsPage = getCMSPage(pageID);
+        
+            if (cmsPage != null) {
+                request.setAttribute("cmsPage", cmsPage);
+                request.setAttribute("theme", cmsPage.getThema());
+            }
         }        
         
         /* User can also set theme directly, eq &theme=b3p */
@@ -72,7 +76,7 @@ public class CMSAction extends BaseGisAction {
             request.setAttribute("theme", theme);
         }
         
-        if (theme == null && pageID == null) {
+        if (theme == null && cmsPage == null) {
             request.setAttribute("theme", "");
         }
     }
