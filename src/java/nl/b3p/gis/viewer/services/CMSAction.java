@@ -17,10 +17,7 @@ public class CMSAction extends BaseGisAction {
 
     private static final Log logger = LogFactory.getLog(CMSAction.class);
     
-    private static final String CMS = "cms";   
-    private static final String CMS_PAGE_ID = "cmsPageId";
-    private static final String CMS_THEME = "theme";
-    private static final String PAGE_GISVIEWER_HOME = "gisviewer_home";
+    private static final String CMS = "cms";
 
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
@@ -66,17 +63,16 @@ public class CMSAction extends BaseGisAction {
         
             if (cmsPage != null) {
                 request.setAttribute("cmsPage", cmsPage);
-                request.setAttribute("theme", cmsPage.getThema());
+                
+                if (cmsPage.getThema() == null || cmsPage.getThema().equals("")) {
+                    request.setAttribute("theme", "");
+                } else {
+                    request.setAttribute("theme", cmsPage.getThema());
+                }                
             }
-        }        
-        
-        /* User can also set theme directly, eq &theme=b3p */
-        String theme = request.getParameter(CMS_THEME);        
-        if (theme != null && !theme.equals("")) {
-            request.setAttribute("theme", theme);
         }
         
-        if (theme == null && cmsPage == null) {
+        if (cmsPage == null) {
             request.setAttribute("theme", "");
         }
     }

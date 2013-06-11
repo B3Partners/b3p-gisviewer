@@ -296,7 +296,14 @@ public class IndexAction extends BaseGisAction {
     }
 
     private void populateTekstblok(HttpServletRequest request, String page) {
-        List tekstBlokken = getTekstBlokken(page);
+        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);          
+        Integer cmsPageId = null;
+        
+        if (param != null && !param.equals("")) {
+            cmsPageId = new Integer(param);
+        }        
+        
+        List tekstBlokken = getTekstBlokken(cmsPageId);
         request.setAttribute("tekstBlokken", tekstBlokken);
     }
 }

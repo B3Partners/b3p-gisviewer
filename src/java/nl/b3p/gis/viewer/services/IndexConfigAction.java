@@ -95,7 +95,14 @@ public class IndexConfigAction extends BaseGisAction {
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         createLists(dynaForm, request);
 
-        List tekstBlokken = getTekstBlokken(PAGE_CONFIG_HOME);
+        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);          
+        Integer cmsPageId = null;
+        
+        if (param != null && !param.equals("")) {
+            cmsPageId = new Integer(param);
+        }        
+        
+        List tekstBlokken = getTekstBlokken(cmsPageId);
         request.setAttribute("tekstBlokken", tekstBlokken);
 
         return mapping.findForward(SUCCESS);
@@ -207,7 +214,14 @@ public class IndexConfigAction extends BaseGisAction {
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         createLists(dynaForm, request);
 
-        List tekstBlokken = getTekstBlokken(PAGE_CONFIG_HOME);
+        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);          
+        Integer cmsPageId = null;
+        
+        if (param != null && !param.equals("")) {
+            cmsPageId = new Integer(param);
+        }        
+        
+        List tekstBlokken = getTekstBlokken(cmsPageId);
         request.setAttribute("tekstBlokken", tekstBlokken);
 
         return getDefaultForward(mapping, request);
@@ -227,7 +241,14 @@ public class IndexConfigAction extends BaseGisAction {
     }
 
     public ActionForward help(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        List tekstBlokken = getTekstBlokken(PAGE_CONFIG_HELP);
+        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);          
+        Integer cmsPageId = null;
+        
+        if (param != null && !param.equals("")) {
+            cmsPageId = new Integer(param);
+        }        
+        
+        List tekstBlokken = getTekstBlokken(cmsPageId);
         request.setAttribute("tekstBlokken", tekstBlokken);
 
         return getDefaultForward(mapping, request);

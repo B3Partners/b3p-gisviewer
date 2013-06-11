@@ -622,7 +622,15 @@ public class ViewerAction extends BaseGisAction {
         }
 
         //get tekstblokken
-        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_TAB);
+        
+        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);          
+        Integer cmsPageId = null;
+        
+        if (param != null && !param.equals("")) {
+            cmsPageId = new Integer(param);
+        }        
+        
+        List tekstBlokken = getTekstBlokken(cmsPageId);
         JSONArray jsonBlokken = getTekstBlokkenJson(tekstBlokken);
         request.setAttribute("tekstBlokken", jsonBlokken);
 

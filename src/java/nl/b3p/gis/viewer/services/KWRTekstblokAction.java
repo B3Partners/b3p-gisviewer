@@ -36,8 +36,16 @@ public class KWRTekstblokAction extends BaseGisAction {
     private static final String PAGE_GISVIEWER_KWRPROJECTEN = "gisviewer_kwrprojecten";
     
     public ActionForward kwrprojecten(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_KWRPROJECTEN);
+        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);          
+        Integer cmsPageId = null;
+        
+        if (param != null && !param.equals("")) {
+            cmsPageId = new Integer(param);
+        }        
+        
+        List tekstBlokken = getTekstBlokken(cmsPageId);
         request.setAttribute("tekstBlokken", tekstBlokken);
+        
         return getDefaultForward(mapping, request);
     }
     

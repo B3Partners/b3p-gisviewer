@@ -9,6 +9,7 @@ import nl.b3p.gis.viewer.admindata.CollectAdmindata;
 import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
+import nl.b3p.gis.viewer.db.Tekstblok;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.db.UserKaartlaag;
 import nl.b3p.gis.viewer.services.GisPrincipal;
@@ -27,6 +28,7 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     private static final Log logger = LogFactory.getLog(BaseGisAction.class);
     public static final String URL_AUTH = "code";
     public static final String APP_AUTH = "appCode";
+    public static final String CMS_PAGE_ID = "cmsPageId";
     protected static final double DEFAULTTOLERANCE = 5.0;
     protected static final String ACKNOWLEDGE_MESSAGES = "acknowledgeMessages";
 
@@ -48,7 +50,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     }
 
     /**
-     * Haal alle themas op uit de database door middel van een in het request meegegeven thema id comma seperated list.
+     * Haal alle themas op uit de database door middel van een in het request
+     * meegegeven thema id comma seperated list.
      *
      * @param mapping ActionMapping
      * @param dynaForm DynaValidatorForm
@@ -75,14 +78,16 @@ public abstract class BaseGisAction extends BaseHibernateAction {
             }
         }
 
-        if (themas != null && themas.size() > 0)
+        if (themas != null && themas.size() > 0) {
             Collections.sort(themas);
+        }
 
         return themas;
     }
 
     /**
-     * Haal een Thema op uit de database door middel van een in het request meegegeven thema id.
+     * Haal een Thema op uit de database door middel van een in het request
+     * meegegeven thema id.
      *
      * @param mapping ActionMapping
      * @param dynaForm DynaValidatorForm
@@ -139,42 +144,43 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     private Themas getThema(String themaid, HttpServletRequest request) {
         Themas t = SpatialUtil.getThema(themaid);
 
-        if (t == null)
+        if (t == null) {
             return null;
+        }
 
         /*
-        if (!HibernateUtil.isCheckLoginKaartenbalie()) {
-            logger.debug("No kb login required, thema: " + t == null ? "<null>" : t.getNaam());
-            return t;
-        }
+         if (!HibernateUtil.isCheckLoginKaartenbalie()) {
+         logger.debug("No kb login required, thema: " + t == null ? "<null>" : t.getNaam());
+         return t;
+         }
 
-        // Zoek layers die via principal binnen komen
-        GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-        if (user == null) {
-            logger.debug("No user found, thema: " + t == null ? "<null>" : t.getNaam());
-            return null;
-        }
-        List layersFromRoles = user.getLayerNames(false);
-        if (layersFromRoles == null) {
-            logger.debug("No layers found, thema: " + t == null ? "<null>" : t.getNaam());
-            return null;
-        }
+         // Zoek layers die via principal binnen komen
+         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+         if (user == null) {
+         logger.debug("No user found, thema: " + t == null ? "<null>" : t.getNaam());
+         return null;
+         }
+         List layersFromRoles = user.getLayerNames(false);
+         if (layersFromRoles == null) {
+         logger.debug("No layers found, thema: " + t == null ? "<null>" : t.getNaam());
+         return null;
+         }
 
-        // Check de rechten op alle layers uit het thema
-        if (!checkThemaLayers(t, layersFromRoles)) {
-            logger.debug("No rights for layers found, thema: " + t == null ? "<null>" : t.getNaam());
-            return null;
-        }
-        */
+         // Check de rechten op alle layers uit het thema
+         if (!checkThemaLayers(t, layersFromRoles)) {
+         logger.debug("No rights for layers found, thema: " + t == null ? "<null>" : t.getNaam());
+         return null;
+         }
+         */
 
         return t;
     }
 
     /**
      * Indien een cluster wordt meegegeven dan voegt deze functie ook de layers
-     * die niet als thema geconfigureerd zijn, maar toch als role aan de principal
-     * zijn meegegeven als dummy thema toe. Als dit niet de bedoeling is dan
-     * dient null als cluster meegegeven te worden.
+     * die niet als thema geconfigureerd zijn, maar toch als role aan de
+     * principal zijn meegegeven als dummy thema toe. Als dit niet de bedoeling
+     * is dan dient null als cluster meegegeven te worden.
      *
      * @param locatie
      * @param request
@@ -269,9 +275,9 @@ public abstract class BaseGisAction extends BaseHibernateAction {
 
     /**
      * Indien een cluster wordt meegegeven dan voegt deze functie ook de layers
-     * die niet als thema geconfigureerd zijn, maar toch als role aan de principal
-     * zijn meegegeven als dummy thema toe. Als dit niet de bedoeling is dan
-     * dient null als cluster meegegeven te worden.
+     * die niet als thema geconfigureerd zijn, maar toch als role aan de
+     * principal zijn meegegeven als dummy thema toe. Als dit niet de bedoeling
+     * is dan dient null als cluster meegegeven te worden.
      *
      * @param locatie
      * @param request
@@ -382,8 +388,9 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     }
 
     /**
-     * Voeg alle layers samen voor een thema en controleer of de gebruiker
-     * voor alle layers rechten heeft. Zo nee, thema niet toevoegen.
+     * Voeg alle layers samen voor een thema en controleer of de gebruiker voor
+     * alle layers rechten heeft. Zo nee, thema niet toevoegen.
+     *
      * @param t
      * @param request
      * @return
@@ -415,7 +422,8 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     }
 
     /**
-     * Een protected methode het object thema ophaalt dat hoort bij een bepaald id.
+     * Een protected methode het object thema ophaalt dat hoort bij een bepaald
+     * id.
      *
      * @param identifier String which identifies the object thema to be found.
      *
@@ -435,19 +443,23 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     }
 
     protected List getTekstBlokken(Integer cmsPageId) {
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        List<Tekstblok> tekstBlokken = new ArrayList();
+        
+        if (cmsPageId != null && cmsPageId > 0) {
+            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
-        List tekstBlokken = sess.createQuery("from Tekstblok where cms_pagina = :id"
-                + " order by volgordenr, cdate").setParameter("id", cmsPageId).list();
+            tekstBlokken = sess.createQuery("from Tekstblok where cms_pagina = :id"
+                    + " order by volgordenr, cdate").setParameter("id", cmsPageId).list();
+        }
 
         return tekstBlokken;
     }
-    
+
     protected CMSPagina getCMSPage(Integer pageID) {
         if (pageID == null || pageID < 1) {
             return null;
         }
-        
+
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         return (CMSPagina) sess.get(CMSPagina.class, pageID);

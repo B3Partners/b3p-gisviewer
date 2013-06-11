@@ -46,50 +46,50 @@ public class SolParcPaginaAction extends BaseGisAction {
     private static final String PAGE_GISVIEWER_SOLPARC_GEMEENTE = "solparc_gemeente";
     
     public ActionForward maatschappelijkevoorzieningen(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-            List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_MAATSCHAPPELIJK);
+            //List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_MAATSCHAPPELIJK);
             request.setAttribute("icon", PAGE_GISVIEWER_SOLPARC_MAATSCHAPPELIJK);
             request.setAttribute("titel", "Maatschappelijke voorzieningen");
-            request.setAttribute("tekstBlokken", tekstBlokken);
+            //request.setAttribute("tekstBlokken", tekstBlokken);
             return getDefaultForward(mapping, request);
     }
 
     public ActionForward actuelezaken(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-            List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_ACTUEEL);
+            //List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_ACTUEEL);
             request.setAttribute("icon", PAGE_GISVIEWER_SOLPARC_ACTUEEL);
             request.setAttribute("titel", "Actuele zaken");
-            request.setAttribute("tekstBlokken", tekstBlokken);
+            //request.setAttribute("tekstBlokken", tekstBlokken);
             return getDefaultForward(mapping, request);
     }
 
     public ActionForward wijkgerichtwerken(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-            List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_WIJKGERICHT);
+            //List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_WIJKGERICHT);
             request.setAttribute("icon", PAGE_GISVIEWER_SOLPARC_WIJKGERICHT);
             request.setAttribute("titel", "Wijkgericht werken");
-            request.setAttribute("tekstBlokken", tekstBlokken);
+            //request.setAttribute("tekstBlokken", tekstBlokken);
             return getDefaultForward(mapping, request);
     }
 
     public ActionForward beheeropenbareruimte(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-            List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_OPENBARERUIMTE);
+            //List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_OPENBARERUIMTE);
             request.setAttribute("icon", PAGE_GISVIEWER_SOLPARC_OPENBARERUIMTE);
             request.setAttribute("titel", "Beheer openbare ruimte");
-            request.setAttribute("tekstBlokken", tekstBlokken);
+            //request.setAttribute("tekstBlokken", tekstBlokken);
             return getDefaultForward(mapping, request);
     }
 
     public ActionForward natuurmilieucultuurhistorie(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-            List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_NATUUR);
+            //List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_NATUUR);
             request.setAttribute("icon", PAGE_GISVIEWER_SOLPARC_NATUUR);
             request.setAttribute("titel", "Natuur, milieu en historie");
-            request.setAttribute("tekstBlokken", tekstBlokken);
+            //request.setAttribute("tekstBlokken", tekstBlokken);
             return getDefaultForward(mapping, request);
     }
 
     public ActionForward gemeenteopdekaart(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-            List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_GEMEENTE);
+            //List tekstBlokken = getTekstBlokken(PAGE_GISVIEWER_SOLPARC_GEMEENTE);
             request.setAttribute("icon", PAGE_GISVIEWER_SOLPARC_GEMEENTE);
             request.setAttribute("titel", "Gemeente op de kaart");
-            request.setAttribute("tekstBlokken", tekstBlokken);
+            //request.setAttribute("tekstBlokken", tekstBlokken);
             return getDefaultForward(mapping, request);
     }
 
