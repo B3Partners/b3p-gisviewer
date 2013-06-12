@@ -39,7 +39,11 @@ public class CMSAction extends BaseGisAction {
         
         if (param != null && !param.equals("")) {
             cmsPageId = new Integer(param);
-        }        
+        }     
+        
+        if (request.getParameter("id") != null) {
+            cmsPageId = Integer.parseInt(request.getParameter("id"));
+        }
         
         populateCMSPage(request, cmsPageId);
         
