@@ -75,5 +75,9 @@ public class CMSAction extends BaseGisAction {
         if (cmsPage == null) {
             request.setAttribute("theme", "");
         }
+        
+        if (cmsPage.getShowPlainAndMapButton()) {
+            request.setAttribute("showPlainAndMapButton", true);
+        }
     }
 }

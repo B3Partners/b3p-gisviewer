@@ -13,6 +13,7 @@ public class CMSPagina {
     private String titel;
     private String tekst;
     private String thema;
+    private Boolean showPlainAndMapButton;
     private Date cdate;
 
     public Integer getId() {
@@ -55,6 +56,14 @@ public class CMSPagina {
         this.cdate = cdate;
     }
 
+    public Boolean getShowPlainAndMapButton() {
+        return showPlainAndMapButton;
+    }
+
+    public void setShowPlainAndMapButton(Boolean showPlainAndMapButton) {
+        this.showPlainAndMapButton = showPlainAndMapButton;
+    }
+
     public JSONObject toJson() throws JSONException {
         JSONObject me = new JSONObject();
         
@@ -62,9 +71,9 @@ public class CMSPagina {
         me.put("titel", this.getTitel());
         me.put("tekst", this.getTekst());
         me.put("thema", this.getThema());
+        me.put("showPlainAndMapButton", this.getShowPlainAndMapButton());
         me.put("cdate", this.getCdate());
         
         return me;
     }
-
 }
