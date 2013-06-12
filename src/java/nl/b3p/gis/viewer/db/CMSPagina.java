@@ -1,6 +1,7 @@
 package nl.b3p.gis.viewer.db;
 
 import java.util.Date;
+import nl.b3p.gis.utils.Slugify;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -15,6 +16,8 @@ public class CMSPagina {
     private String thema;
     private Boolean showPlainAndMapButton;
     private Date cdate;
+    
+    private String sefUrl;
 
     public Integer getId() {
         return id;
@@ -64,6 +67,14 @@ public class CMSPagina {
         this.showPlainAndMapButton = showPlainAndMapButton;
     }
 
+    public String getSefUrl() {
+        return Slugify.slugify(getTitel());
+    }
+
+    public void setSefUrl(String sefUrl) {
+        this.sefUrl = sefUrl;
+    }
+
     public JSONObject toJson() throws JSONException {
         JSONObject me = new JSONObject();
         
@@ -73,6 +84,7 @@ public class CMSPagina {
         me.put("thema", this.getThema());
         me.put("showPlainAndMapButton", this.getShowPlainAndMapButton());
         me.put("cdate", this.getCdate());
+        me.put("sefUrl", this.getSefUrl());
         
         return me;
     }
