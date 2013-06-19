@@ -9,4 +9,4 @@ create table cms_pagina (
 );
 
 ALTER TABLE tekstblok ADD (cms_pagina integer);
-ALTER TABLE tekstblok DROP (pagina NOT NULL);
+ALTER TABLE tekstblok MODIFY (pagina NULL);
