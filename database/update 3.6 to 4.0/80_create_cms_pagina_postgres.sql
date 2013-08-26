@@ -1,4 +1,6 @@
-drop table cms_pagina;
+DROP TABLE IF EXISTS cms_pagina;
+
+-- set session authorization user;
 
 create table cms_pagina (
 	id  serial not null,
@@ -11,5 +13,4 @@ create table cms_pagina (
 );
 
 ALTER TABLE tekstblok ADD COLUMN cms_pagina integer;
-
 ALTER TABLE tekstblok ALTER COLUMN pagina DROP NOT NULL;

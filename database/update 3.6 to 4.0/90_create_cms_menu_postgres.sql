@@ -1,10 +1,8 @@
+DROP TABLE IF EXISTS cms_menu_menuitem;
+DROP TABLE IF EXISTS cms_menuitem;
+DROP TABLE IF EXISTS cms_menu;
+
 -- set session authorization user;
-
-DROP TABLE cms_menu_menuitem;
-DROP TABLE cms_menuitem;
-DROP TABLE cms_menu;
-
-ALTER TABLE cms_pagina DROP COLUMN cms_menu;
 
 create table cms_menu (
 	id  serial not null,
