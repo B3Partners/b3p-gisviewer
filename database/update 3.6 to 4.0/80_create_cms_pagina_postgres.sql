@@ -1,3 +1,5 @@
+drop table cms_pagina;
+
 create table cms_pagina (
 	id  serial not null,
 	titel varchar(255) not null,

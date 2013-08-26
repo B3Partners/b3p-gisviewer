@@ -48,7 +48,9 @@ import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.utils.KaartSelectieUtil;
+import static nl.b3p.gis.viewer.BaseGisAction.CMS_PAGE_ID;
 import nl.b3p.gis.viewer.db.Applicatie;
+import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Tekstblok;
@@ -658,6 +660,19 @@ public class ViewerAction extends BaseGisAction {
                     }
                 }
             }
+        }
+        
+        /* CMS Theme klaarzetten */
+        CMSPagina cmsPage = (CMSPagina) sess.get(CMSPagina.class, cmsPageId);
+        
+        /* cms page id op sessie zetten voor redirect uitloggen */
+        if (cmsPageId != null && cmsPageId > 0) {
+            request.setAttribute("cmsPageId", cmsPageId);
+        }
+        
+        if (cmsPage != null && cmsPage.getThema() != null 
+                && !cmsPage.getThema().equals("")) {
+            request.setAttribute("theme", cmsPage.getThema());
         }
     }
 

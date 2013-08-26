@@ -1,6 +1,5 @@
 package nl.b3p.gis.viewer.services;
 
-import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.Principal;
@@ -8,16 +7,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
-import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.BaseGisAction;
+import static nl.b3p.gis.viewer.BaseGisAction.APP_AUTH;
 import nl.b3p.gis.viewer.db.Applicatie;
+import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Themas;
 import org.apache.commons.logging.Log;
@@ -31,8 +29,8 @@ import org.securityfilter.filter.SecurityRequestWrapper;
  * Deze Action haalt alle analyse thema's op.
  */
 public class IndexAction extends BaseGisAction {
-
     private static final Log logger = LogFactory.getLog(IndexAction.class);
+    
     protected static final String LOGIN = "login";
     protected static final String LOGINERROR = "loginError";
     protected static final String LOGOUT = "logout";
@@ -89,11 +87,26 @@ public class IndexAction extends BaseGisAction {
      *
      * @throws Exception
      */
-    public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public ActionForward unspecified(ActionMapping mapping, 
+            DynaValidatorForm dynaForm, HttpServletRequest request,
+            HttpServletResponse response) throws Exception { 
+        
+        /* Forward to first page if a cms page exists */
+        Integer firstCmsPageId = getFirstCMSPageId();
+        String webApp = request.getContextPath();
+
+        if (firstCmsPageId != null && firstCmsPageId > 0) {
+            CMSPagina cmsPage = getCMSPage(firstCmsPageId);
+            String url = prettifyCMSPageUrl(request, cmsPage);
+            
+            response.sendRedirect(response.encodeRedirectURL(url));
+            return null;
+        }
+
         createLists(dynaForm, request);
 
         populateTekstblok(request, PAGE_GISVIEWER_HOME);
-        
+
         request.setAttribute("theme", "");
 
         return mapping.findForward(SUCCESS);
@@ -227,12 +240,32 @@ public class IndexAction extends BaseGisAction {
 
     public ActionForward logout(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
+        Integer cmsPageId = null;
+        if (request.getParameter("cmsPageId") != null) {            
+            try {
+                String nr = request.getParameter("cmsPageId");
+                cmsPageId = new Integer(nr);
+            } catch (NumberFormatException nfe) {
+                logger.debug("Fout tijdens uitloggen met een cms page id.", nfe);
+            }
+        }
+        
         HttpSession session = request.getSession();
-        String sesId = session.getId();
+        String sessionId = session.getId();
+
         session.invalidate();
-        logger.info("Logged out from session: " + sesId);
+        logger.debug("Logged out from session: " + sessionId);
+
+        /* Uitloggen en gaan naar cms pagina */
+        if (cmsPageId != null && cmsPageId > 0) {
+            CMSPagina cmsPage = getCMSPage(cmsPageId);
+            String url = prettifyCMSPageUrl(request, cmsPage);
+            
+            return new RedirectingActionForward(url);
+        }
 
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
+
         return getDefaultForward(mapping, request);
     }
 
@@ -269,7 +302,7 @@ public class IndexAction extends BaseGisAction {
         createLists(dynaForm, request);
 
         populateTekstblok(request, PAGE_GISVIEWER_HOME);
-        
+
         HttpSession session = request.getSession();
         session.setAttribute("loginForm", false);
 
@@ -296,14 +329,25 @@ public class IndexAction extends BaseGisAction {
     }
 
     private void populateTekstblok(HttpServletRequest request, String page) {
-        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);          
+        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);
         Integer cmsPageId = null;
-        
+
         if (param != null && !param.equals("")) {
             cmsPageId = new Integer(param);
-        }        
-        
+        }
+
         List tekstBlokken = getTekstBlokken(cmsPageId);
         request.setAttribute("tekstBlokken", tekstBlokken);
+    }
+
+    private Integer getFirstCMSPageId() {
+        Integer id = null;
+
+        List<CMSPagina> paginas = getCMSPaginas();
+        if (paginas != null && paginas.size() > 0) {
+            id = paginas.get(0).getId();
+        }
+
+        return id;
     }
 }

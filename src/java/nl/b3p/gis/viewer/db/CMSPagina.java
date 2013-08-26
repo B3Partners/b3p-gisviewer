@@ -15,9 +15,10 @@ public class CMSPagina {
     private String tekst;
     private String thema;
     private Boolean showPlainAndMapButton;
-    private Date cdate;
-    
-    private String sefUrl;
+    private Date cdate;    
+    private String sefUrl;    
+    private Integer cmsMenu;
+    private Boolean loginRequired;
 
     public Integer getId() {
         return id;
@@ -75,6 +76,22 @@ public class CMSPagina {
         this.sefUrl = sefUrl;
     }
 
+    public Integer getCmsMenu() {
+        return cmsMenu;
+    }
+
+    public void setCmsMenu(Integer cmsMenu) {
+        this.cmsMenu = cmsMenu;
+    }
+
+    public Boolean getLoginRequired() {
+        return loginRequired;
+    }
+
+    public void setLoginRequired(Boolean loginRequired) {
+        this.loginRequired = loginRequired;
+    }
+
     public JSONObject toJson() throws JSONException {
         JSONObject me = new JSONObject();
         
@@ -85,6 +102,8 @@ public class CMSPagina {
         me.put("showPlainAndMapButton", this.getShowPlainAndMapButton());
         me.put("cdate", this.getCdate());
         me.put("sefUrl", this.getSefUrl());
+        me.put("cmsMenu", this.getCmsMenu());
+        me.put("loginRequired", this.getLoginRequired());
         
         return me;
     }

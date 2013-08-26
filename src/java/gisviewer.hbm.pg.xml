@@ -270,6 +270,35 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="thema" type="string"/>
         <property name="showPlainAndMapButton" column="show_plain_map_btn" not-null="true" type="boolean"/>
         <property name="cdate" not-null="true" type="timestamp"/>
+        <property column="cms_menu" name="cmsMenu" type="integer" />
+        <property column="login_required" name="loginRequired" type="boolean"/>
+    </class>
+    
+    <class name="nl.b3p.gis.viewer.db.CMSMenu" table="cms_menu">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="titel" length="255" not-null="true"/>
+        <property name="cdate" not-null="true" type="timestamp"/>
+        <set name="cmsMenuItems" table="cms_menu_menuitem">
+            <key column="cms_menu_id"/>
+            <many-to-many class="nl.b3p.gis.viewer.db.CMSMenuItem" column="cms_menuitem_id"/>
+        </set>
+    </class>
+    
+    <class name="nl.b3p.gis.viewer.db.CMSMenuItem" table="cms_menuitem">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="titel" length="255" not-null="true"/>
+        <property name="url" length="255" not-null="true"/>
+        <property name="icon" length="255"/>
+        <property name="volgordenr" type="integer"/>
+        <property name="cdate" not-null="true" type="timestamp"/>
+        <set name="cmsMenus" table="cms_menu_menuitem">
+            <key column="cms_menuitem_id"/>
+            <many-to-many class="nl.b3p.gis.viewer.db.CMSMenu" column="cms_menu_id"/>
+        </set>
     </class>
     
 </hibernate-mapping>

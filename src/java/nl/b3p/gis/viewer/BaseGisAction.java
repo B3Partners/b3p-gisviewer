@@ -1,11 +1,16 @@
 package nl.b3p.gis.viewer;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import nl.b3p.gis.viewer.admindata.CollectAdmindata;
+import nl.b3p.gis.viewer.db.CMSMenu;
+import nl.b3p.gis.viewer.db.CMSMenuItem;
 import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Gegevensbron;
@@ -32,6 +37,9 @@ public abstract class BaseGisAction extends BaseHibernateAction {
     protected static final double DEFAULTTOLERANCE = 5.0;
     protected static final String ACKNOWLEDGE_MESSAGES = "acknowledgeMessages";
 
+    private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
+    private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
+    
     protected void createLists(DynaValidatorForm dynaForm, HttpServletRequest request) throws Exception {
         GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
         String code = null;
@@ -463,5 +471,53 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         return (CMSPagina) sess.get(CMSPagina.class, pageID);
+    }
+    
+    protected CMSMenu getCMSMenu(Integer id) {
+        if (id == null || id < 1) {
+            return null;
+        }
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        return (CMSMenu) sess.get(CMSMenu.class, id);
+    }
+    
+    protected List<CMSMenuItem> getCMSMenuItems(Integer menuId) {
+        List<CMSMenuItem> menuItems = new ArrayList<CMSMenuItem>();
+        
+        if (menuId == null || menuId < 1) {
+            return menuItems;
+        }
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        menuItems = sess.createQuery("select item from CMSMenuItem item"
+                + " where item.id in (select cmsMenuItems.id"
+                + " from CMSMenu menu inner join menu.cmsMenuItems cmsMenuItems"
+                + " where menu.id = :menuId) order by item.volgordenr DESC")
+                .setParameter("menuId", menuId)
+                .list();
+       
+        return menuItems;
+    }
+    
+    protected List<CMSPagina> getCMSPaginas() {
+        List<CMSPagina> paginas;
+        
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        paginas = sess.createQuery("from CMSPagina order by id").list();
+
+        return paginas;
+    }
+    
+    protected String prettifyCMSPageUrl(HttpServletRequest request, CMSPagina cmsPage) {
+        String baseURL = request.getRequestURL().toString().replace(request.getRequestURI().substring(0), request.getContextPath());
+
+        String nowhitespace = WHITESPACE.matcher(cmsPage.getTitel()).replaceAll("-");
+        String normalized = Normalizer.normalize(nowhitespace, Normalizer.Form.NFD);
+        String slug = NONLATIN.matcher(normalized).replaceAll("");
+        String url = slug.toLowerCase(Locale.ENGLISH);
+
+        return baseURL + "/cms/" + cmsPage.getId() + "/" + url + ".htm";
     }
 }
