@@ -99,10 +99,10 @@ public class PrintAction extends BaseHibernateAction {
          en in een Map<laag naam, legenda url> settings gestopt. De gebruiker kan in
          het printvoorbeeld nog kiezen welke legenda plaatjes in de print moeten komen. */
         request.getSession().setAttribute("legendItems", settings.getLegendMap());
-        
+
         Integer currentScale = calcCurrentScale(settings);
         dynaForm.set("scale", currentScale);
-        
+
         return mapping.findForward(SUCCESS);
     }
 
@@ -150,68 +150,71 @@ public class PrintAction extends BaseHibernateAction {
 
         return null;
     }
-    
-    private Integer calcCurrentScale(CombineImageSettings settings) { 
-        Double newMapWidth = settings.getBbox().getMaxx() - settings.getBbox().getMinx();        
+
+    private Integer calcCurrentScale(CombineImageSettings settings) {
+        Double newMapWidth = settings.getBbox().getMaxx() - settings.getBbox().getMinx();
         Double scale = newMapWidth / (settings.getWidth() * 0.00028);
-        
+
         return scale.intValue();
     }
-    
-    private String calculateBboxForScale(CombineImageSettings settings, Integer scale) {         
+
+    private String calculateBboxForScale(CombineImageSettings settings, Integer scale) {
         Integer mapWidth = settings.getWidth();
         Integer mapHeight = settings.getHeight();
-        
+
         /* Calculate new width in map units assuming a default 
          * pixel on screen of 0.28mm */
-        Double newMapWidth = Math.ceil( scale * (mapWidth * 0.00028));
-        Double newMapHeight = Math.ceil( scale * (mapHeight * 0.00028));
-        
+        Double newMapWidth = Math.ceil(scale * (mapWidth * 0.00028));
+        Double newMapHeight = Math.ceil(scale * (mapHeight * 0.00028));
+
         double minx = settings.getBbox().getMinx();
-        double miny = settings.getBbox().getMiny();        
+        double miny = settings.getBbox().getMiny();
         double maxx = settings.getBbox().getMaxx();
         double maxy = settings.getBbox().getMaxy();
-        
+
         /* Calculate center of current bounding box */
         double centerX = (maxx - minx) / 2 + minx;
         double centerY = (maxy - miny) / 2 + miny;
-        
+
         /* Calculate new bounding box for scale */
         String newMinX = Double.toString(centerX - (newMapWidth / 2));
         String newMaxX = Double.toString(centerX + (newMapWidth / 2));
         String newMinY = Double.toString(centerY - (newMapHeight / 2));
         String newMaxY = Double.toString(centerY + (newMapHeight / 2));
-        
+
         return newMinX + "," + newMinY + "," + newMaxX + "," + newMaxY;
     }
-    
-    private float calcPixelSizeForResolution(Integer ppi) {  
+
+    private float calcPixelSizeForResolution(Integer ppi) {
         float ratio = (float) 1 / ppi;
         float pixelSize = (float) ratio * 25.4f;
-        
+
         return (float) pixelSize / 1000;
     }
-    
+
     private Integer calcNewMapWidthFromPPI(Integer ppi, Double paperWidthInInches) {
         Double w = Math.ceil(ppi * paperWidthInInches);
-        
+
         return w.intValue();
     }
-    
+
     /**
      * Calculate new scale given a ppi, map width and paper size
-     * @see http://www.britishideas.com/2009/09/22/map-scales-and-printing-with-mapnik/
-    **/
-    private Integer calcScaleForHigherPPI(Integer ppi, Integer mapWidthInMeters, 
+     *
+     * @see
+     * http://www.britishideas.com/2009/09/22/map-scales-and-printing-with-mapnik/
+    *
+     */
+    private Integer calcScaleForHigherPPI(Integer ppi, Integer mapWidthInMeters,
             Double paperWidthInInches) {
-        
+
         float pixelSize = calcPixelSizeForResolution(ppi);
-        Integer newMapWidth = calcNewMapWidthFromPPI(ppi, paperWidthInInches);        
-        
-        Double schaal = Math.ceil( mapWidthInMeters / (newMapWidth * pixelSize) );
-        
+        Integer newMapWidth = calcNewMapWidthFromPPI(ppi, paperWidthInInches);
+
+        Double schaal = Math.ceil(mapWidthInMeters / (newMapWidth * pixelSize));
+
         return schaal.intValue();
-    }    
+    }
 
     public ActionForward print(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
@@ -229,13 +232,16 @@ public class PrintAction extends BaseHibernateAction {
 
         /* huidige CombineImageSettings ophalen */
         CombineImageSettings settings = (CombineImageSettings) request.getSession().getAttribute(imageId);
-        
+
         /* bbox klaarzetten voor xsl */
-        String minx = Double.toString(settings.getBbox().getMinx());
-        String miny = Double.toString(settings.getBbox().getMiny());
-        String maxx = Double.toString(settings.getBbox().getMaxx());
-        String maxy = Double.toString(settings.getBbox().getMaxy());
-        String bbox = minx + "," + miny + "," + maxx + "," + maxy;
+        String bbox = "";
+        if (settings != null && settings.getBbox() != null) {
+            String minx = Double.toString(settings.getBbox().getMinx());
+            String miny = Double.toString(settings.getBbox().getMiny());
+            String maxx = Double.toString(settings.getBbox().getMaxx());
+            String maxy = Double.toString(settings.getBbox().getMaxy());
+            bbox = minx + "," + miny + "," + maxx + "," + maxy;
+        }
 
         /* nu */
         Date now = new Date();
@@ -266,15 +272,15 @@ public class PrintAction extends BaseHibernateAction {
         info.setBbox(bbox);
         info.setOpmerking(remark);
         info.setKwaliteit(kwaliteit);
-        
+
         /* Indien schhaal ingevuld in printvoorbeeld de bbox opnieuw berekenen. */
         Integer currentScale = calcCurrentScale(settings);
-        String oldBBox = calculateBboxForScale(settings, currentScale);  
-        
-        Integer newScale = (Integer) dynaForm.get("scale");    
+        String oldBBox = calculateBboxForScale(settings, currentScale);
+
+        Integer newScale = (Integer) dynaForm.get("scale");
         String newBbox = null;
         if (newScale != null & newScale > 0) {
-            newBbox = calculateBboxForScale(settings, newScale);            
+            newBbox = calculateBboxForScale(settings, newScale);
             info.setBbox(newBbox);
             settings.setBbox(newBbox);
             info.setScale(newScale);
@@ -284,19 +290,19 @@ public class PrintAction extends BaseHibernateAction {
         String[] arr = (String[]) dynaForm.get("legendItems");
         if (arr != null && arr.length > 0) {
             Map legendItemsMap = new HashMap();
-            
+
             for (int i = 0; i < arr.length; i++) {
                 String key = arr[i];
 
-                if (settings.getLegendMap() != null && settings.getLegendMap().containsKey(key)) {                    
+                if (settings.getLegendMap() != null && settings.getLegendMap().containsKey(key)) {
                     String url = (String) settings.getLegendMap().get(key);
                     legendItemsMap.put(key, url);
                 }
             }
-            
+
             info.setLegendItems(legendItemsMap);
         }
-        
+
         /* doorgeven mimetype en template */
         String mimeType = null;
 
@@ -313,7 +319,7 @@ public class PrintAction extends BaseHibernateAction {
         if (outputType != null && outputType.equals(OUTPUT_PDF_PRINT)) {
             addJavascript = true;
         }
-        
+
         logFile.debug("Print url: " + info.getImageUrl());
 
         /* Maak de output */
@@ -323,10 +329,10 @@ public class PrintAction extends BaseHibernateAction {
         return null;
     }
 
-    private String createImageUrl(HttpServletRequest request) {        
+    private String createImageUrl(HttpServletRequest request) {
         if (PrintServlet.baseImageUrl != null) {
             return PrintServlet.baseImageUrl;
-            
+
         } else {
             String requestUrl = request.getRequestURL().toString();
 
@@ -334,8 +340,8 @@ public class PrintAction extends BaseHibernateAction {
 
             String basePart = requestUrl.substring(0, lastIndex);
             String servletPart = "/services/PrintServlet?";
-            
-            return basePart + servletPart;            
+
+            return basePart + servletPart;
         }
     }
 

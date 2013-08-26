@@ -568,10 +568,8 @@ public class KaartSelectieAction extends BaseGisAction {
         
         WebMapServer wms = null;
         org.geotools.data.ows.Layer[] layers = null;
-        try {
-            URL testUrl = new URL("http://192.168.1.15:8585/cgi-bin/mapserv.exe?map=C:/srv/maps/boy/cbs_gem_2009.map&VERSION=1.1.1&REQUEST=GetCapabilities&service=WMS");
-            
-            wms = new WebMapServer(testUrl);
+        try {            
+            wms = new WebMapServer(url);
             layers = WMSUtils.getNamedLayers(wms.getCapabilities());            
         } catch (IOException ioex) {
             log.error("Kan geen verbinding maken naar de WMS Service.", ioex);

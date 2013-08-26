@@ -214,19 +214,19 @@ public class ViewerAction extends BaseGisAction {
                 return mapping.findForward(SIMPLE_VIEWER_FW);
             }
         }
-        
+
         String forceViewer = request.getParameter(ViewerAction.FORCEVIEWER);
-        
-        if(forceViewer != null && !forceViewer.equals("")){
+
+        if (forceViewer != null && !forceViewer.equals("")) {
             boolean viewer = new Boolean(forceViewer);
-            
-            if(!viewer){
-                 return mapping.findForward(A11Y_VIEWER_FW);
+
+            if (!viewer) {
+                return mapping.findForward(A11Y_VIEWER_FW);
             }
-        }else{
-             return mapping.findForward(A11Y_VIEWER_FW);
+        } else {
+            return mapping.findForward(A11Y_VIEWER_FW);
         }
-        
+
         return mapping.findForward(SUCCESS);
     }
 
@@ -651,7 +651,7 @@ public class ViewerAction extends BaseGisAction {
 
                 request.setAttribute("startLocationX", startLocationX);
                 request.setAttribute("startLocationY", startLocationY);
-                
+
                 if (map != null) {
                     Integer defaultSearchRadius = (Integer) map.get("defaultSearchRadius");
                     if (defaultSearchRadius != null && defaultSearchRadius > 0) {
@@ -661,7 +661,18 @@ public class ViewerAction extends BaseGisAction {
                 }
             }
         }
+        String transSliderTab = null;
+        if (map != null) {
+            transSliderTab = (String) map.get("transSliderTab");
+            
+            if (transSliderTab != null && !transSliderTab.equals("")) {
+                request.setAttribute("transSliderTab", transSliderTab);
+            }
+        }
         
+        if (transSliderTab == null || transSliderTab.equals("")) {
+            request.setAttribute("transSliderTab", "legenda");
+        }
         /* CMS Theme klaarzetten */
         CMSPagina cmsPage = (CMSPagina) sess.get(CMSPagina.class, cmsPageId);
         
@@ -812,7 +823,7 @@ public class ViewerAction extends BaseGisAction {
             boolean defaultOn = false;
             if (groepen != null && groepen.size() > 0) {
                 for (UserKaartgroep groep : groepen) {
-                    if (groep.getClusterid() == cluster.getId()) {
+                    if (groep.getClusterid().equals(cluster.getId())) {
                         if (groep.getDefault_on()) {
                             defaultOn = true;
                         }

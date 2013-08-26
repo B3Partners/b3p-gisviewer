@@ -66,7 +66,8 @@ public class SpatialUtil {
     }
 
     /**
-     * Haal een Thema op uit de database door middel van het meegegeven thema id.
+     * Haal een Thema op uit de database door middel van het meegegeven thema
+     * id.
      *
      * @param themaid String
      *
@@ -99,12 +100,16 @@ public class SpatialUtil {
 
     public static List getValidThemas(boolean locatie) {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        String hquery = "FROM Themas ";
+
+        String hquery = "FROM Themas t LEFT JOIN FETCH t.gegevensbron ";
         if (locatie) {
             hquery += "WHERE locatie_thema = true ";
         }
-        hquery += "ORDER BY belangnr, naam DESC";
+
+        hquery += "ORDER BY t.belangnr, t.naam DESC";
+
         Query q = sess.createQuery(hquery);
+
         return q.list();
     }
 
@@ -231,12 +236,13 @@ public class SpatialUtil {
         for (UserService service : services) {
             List<UserLayer> layers = sess.createQuery("from UserLayer where serviceid = :ser"
                     + " and show = :show")
-                .setParameter("ser", service)
-                .setParameter("show", true)
-                .list();
+                    .setParameter("ser", service)
+                    .setParameter("show", true)
+                    .list();
 
-            if (layers != null && layers.size() > 0)
+            if (layers != null && layers.size() > 0) {
                 validServices.add(service);
+            }
         }
 
         return validServices;

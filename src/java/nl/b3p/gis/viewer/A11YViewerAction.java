@@ -189,17 +189,20 @@ public class A11YViewerAction extends BaseGisAction {
         String appCode = (String) request.getParameter("appCode");
 
         /* Instellingen ophalen en appCode weer op request plaatsen */
-        Applicatie app;
-        if (appCode != null && appCode.length() > 0) {
+        Applicatie app = null;
+        if (appCode != null && !appCode.equals("")) {
             app = KaartSelectieUtil.getApplicatie(appCode);
         } else {
             app = KaartSelectieUtil.getDefaultApplicatie();
 
         }
-
-        appCode = app.getCode();
-
-        request.setAttribute("appCode", appCode);
+        
+        if (app != null) {
+            appCode = app.getCode();
+            request.setAttribute("appCode", appCode);
+        } else {
+            return;
+        }
 
         ConfigKeeper configKeeper = new ConfigKeeper();
         Map map = configKeeper.getConfigMap(appCode);

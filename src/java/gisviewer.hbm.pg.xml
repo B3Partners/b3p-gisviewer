@@ -71,12 +71,12 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="defaultValues"/>
         <property name="voorbeelden"/>
         <property name="kolombreedte" not-null="true"/>
-        <many-to-one lazy="false" name="waardeType"/>
-        <many-to-one lazy="false" name="dataType"/>
+        <many-to-one name="waardeType"/>
+        <many-to-one name="dataType"/>
         <property name="commando"/>
         <property name="kolomnaam"/>
         <property name="dataorder"/>
-        <many-to-one lazy="false" name="gegevensbron"/>
+        <many-to-one name="gegevensbron"/>
     </class>
     <class name="nl.b3p.gis.viewer.db.Themas">
         <id name="id">
@@ -86,7 +86,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="naam"/>
         <property name="metadata_link"/>
         <property name="belangnr" not-null="true"/>
-        <many-to-one column="clusters" lazy="false" name="cluster" not-null="true"/>
+        <many-to-one column="clusters" name="cluster" not-null="true"/>
         <property name="opmerkingen" type="text"/>
         <property name="analyse_thema" not-null="true"/>
         <property name="locatie_thema" not-null="true"/>
@@ -105,7 +105,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="sldattribuut"/>
         <property name="layoutadmindata"/>
         <property name="style"/>
-        <many-to-one lazy="false" name="gegevensbron"/>
+        <many-to-one name="gegevensbron"/>
     </class>
     <class name="nl.b3p.gis.viewer.db.WaardeTypen">
         <id name="id">
@@ -127,7 +127,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
             <generator class="identity"/>
         </id>
         <property name="naam"/>
-        <many-to-one lazy="false" name="bron"/>
+        <many-to-one name="bron"/>
         <property name="admin_tabel"/>
         <property name="admin_pk"/>
         <property name="admin_query" type="text"/>
@@ -141,7 +141,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="volgordenr"/>
         <property name="editable"/>
         <property name="geometryeditable"/>
-        <set cascade="all-delete-orphan" lazy="false" name="themaData" order-by="dataorder, basisregel desc, label">
+        <set cascade="all-delete-orphan" name="themaData" order-by="dataorder, basisregel desc, label">
             <key column="gegevensbron"/>
             <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
         </set>
@@ -153,9 +153,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="titel" not-null="true" type="string"/>
         <property name="tekst" type="text"/>
         <property name="url" type="string"/>
-        <property column="toonurl" name="toonUrl" type="boolean"/>
-        <!-- <property name="pagina" not-null="true" type="string"/> -->
-        <property column="volgordenr" name="volgordeNr" type="integer"/>
+        <property column="toonurl" name="toonUrl" type="boolean"/>        <property column="volgordenr" name="volgordeNr" type="integer"/>
         <property name="kleur" type="string"/>
         <property name="auteur" type="string"/>
         <property name="cdate" not-null="true" type="timestamp"/>
@@ -188,7 +186,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="url" not-null="true" type="string"/>
         <property name="groupname" not-null="true" type="string"/>
         <property name="sld_url" type="string"/>
-        <set cascade="save-update, delete, delete-orphan" inverse="true" lazy="false" name="user_layers" order-by="id, title">
+        <set cascade="save-update, delete, delete-orphan" inverse="true" name="user_layers" order-by="id, title">
             <key column="serviceid"/>
             <one-to-many class="nl.b3p.gis.viewer.db.UserLayer"/>
         </set>
@@ -199,7 +197,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <id name="id">
             <generator class="identity"/>
         </id>
-        <many-to-one lazy="false" name="serviceid"/>
+        <many-to-one name="serviceid"/>
         <property name="title" type="string"/>
         <property name="name" type="string"/>
         <property name="queryable" type="boolean"/>
@@ -210,7 +208,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="show" type="boolean"/>
         <property name="default_on" type="boolean"/>
         <many-to-one class="nl.b3p.gis.viewer.db.UserLayer" name="parent"/>
-        <set cascade="save-update, delete, delete-orphan" inverse="true" lazy="false" name="user_layer_styles" order-by="id, name">
+        <set cascade="save-update, delete, delete-orphan" inverse="true" name="user_layer_styles" order-by="id, name">
             <key column="layerid"/>
             <one-to-many class="nl.b3p.gis.viewer.db.UserLayerStyle"/>
         </set>
@@ -219,7 +217,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <id name="id">
             <generator class="identity"/>
         </id>
-        <many-to-one lazy="false" name="layerid"/>
+        <many-to-one name="layerid"/>
         <property name="name" type="string"/>
     </class>
     <class name="nl.b3p.gis.viewer.db.Applicatie">
@@ -257,8 +255,8 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <id name="id">
             <generator class="identity"/>
         </id>        
-        <many-to-one lazy="false" name="zoekconfiguratie"/>
-        <many-to-one lazy="false" name="thema"/>
+        <many-to-one name="zoekconfiguratie"/>
+        <many-to-one name="thema"/>
     </class>
     
     <class name="nl.b3p.gis.viewer.db.CMSPagina" table="cms_pagina">

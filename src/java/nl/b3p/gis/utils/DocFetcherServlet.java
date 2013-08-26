@@ -93,10 +93,20 @@ public class DocFetcherServlet extends HttpServlet {
         return transformedFilename;
     }
 
+    public static String getLastBitFromUrl(final String url) {
+        return url.replaceFirst(".*/([^/?]+).*", "$1");
+    }
+
+    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
 
-        String fileName = transformFilename(request.getParameter("id"));
+        /* REST instead of ? in url eq.
+         * http://domain.com/gisviewer/services/DocFetcher/abc.jpg
+         */
+        String uri = request.getPathInfo();
+        String lastPart = getLastBitFromUrl(uri);        
+        String fileName = transformFilename(lastPart);     
 
         switch (fetchMethod) {
             case FILE:
@@ -175,9 +185,9 @@ public class DocFetcherServlet extends HttpServlet {
             if (statusCode != HttpStatus.SC_OK) {
                 log.error("Host: " + location + " error: " + method.getStatusLine().getReasonPhrase());
                 response.sendError(HttpServletResponse.SC_NOT_FOUND,
-                        "Document " + headerFileName + " (" +
-                        method.getStatusLine().getReasonPhrase() +
-                        ")");
+                        "Document " + headerFileName + " ("
+                        + method.getStatusLine().getReasonPhrase()
+                        + ")");
                 return;
             }
             if (method.getResponseHeader("Content-Type") != null) {

@@ -830,6 +830,20 @@ public class ConfigKeeper {
         cfg.setSetting(appCode);
         cfg.setType("java.lang.String");
         sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("fullextent");
+        cfg.setPropval("\"12000,304000,280000,620000\"");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.String");
+        sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("cfg_transSliderTab");
+        cfg.setPropval("\"legenda\"");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.String");
+        sess.save(cfg);
 
         sess.flush();
     }
