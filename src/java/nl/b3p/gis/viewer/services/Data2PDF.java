@@ -1,5 +1,7 @@
 package nl.b3p.gis.viewer.services;
 
+import com.vividsolutions.jts.geom.Envelope;
+import com.vividsolutions.jts.geom.Geometry;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -29,6 +31,7 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.sax.SAXResult;
 import javax.xml.transform.stream.StreamSource;
+import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Gegevensbron;
@@ -36,6 +39,9 @@ import nl.b3p.gis.viewer.db.ThemaData;
 import static nl.b3p.gis.viewer.print.PrintServlet.fontPath;
 import static nl.b3p.gis.viewer.print.PrintServlet.fopConfig;
 import nl.b3p.gis.viewer.services.ObjectdataPdfInfo.Record;
+import nl.b3p.imagetool.CombineImageSettings;
+import nl.b3p.imagetool.CombineImagesHandler;
+import nl.b3p.ogc.utils.OGCRequest;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.logging.Log;
@@ -44,11 +50,13 @@ import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.apps.Fop;
 import org.apache.fop.apps.FopFactory;
 import org.apache.fop.apps.MimeConstants;
+import org.geotools.feature.simple.SimpleFeatureImpl;
 import org.hibernate.Transaction;
 import org.opengis.feature.Feature;
 import org.opengis.feature.Property;
 import org.opengis.filter.Filter;
 import org.xml.sax.SAXException;
+import sun.misc.BASE64Encoder;
 
 /**
  *
@@ -74,6 +82,16 @@ public class Data2PDF extends HttpServlet {
         String gegevensbronId = request.getParameter("gbId");
         String objectIds = request.getParameter("objectIds");
         String orientation = request.getParameter("orientation");
+
+        CombineImageSettings settings = null;
+        try {
+            settings = getCombineImageSettings(request);
+        } catch (Exception ex) {
+            log.error("Fout tijdens ophalen combine settings: ", ex);
+        }
+
+        //String imageId = CombineImagesServlet.uniqueName("");
+        //request.getSession().setAttribute(imageId, settings);
 
         Transaction tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
         try {
@@ -117,16 +135,61 @@ public class Data2PDF extends HttpServlet {
 
             Map<Integer, Record> records = new HashMap();
 
+            /* TODO: Objectdata kolommen obv volgordenr toevoegen ? */
+            settings.setWidth(200);
+            settings.setHeight(150);
+            
+            BASE64Encoder enc = new BASE64Encoder();
             int i = 0;
             for (Object obj : data) {
+                String[] items = (String[]) obj;
+
                 Record record = new ObjectdataPdfInfo.Record();
 
                 record.setId(i);
-                record.setImageUrl("http://www.b3partners.nl/b3partners/images/kop.jpg");
 
-                Map<String, String> item = new HashMap();
-                item.put("waarde", Integer.toString(i));
-                record.setItems(item);
+                /* Geometrie ophalen */
+                String wkt = items[items.length - 1];
+                Geometry geom = null;
+                try {
+                    geom = DataStoreUtil.createGeomFromWKTString(wkt);
+                } catch (Exception ex) {
+                    log.error("Fout tijdens knutselen geometrie: ", ex);
+                }
+
+                /* Bbox uit berekenen */                
+                Envelope bbox = geom.getEnvelopeInternal();
+                
+                double[] dbbox = new double[4];
+                double bufferSize = 50;
+                
+                dbbox[0]=bbox.getMinX()-bufferSize;
+                dbbox[1]=bbox.getMinY()-bufferSize;
+                dbbox[2]=bbox.getMaxX()+bufferSize;
+                dbbox[3]=bbox.getMaxY()+bufferSize;
+                
+                /* Bbox in imageSettings */
+                settings.setBbox(dbbox);
+                
+                /* Maak met imageSettings plaatje */
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                
+                String imageUrl = "";
+                try {
+                    CombineImagesHandler.combineImage(baos, settings);
+
+                    byte[] imageBytes = baos.toByteArray();
+                    imageUrl = enc.encode(imageBytes);                    
+                } catch (Exception ex) {
+                }
+                
+                record.setImageUrl(imageUrl);
+
+                /* Add items */
+                for (int j = 0; j < items.length - 1; j++) {
+                    String string = items[j];
+                    record.addItem(propertyNames[j], string);
+                }
 
                 records.put(i, record);
                 i++;
@@ -134,9 +197,9 @@ public class Data2PDF extends HttpServlet {
 
             pdfInfo.setRecords(records);
 
-            String xmlFile = "/home/boy/dev/tmp/data.xml";
-            createXmlOutput(pdfInfo, xmlFile);
-            
+            //String xmlFile = "/home/boy/dev/tmp/data.xml";
+            //createXmlOutput(pdfInfo, xmlFile);
+
             try {
                 createPdfOutput(pdfInfo, template, response);
             } catch (MalformedURLException ex) {
@@ -163,7 +226,7 @@ public class Data2PDF extends HttpServlet {
 
             jaxbMarshaller.marshal(object, file);
         } catch (JAXBException e) {
-            log.error("Fout tijdens maken xml: ", e);
+            log.error("Fout tijdens maken objectdata export naar xml: ", e);
         }
     }
 
@@ -194,7 +257,7 @@ public class Data2PDF extends HttpServlet {
 
             Date now = new Date();
             foUserAgent.setCreationDate(now);
-            foUserAgent.setTitle("Data");
+            foUserAgent.setTitle("Objectdata PDF Export");
 
             Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, foUserAgent, out);
 
@@ -220,14 +283,14 @@ public class Data2PDF extends HttpServlet {
 
             SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy", new Locale("NL"));
             String date = df.format(now);
-            String fileName = "Data_" + date + ".pdf";
+            String fileName = "Objectdata_Export_" + date + ".pdf";
 
             response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
             response.getOutputStream().write(out.toByteArray());
             response.getOutputStream().flush();
 
         } catch (Exception ex) {
-            log.error("Fout tijdens pdf output: ", ex);
+            log.error("Fout tijdens objectdata pdf export: ", ex);
         } finally {
             out.close();
         }
@@ -263,11 +326,12 @@ public class Data2PDF extends HttpServlet {
                 DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart(), pks);
         List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
-        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, false);
+        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, true);
         ArrayList result = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = features.get(i);
-            String[] row = new String[propertyNames.length];
+
+            String[] row = new String[propertyNames.length + 1];
 
             for (int p = 0; p < propertyNames.length; p++) {
                 Property property = f.getProperty(propertyNames[p]);
@@ -277,8 +341,16 @@ public class Data2PDF extends HttpServlet {
                     row[p] = "";
                 }
             }
+
+            SimpleFeatureImpl feature = (SimpleFeatureImpl) f;
+            Geometry geom = (Geometry) feature.getDefaultGeometry();
+            String wkt = geom.toText();
+
+            row[row.length - 1] = wkt;
+
             result.add(row);
         }
+
         return result;
     }
 
@@ -314,6 +386,115 @@ public class Data2PDF extends HttpServlet {
         } catch (Exception e) {
             throw new ServletException(e);
         }
+    }
+
+    private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
+        String url = FormUtils.nullIfEmpty(request.getParameter("urls"));
+        String wkt = FormUtils.nullIfEmpty(request.getParameter("wkts"));
+        String tilings = FormUtils.nullIfEmpty(request.getParameter("tilings"));
+        String mapsizes = FormUtils.nullIfEmpty(request.getParameter("mapsizes"));
+        String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
+
+        CombineImageSettings settings = new CombineImageSettings();
+
+        String[] urls = null;
+        if (url != null) {
+            log.debug("Urls: " + url);
+            urls = url.split(";");
+            settings.setUrls(urls);
+        }
+        String[] wkts = null;
+        if (wkt != null) {
+            log.debug("WKT: " + wkt);
+            wkts = wkt.split(";");
+            settings.setWktGeoms(wkts);
+        }
+
+        Map legendMap = new HashMap();
+        if (legendUrls != null) {
+            log.debug("legendUrls: " + legendUrls);
+            String[] arr = legendUrls.split(";");
+
+            for (int i = 0; i < arr.length; i++) {
+                String[] legendUrlsArr = arr[i].split("#");
+                legendMap.put(legendUrlsArr[0], legendUrlsArr[1]);
+            }
+
+            settings.setLegendMap(legendMap);
+        }
+
+        /* Tiling settings van POST form:
+         * bbox, resolutions, tileWidth, tileHeight, serviceUrl */
+        String[] tilingSettings = null;
+        if (tilings != null) {
+            tilingSettings = tilings.split(";");
+
+            if (tilingSettings != null && tilingSettings.length == 5) {
+                settings.setTilingBbox(tilingSettings[0]);
+                settings.setTilingResolutions(tilingSettings[1]);
+                settings.setTilingTileWidth(new Integer(tilingSettings[2]));
+                settings.setTilingTileHeight(new Integer(tilingSettings[3]));
+                settings.setTilingServiceUrl(tilingSettings[4]);
+            }
+        }
+
+        if (tilingSettings != null && tilingSettings.length < 5) {
+            throw new Exception("Er zijn niet voldoende parameters voor printen tiling.");
+        }
+
+        if ((urls == null && tilingSettings == null) || (urls != null && urls.length == 0)) {
+            throw new Exception("Er zijn geen verzoeken naar plaatjes gevonden.");
+        }
+
+        String reqWidth = request.getParameter(OGCRequest.WMS_PARAM_WIDTH);
+        String reqHeight = request.getParameter(OGCRequest.WMS_PARAM_HEIGHT);
+        String reqBbox = request.getParameter(OGCRequest.WMS_PARAM_BBOX);
+
+        if (reqWidth != null && reqHeight != null && reqBbox != null) {
+            // gebruik info uit request
+            settings.setWidth(new Integer(reqWidth));
+            settings.setHeight(new Integer(reqHeight));
+            settings.setBbox(reqBbox);
+        } else if (urls != null) {
+            // bereken width, height en bbox uit eerste url,
+            // want dit zal voor alle urls hetzelfde moeten zijn
+            String url1 = urls[0];
+            OGCRequest ogcr = new OGCRequest(url1);
+            int width = Integer.parseInt(ogcr.getParameter(OGCRequest.WMS_PARAM_WIDTH));
+            int height = Integer.parseInt(ogcr.getParameter(OGCRequest.WMS_PARAM_HEIGHT));
+            String bbox = ogcr.getParameter(OGCRequest.WMS_PARAM_BBOX);
+            settings.setWidth(width);
+            settings.setHeight(height);
+            settings.setBbox(bbox);
+        }
+
+        /* Indien geen wms url beschikbaar om width en height uit te halen pad dan
+         * waardes uit post formulier direct van controller opgehaald */
+        String[] mapSizeSettings = null;
+        if (urls == null && mapsizes != null) {
+            mapSizeSettings = mapsizes.split(";");
+
+            if (mapSizeSettings != null && mapSizeSettings.length == 3) {
+                settings.setWidth(new Integer(mapSizeSettings[0]));
+                settings.setHeight(new Integer(mapSizeSettings[1]));
+                settings.setBbox(mapSizeSettings[2]);
+
+                /* TODO: Kijken of dit netter kan. Nu wordt er in de createmappdf.js
+                 * een imageSize uit url[0] &width gehaald. Alleen werkt dit niet als
+                 * er geen gewone wms url aanwezig is. Dus als er alleen een tiling laag
+                 * aan staat. */
+                urls = new String[1];
+                urls[0] = tilingSettings[4] + "&width=" + mapSizeSettings[0];
+                settings.setUrls(urls);
+            }
+        }
+
+        String mimeType = FormUtils.nullIfEmpty(request.getParameter(OGCRequest.WMS_PARAM_FORMAT));
+        if (mimeType != null && !mimeType.equals("")) {
+            settings.setMimeType(mimeType);
+        }
+
+        return settings;
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
