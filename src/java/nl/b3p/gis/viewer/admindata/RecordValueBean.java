@@ -12,6 +12,7 @@ public class RecordValueBean {
     public static final String TYPE_URL = "TYPE_URL";
     public static final String TYPE_QUERY = "TYPE_QUERY";
     public static final String TYPE_FUNCTION = "TYPE_FUNCTION";
+    public static final String TYPE_GOOGLENAV = "TYPE_GOOGLENAV";
     
     public static final String JAVASCRIPT_COMMAND_SURFACE_AREA = "surfaceArea";
 
@@ -73,6 +74,9 @@ public class RecordValueBean {
 
         if (id == 4)
             return RecordValueBean.TYPE_FUNCTION;
+        
+        if (id == 5)
+            return RecordValueBean.TYPE_GOOGLENAV;
 
         return null;
     }

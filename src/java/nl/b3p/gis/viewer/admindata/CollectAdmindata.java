@@ -399,7 +399,17 @@ public class CollectAdmindata {
              */
             List resultList = new ArrayList();
             String resultValue = null;
-            if (lb.getType().equals(RecordValueBean.TYPE_DATA)) {
+            if (lb.getType().equals(RecordValueBean.TYPE_GOOGLENAV)) {
+                resultValue = "TYPE_GOOGLENAV";
+
+                if (attributeValueList != null && attributeValueList.size() > 1) {
+                    for (int i = 0; i < attributeValueList.size(); i++) {
+                        Object localValue = attributeValueList.get(i);
+                        String lData = "TYPE_GOOGLENAV";
+                        resultList.add(lData);
+                    }
+                }
+            } else if (lb.getType().equals(RecordValueBean.TYPE_DATA)) {
                 resultValue = createData(attributeValue);
 
                 if (attributeValueList != null && attributeValueList.size() > 1) {

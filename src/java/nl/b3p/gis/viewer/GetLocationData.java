@@ -2,6 +2,7 @@ package nl.b3p.gis.viewer;
 
 import nl.b3p.gis.geotools.DataStoreUtil;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -24,14 +25,18 @@ import com.vividsolutions.jts.geom.MultiPoint;
 import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
+import com.vividsolutions.jts.geom.PrecisionModel;
+import com.vividsolutions.jts.io.WKTReader;
 import java.sql.DriverManager;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import javax.servlet.http.HttpSession;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
+import nl.b3p.zoeker.services.A11YResult;
 import org.geotools.data.DataStore;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
@@ -274,6 +279,7 @@ public class GetLocationData {
 
     /**
      * TODO vullen met properties
+     *
      * @param results
      * @return
      */
@@ -364,9 +370,10 @@ public class GetLocationData {
 
     /**
      * Methode wordt aangeroepen door knop "analysewaarde" op tabblad "Analyse"
-     * en berekent een waarde op basis van actieve thema, plus evt. een
-     * extra zoekcriterium voor de administratieve waarde in de basisregel, en
-     * een gekozen gebied onder het klikpunt.
+     * en berekent een waarde op basis van actieve thema, plus evt. een extra
+     * zoekcriterium voor de administratieve waarde in de basisregel, en een
+     * gekozen gebied onder het klikpunt.
+     *
      * @throws Exception exception
      *
      * waarde
@@ -513,7 +520,7 @@ public class GetLocationData {
     }
 
     /* LatLon coordinaten en latlon span teruggeven voor gebruik in Google Map url
-    Input is Point in het midden en Point linksonder en rechtsboven van de huidige extent */
+     Input is Point in het midden en Point linksonder en rechtsboven van de huidige extent */
     public String[] getLatLonForRDPoint(String centerWkt, String minWkt, String maxWkt) {
         String[] llSpnParams = new String[4];
 
@@ -530,6 +537,58 @@ public class GetLocationData {
         llSpnParams[3] = Double.toString(spnLon);
 
         return llSpnParams;
+    }
+    
+    public String[] getLatLonForGoogleDirections(String destWkt) {
+        String[] llParams = new String[4];
+        
+        Geometry startGeom = getStartLocation();
+        if (startGeom != null) {
+            Point start = convertWktToLatLonPoint(startGeom.toText());
+
+            llParams[0] = Double.toString(start.getX());
+            llParams[1] = Double.toString(start.getY());
+        } else {
+            llParams[0] = "";
+            llParams[1] = "";
+        }
+
+        Point centerPoint = convertWktToLatLonPoint(destWkt);
+
+        llParams[2] = Double.toString(centerPoint.getX());
+        llParams[3] = Double.toString(centerPoint.getY());
+
+        return llParams;
+    }
+
+    private Geometry getStartLocation() {
+        Geometry startGeom = null;
+        WebContext ctx = WebContextFactory.get();
+        HttpServletRequest request = null;
+
+        if (ctx != null) {
+            request = ctx.getHttpServletRequest();
+        }
+
+        HttpSession session = request.getSession(true);
+        A11YResult a11yResult = (A11YResult) session.getAttribute("a11yResult");
+        if (a11yResult != null && a11yResult.getStartWkt() != null) {
+            startGeom = createGeomFromWkt(a11yResult.getStartWkt());
+        }
+
+        return startGeom;
+    }
+
+    private Geometry createGeomFromWkt(String wkt) {
+        WKTReader wktreader = new WKTReader(new GeometryFactory(new PrecisionModel(), 28992));
+        Geometry geom = null;
+        try {
+            geom = wktreader.read(wkt);
+        } catch (Exception e) {
+            log.error("Fout bij parsen wkt geometry", e);
+        }
+
+        return geom;
     }
 
     private Point convertWktToLatLonPoint(String wkt) {
@@ -563,14 +622,16 @@ public class GetLocationData {
 
     /**
      *
-     * @param elementId element in html pagina waar nieuwe waarde naar wordt geschreven
+     * @param elementId element in html pagina waar nieuwe waarde naar wordt
+     * geschreven
      * @param themaId id van thema waar update betrekking op heeft
      * @param keyName naam van primary key voor selectie van juiste row
      * @param keyValue waarde van primary key voor selectie
      * @param attributeName kolomnaam die veranderd moet worden
      * @param oldValue oude waarde van de kolom
      * @param newValue nieuwe waarde van de kolom
-     * @return array van 2 return waarden: 1=elementId, 2=oude of nieuwe waarde met fout indicatie
+     * @return array van 2 return waarden: 1=elementId, 2=oude of nieuwe waarde
+     * met fout indicatie
      */
     public String[] setAttributeValue(String elementId, String themaId, String keyName, String keyValue, String attributeName, String oldValue, String newValue) {
         String[] returnValue = new String[2];
@@ -637,7 +698,9 @@ public class GetLocationData {
     }
 
     /**
-     * In eerste instantie direct uit jsp via dwr aanroepen, later wrappen voor meer veiligheid
+     * In eerste instantie direct uit jsp via dwr aanroepen, later wrappen voor
+     * meer veiligheid
+     *
      * @param x_input
      * @param y_input
      * @param cols
