@@ -263,6 +263,10 @@ public class PrintAction extends BaseHibernateAction {
             template = PrintServlet.xsl_A3_Liggend;
         } else if (!landscape && pageSize.equals("A3")) {
             template = PrintServlet.xsl_A3_Staand;
+        } else  if (landscape && pageSize.equals("A0")) {
+            template = PrintServlet.xsl_A0_Liggend;
+        } else  if (!landscape && pageSize.equals("A0")) {
+            template = PrintServlet.xsl_A0_Staand;
         } else {
             template = PrintServlet.xsl_A4_Liggend;
         }

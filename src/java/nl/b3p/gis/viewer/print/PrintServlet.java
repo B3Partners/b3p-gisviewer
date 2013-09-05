@@ -53,6 +53,8 @@ public class PrintServlet extends HttpServlet {
     public static String xsl_A4_Staand = null;
     public static String xsl_A3_Liggend = null;
     public static String xsl_A3_Staand = null;
+    public static String xsl_A0_Liggend = null;
+    public static String xsl_A0_Staand = null;
     
     public static String fopConfig = null;
     public static String fontPath = null;
@@ -245,6 +247,12 @@ public class PrintServlet extends HttpServlet {
             }
             if (config.getInitParameter("xsl_A3_Liggend") != null) {
                 xsl_A3_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A3_Liggend"));
+            }
+            if (config.getInitParameter("xsl_A0_Staand") != null) {
+                xsl_A3_Staand = getServletContext().getRealPath(config.getInitParameter("xsl_A0_Staand"));
+            }
+            if (config.getInitParameter("xsl_A0_Liggend") != null) {
+                xsl_A3_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A0_Liggend"));
             }
             if (config.getInitParameter("baseImageUrl") != null) {
                 baseImageUrl = config.getInitParameter("baseImageUrl");
