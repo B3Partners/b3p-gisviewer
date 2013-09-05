@@ -46,11 +46,15 @@ public class UploadedPointsWmsServlet extends HttpServlet {
             String height = request.getParameter("HEIGHT");
 
             CombineImageSettings settings = new CombineImageSettings();
-            settings.setBbox(bbox);
-            settings.setWidth(new Integer(width));
-            settings.setHeight(new Integer(height));
-            settings.setMimeType(IMAGE_MIME_TYPE);
-
+            try{
+                settings.setBbox(bbox);
+                settings.setWidth(new Integer(width));
+                settings.setHeight(new Integer(height));
+                settings.setMimeType(IMAGE_MIME_TYPE);
+            }catch(Exception e){
+                throw new ServletException("Cannot make combineImageSettings: ",e);
+                
+            }
             List<CombineImageWkt> wkts = new ArrayList<CombineImageWkt>();
 
             if (points != null && points.getPoints() != null 

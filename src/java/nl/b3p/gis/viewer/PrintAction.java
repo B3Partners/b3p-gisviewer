@@ -39,6 +39,8 @@ import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.struts.BaseHibernateAction;
 import nl.b3p.imagetool.CombineImageSettings;
 import nl.b3p.imagetool.CombineImagesHandler;
+import nl.b3p.imagetool.CombineWmsUrl;
+import nl.b3p.imagetool.CombineWmscUrl;
 import nl.b3p.ogc.utils.OGCRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,6 +48,7 @@ import org.apache.fop.apps.MimeConstants;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
+import org.json.JSONObject;
 
 public class PrintAction extends BaseHibernateAction {
 
@@ -346,26 +349,11 @@ public class PrintAction extends BaseHibernateAction {
     }
 
     private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
-        String url = FormUtils.nullIfEmpty(request.getParameter("urls"));
-        String wkt = FormUtils.nullIfEmpty(request.getParameter("wkts"));
-        String tilings = FormUtils.nullIfEmpty(request.getParameter("tilings"));
-        String mapsizes = FormUtils.nullIfEmpty(request.getParameter("mapsizes"));
+        String jsonSettingsParam = FormUtils.nullIfEmpty(request.getParameter("jsonSettings"));
         String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
 
-        CombineImageSettings settings = new CombineImageSettings();
-
-        String[] urls = null;
-        if (url != null) {
-            logFile.debug("Urls: " + url);
-            urls = url.split(";");
-            settings.setUrls(urls);
-        }
-        String[] wkts = null;
-        if (wkt != null) {
-            logFile.debug("WKT: " + wkt);
-            wkts = wkt.split(";");
-            settings.setWktGeoms(wkts);
-        }
+        JSONObject jsonSettings = new JSONObject(jsonSettingsParam);
+        CombineImageSettings settings = CombineImageSettings.fromJson(jsonSettings);
 
         Map legendMap = new HashMap();
         if (legendUrls != null) {
@@ -378,72 +366,6 @@ public class PrintAction extends BaseHibernateAction {
             }
 
             settings.setLegendMap(legendMap);
-        }
-
-        /* Tiling settings van POST form:
-         * bbox, resolutions, tileWidth, tileHeight, serviceUrl */
-        String[] tilingSettings = null;
-        if (tilings != null) {
-            tilingSettings = tilings.split(";");
-
-            if (tilingSettings != null && tilingSettings.length == 5) {
-                settings.setTilingBbox(tilingSettings[0]);
-                settings.setTilingResolutions(tilingSettings[1]);
-                settings.setTilingTileWidth(new Integer(tilingSettings[2]));
-                settings.setTilingTileHeight(new Integer(tilingSettings[3]));
-                settings.setTilingServiceUrl(tilingSettings[4]);
-            }
-        }
-
-        if (tilingSettings != null && tilingSettings.length < 5) {
-            throw new Exception("Er zijn niet voldoende parameters voor printen tiling.");
-        }
-
-        if ((urls == null && tilingSettings == null) || (urls != null && urls.length == 0)) {
-            throw new Exception("Er zijn geen verzoeken naar plaatjes gevonden.");
-        }
-
-        String reqWidth = request.getParameter(OGCRequest.WMS_PARAM_WIDTH);
-        String reqHeight = request.getParameter(OGCRequest.WMS_PARAM_HEIGHT);
-        String reqBbox = request.getParameter(OGCRequest.WMS_PARAM_BBOX);
-
-        if (reqWidth != null && reqHeight != null && reqBbox != null) {
-            // gebruik info uit request
-            settings.setWidth(new Integer(reqWidth));
-            settings.setHeight(new Integer(reqHeight));
-            settings.setBbox(reqBbox);
-        } else if (urls != null) {
-            // bereken width, height en bbox uit eerste url,
-            // want dit zal voor alle urls hetzelfde moeten zijn
-            String url1 = urls[0];
-            OGCRequest ogcr = new OGCRequest(url1);
-            int width = Integer.parseInt(ogcr.getParameter(OGCRequest.WMS_PARAM_WIDTH));
-            int height = Integer.parseInt(ogcr.getParameter(OGCRequest.WMS_PARAM_HEIGHT));
-            String bbox = ogcr.getParameter(OGCRequest.WMS_PARAM_BBOX);
-            settings.setWidth(width);
-            settings.setHeight(height);
-            settings.setBbox(bbox);
-        }
-
-        /* Indien geen wms url beschikbaar om width en height uit te halen pad dan
-         * waardes uit post formulier direct van controller opgehaald */
-        String[] mapSizeSettings = null;
-        if (urls == null && mapsizes != null) {
-            mapSizeSettings = mapsizes.split(";");
-
-            if (mapSizeSettings != null && mapSizeSettings.length == 3) {
-                settings.setWidth(new Integer(mapSizeSettings[0]));
-                settings.setHeight(new Integer(mapSizeSettings[1]));
-                settings.setBbox(mapSizeSettings[2]);
-
-                /* TODO: Kijken of dit netter kan. Nu wordt er in de createmappdf.js
-                 * een imageSize uit url[0] &width gehaald. Alleen werkt dit niet als
-                 * er geen gewone wms url aanwezig is. Dus als er alleen een tiling laag
-                 * aan staat. */
-                urls = new String[1];
-                urls[0] = tilingSettings[4] + "&width=" + mapSizeSettings[0];
-                settings.setUrls(urls);
-            }
         }
 
         String mimeType = FormUtils.nullIfEmpty(request.getParameter(OGCRequest.WMS_PARAM_FORMAT));
