@@ -167,7 +167,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
             <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
         </set>
     </class>
-    <class name="nl.b3p.gis.viewer.db.Tekstblok">
+    <class name="nl.b3p.gis.viewer.db.Tekstblok" table="tekstblok">
         <id name="id" type="int">
             <column name="id" not-null="true"/>
             <generator class="sequence">
@@ -177,14 +177,13 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="titel" not-null="true" type="string"/>
         <property name="tekst" type="materialized_clob"/>
         <property name="url" type="string"/>
-        <property column="toonurl" name="toonUrl" type="boolean"/>
-        <property name="pagina" type="string"/>
-        <property column="volgordenr" name="volgordeNr" type="integer"/>
+        <property column="toonurl" name="toonUrl" type="boolean"/>        <property column="volgordenr" name="volgordeNr" type="integer"/>
         <property name="kleur" type="string"/>
         <property name="auteur" type="string"/>
         <property name="cdate" not-null="true" type="timestamp"/>
         <property column="inlogicon" name="inlogIcon" type="boolean"/>
         <property name="hoogte" type="integer"/>
+        <property column="cms_pagina" name="cmsPagina" type="integer" />
     </class>
 
     <class name="nl.b3p.gis.viewer.db.UserKaartgroep">
