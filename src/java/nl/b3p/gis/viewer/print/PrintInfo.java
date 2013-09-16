@@ -1,12 +1,12 @@
 package nl.b3p.gis.viewer.print;
 
-import java.util.Map;
+import java.util.List;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
 @XmlRootElement(name="info")
-@XmlType(propOrder = {"titel","datum","imageUrl","bbox","opmerking","kwaliteit","scale","legendItems"})
+@XmlType(propOrder = {"titel","datum","imageUrl","bbox","opmerking","kwaliteit","legendUrls","scale"})
 public class PrintInfo {
     private String titel;
     private String datum;
@@ -14,8 +14,8 @@ public class PrintInfo {
     private String bbox;
     private String opmerking;
     private int kwaliteit;
+    private List<String> legendUrls;
     private Integer scale;
-    private Map legendItems;
 
     public PrintInfo() {
     }    
@@ -74,6 +74,15 @@ public class PrintInfo {
         this.kwaliteit = kwaliteit;
     }
 
+    @XmlElement(name="legendUrls")
+    public List<String> getLegendUrls() {
+        return legendUrls;
+    }
+
+    public void setLegendUrls(List<String> legendUrls) {
+        this.legendUrls = legendUrls;
+    }
+
     @XmlElement(name="scale")
     public Integer getScale() {
         return scale;
@@ -81,13 +90,5 @@ public class PrintInfo {
 
     public void setScale(Integer scale) {
         this.scale = scale;
-    }
-
-    public Map getLegendItems() {
-        return legendItems;
-    }
-
-    public void setLegendItems(Map legendItems) {
-        this.legendItems = legendItems;
     }
 }

@@ -24,8 +24,10 @@ package nl.b3p.gis.viewer;
 
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -39,8 +41,6 @@ import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.struts.BaseHibernateAction;
 import nl.b3p.imagetool.CombineImageSettings;
 import nl.b3p.imagetool.CombineImagesHandler;
-import nl.b3p.imagetool.CombineWmsUrl;
-import nl.b3p.imagetool.CombineWmscUrl;
 import nl.b3p.ogc.utils.OGCRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,6 +68,8 @@ public class PrintAction extends BaseHibernateAction {
     private static float footerHeight = 25;
     private static boolean addFooter = true;
     private static int maxResponseTime = 30000;
+    
+    private static Integer DEFAULT_PPI = 72;
 
     @Override
     protected Map getActionMethodPropertiesMap() {
@@ -195,6 +197,37 @@ public class PrintAction extends BaseHibernateAction {
         return (float) pixelSize / 1000;
     }
 
+    /* Paper sizes in mm
+     * A0 841 × 1189, A1 594 x 841, A2 420 × 594, A3 297 × 420, A4 210 × 297
+     */
+    private Double convertPaperFormatToInches(String format, boolean landscape) {
+        Double oneMmInchUnit = 0.0394; // 1mm = 0.0394 inch
+
+        if (format.equals("A0") && !landscape) {
+            return 841 * oneMmInchUnit;
+        } else if (format.equals("A0") && landscape) {
+            return 1189 * oneMmInchUnit;
+        } else if (format.equals("A1") && !landscape) {
+            return 594 * oneMmInchUnit;
+        } else if (format.equals("A1") && landscape) {
+            return 841 * oneMmInchUnit;
+        } else if (format.equals("A2") && !landscape) {
+            return 420 * oneMmInchUnit;
+        } else if (format.equals("A2") && landscape) {
+            return 594 * oneMmInchUnit;
+        } else if (format.equals("A3") && !landscape) {
+            return 297 * oneMmInchUnit;
+        } else if (format.equals("A3") && landscape) {
+            return 420 * oneMmInchUnit;
+        } else if (format.equals("A4") && !landscape) {
+            return 210 * oneMmInchUnit;
+        } else if (format.equals("A4") && landscape) {
+            return 297 * oneMmInchUnit;
+        }
+
+        return null;
+    }
+
     private Integer calcNewMapWidthFromPPI(Integer ppi, Double paperWidthInInches) {
         Double w = Math.ceil(ppi * paperWidthInInches);
 
@@ -229,10 +262,15 @@ public class PrintAction extends BaseHibernateAction {
         boolean landscape = Boolean.valueOf(dynaForm.getString("landscape")).booleanValue();
         String outputType = FormUtils.nullIfEmpty(dynaForm.getString("outputType"));
         String remark = FormUtils.nullIfEmpty(dynaForm.getString("remark"));
-
-        /* kwaliteit is nieuwe width voor getMap verzoek */
-        int kwaliteit = new Integer(imageSize).intValue();
-
+        
+        Object strPPI = dynaForm.get("ppi");
+        
+        
+        Integer PPI = DEFAULT_PPI;
+        if (strPPI != null) {
+             PPI =(Integer)strPPI;
+        }        
+        
         /* huidige CombineImageSettings ophalen */
         CombineImageSettings settings = (CombineImageSettings) request.getSession().getAttribute(imageId);
 
@@ -263,9 +301,17 @@ public class PrintAction extends BaseHibernateAction {
             template = PrintServlet.xsl_A3_Liggend;
         } else if (!landscape && pageSize.equals("A3")) {
             template = PrintServlet.xsl_A3_Staand;
-        } else  if (landscape && pageSize.equals("A0")) {
+        } else if (landscape && pageSize.equals("A2")) {
+            template = PrintServlet.xsl_A2_Liggend;
+        } else if (!landscape && pageSize.equals("A2")) {
+            template = PrintServlet.xsl_A2_Staand;
+        } else if (landscape && pageSize.equals("A1")) {
+            template = PrintServlet.xsl_A1_Liggend;
+        } else if (!landscape && pageSize.equals("A1")) {
+            template = PrintServlet.xsl_A1_Staand;
+        } else if (landscape && pageSize.equals("A0")) {
             template = PrintServlet.xsl_A0_Liggend;
-        } else  if (!landscape && pageSize.equals("A0")) {
+        } else if (!landscape && pageSize.equals("A0")) {
             template = PrintServlet.xsl_A0_Staand;
         } else {
             template = PrintServlet.xsl_A4_Liggend;
@@ -278,37 +324,68 @@ public class PrintAction extends BaseHibernateAction {
         info.setImageUrl(imageUrl);
         info.setBbox(bbox);
         info.setOpmerking(remark);
-        info.setKwaliteit(kwaliteit);
 
-        /* Indien schhaal ingevuld in printvoorbeeld de bbox opnieuw berekenen. */
+        /* Indien schaal ingevuld in printvoorbeeld de bbox opnieuw berekenen. */
         Integer currentScale = calcCurrentScale(settings);
         String oldBBox = calculateBboxForScale(settings, currentScale);
 
         Integer newScale = (Integer) dynaForm.get("scale");
         String newBbox = null;
-        if (newScale != null & newScale > 0) {
+        if (newScale != null && newScale > 0) {
             newBbox = calculateBboxForScale(settings, newScale);
             info.setBbox(newBbox);
             settings.setBbox(newBbox);
             info.setScale(newScale);
         }
 
-        /* Legenda Map klaarzetten voor in xsl <kaartnaam, url> */
+        /* Test voor grotere print resoluties en papier formaten a0, a1 en a2 */
+        Double paperInches = convertPaperFormatToInches(pageSize, landscape);
+
+        Integer newWidthPx = calcNewMapWidthFromPPI(PPI, paperInches);
+        
+        info.setKwaliteit(newWidthPx);
+         
+        /*
+        double maxX = settings.getBbox().getMaxx();
+        double minX = settings.getBbox().getMinx();
+
+        Double bla = Math.ceil(maxX - minX);
+        Integer currentWidth = bla.intValue();
+
+        Integer schaalEnzo = calcScaleForHigherPPI(PPI, currentWidth, paperInches);
+        logFile.debug("NEW SCALE: " + schaalEnzo);
+
+        if (schaalEnzo != null & schaalEnzo > 0) {
+            newBbox = calculateBboxForScale(settings, schaalEnzo);
+            logFile.debug("NEW BBOX: " + newBbox);
+
+            settings.setBbox(newBbox);
+            info.setBbox(newBbox);
+            info.setScale(schaalEnzo);
+            info.setKwaliteit(newWidthPx);
+        }
+        */
+
+        /* Legenda urls klaarzetten. Hier worden de aangevinkte laagnamen
+         vergeleken met de keys die al klaargezet waren in de 
+         Map<laag naam, legenda url> settings. De bijbehornede legenda url wordt
+         in een List gestopt en doorgegeven aan de xsl. */
         String[] arr = (String[]) dynaForm.get("legendItems");
+        List<String> legendUrlsList = new ArrayList<String>();
         if (arr != null && arr.length > 0) {
-            Map legendItemsMap = new HashMap();
+            Map legendMap = settings.getLegendMap();
 
             for (int i = 0; i < arr.length; i++) {
-                String key = arr[i];
+                String keyStr = arr[i];
 
-                if (settings.getLegendMap() != null && settings.getLegendMap().containsKey(key)) {
-                    String url = (String) settings.getLegendMap().get(key);
-                    legendItemsMap.put(key, url);
+                if (legendMap != null && legendMap.containsKey(keyStr)) {
+                    String url = (String) legendMap.get(keyStr);
+                    legendUrlsList.add(url);
                 }
             }
-
-            info.setLegendItems(legendItemsMap);
         }
+
+        info.setLegendUrls(legendUrlsList);
 
         /* doorgeven mimetype en template */
         String mimeType = null;

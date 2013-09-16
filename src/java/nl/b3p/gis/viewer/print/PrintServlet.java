@@ -52,7 +52,11 @@ public class PrintServlet extends HttpServlet {
     public static String xsl_A4_Liggend = null;
     public static String xsl_A4_Staand = null;
     public static String xsl_A3_Liggend = null;
-    public static String xsl_A3_Staand = null;
+    public static String xsl_A3_Staand = null;    
+    public static String xsl_A2_Liggend = null;
+    public static String xsl_A2_Staand = null;
+    public static String xsl_A1_Liggend = null;
+    public static String xsl_A1_Staand = null;    
     public static String xsl_A0_Liggend = null;
     public static String xsl_A0_Staand = null;
     
@@ -247,15 +251,24 @@ public class PrintServlet extends HttpServlet {
             }
             if (config.getInitParameter("xsl_A3_Liggend") != null) {
                 xsl_A3_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A3_Liggend"));
+            }            
+            if (config.getInitParameter("xsl_A2_Staand") != null) {
+                xsl_A2_Staand = getServletContext().getRealPath(config.getInitParameter("xsl_A2_Staand"));
             }
+            if (config.getInitParameter("xsl_A2_Liggend") != null) {
+                xsl_A2_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A2_Liggend"));
+            }            
+            if (config.getInitParameter("xsl_A1_Staand") != null) {
+                xsl_A1_Staand = getServletContext().getRealPath(config.getInitParameter("xsl_A1_Staand"));
+            }
+            if (config.getInitParameter("xsl_A1_Liggend") != null) {
+                xsl_A1_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A1_Liggend"));
+            }            
             if (config.getInitParameter("xsl_A0_Staand") != null) {
-                xsl_A3_Staand = getServletContext().getRealPath(config.getInitParameter("xsl_A0_Staand"));
+                xsl_A0_Staand = getServletContext().getRealPath(config.getInitParameter("xsl_A0_Staand"));
             }
             if (config.getInitParameter("xsl_A0_Liggend") != null) {
-                xsl_A3_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A0_Liggend"));
-            }
-            if (config.getInitParameter("baseImageUrl") != null) {
-                baseImageUrl = config.getInitParameter("baseImageUrl");
+                xsl_A0_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A0_Liggend"));
             }
             
             fopConfig = getServletContext().getRealPath("/WEB-INF/xsl/fop.xml");
