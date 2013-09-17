@@ -67,7 +67,7 @@ public class Data2PDF extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(Data2PDF.class);
     private static String HTMLTITLE = "Exporteer naar PDF";
-    private static String xsl_data2pdf_staand = null;
+    private static String xsl_data2pdf = null;
 
     /**
      * Processes requests for both HTTP
@@ -90,9 +90,6 @@ public class Data2PDF extends HttpServlet {
         } catch (Exception ex) {
             log.error("Fout tijdens ophalen combine settings: ", ex);
         }
-
-        //String imageId = CombineImagesServlet.uniqueName("");
-        //request.getSession().setAttribute(imageId, settings);
 
         Transaction tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
         try {
@@ -128,7 +125,7 @@ public class Data2PDF extends HttpServlet {
             Date now = new Date();
             SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
 
-            String template = xsl_data2pdf_staand;
+            String template = xsl_data2pdf;
 
             ObjectdataPdfInfo pdfInfo = new ObjectdataPdfInfo();
             pdfInfo.setTitel("Export van " + gb.getNaam());
@@ -137,8 +134,8 @@ public class Data2PDF extends HttpServlet {
             Map<Integer, Record> records = new HashMap();
 
             /* TODO: Objectdata kolommen obv volgordenr toevoegen ? */
-            settings.setWidth(200);
-            settings.setHeight(150);
+            settings.setWidth(500);
+            settings.setHeight(375);
             
             BASE64Encoder enc = new BASE64Encoder();
             int i = 0;
@@ -378,8 +375,8 @@ public class Data2PDF extends HttpServlet {
         super.init(config);
 
         try {
-            if (config.getInitParameter("xsl_data2pdf_staand") != null) {
-                xsl_data2pdf_staand = getServletContext().getRealPath(config.getInitParameter("xsl_data2pdf_staand"));
+            if (config.getInitParameter("xsl_data2pdf") != null) {
+                xsl_data2pdf = getServletContext().getRealPath(config.getInitParameter("xsl_data2pdf"));
             }
 
             fopConfig = getServletContext().getRealPath("/WEB-INF/xsl/fop.xml");
