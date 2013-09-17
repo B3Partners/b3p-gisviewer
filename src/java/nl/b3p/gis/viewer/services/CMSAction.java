@@ -50,9 +50,9 @@ public class CMSAction extends BaseGisAction {
 
         /* Indien voor cms pagina ingelogd moet worden dan redirecten */
         CMSPagina cmsPage = getCMSPage(cmsPageId);
-        Boolean loginRequired = cmsPage.getLoginRequired();
+        Boolean loginRequired = null;
         
-        if (loginRequired != null && loginRequired) {
+        if (cmsPage != null && cmsPage.getLoginRequired()) {
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
             if (user == null) {
                 String url = prettifyCMSPageUrl(request, cmsPage);

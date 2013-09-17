@@ -263,8 +263,7 @@ public class PrintAction extends BaseHibernateAction {
         String outputType = FormUtils.nullIfEmpty(dynaForm.getString("outputType"));
         String remark = FormUtils.nullIfEmpty(dynaForm.getString("remark"));
         
-        Object strPPI = dynaForm.get("ppi");
-        
+        Object strPPI = dynaForm.get("ppi");        
         
         Integer PPI = DEFAULT_PPI;
         if (strPPI != null) {

@@ -41,8 +41,6 @@ import static nl.b3p.gis.viewer.print.PrintServlet.fopConfig;
 import nl.b3p.gis.viewer.services.ObjectdataPdfInfo.Record;
 import nl.b3p.imagetool.CombineImageSettings;
 import nl.b3p.imagetool.CombineImagesHandler;
-import nl.b3p.imagetool.CombineWmsUrl;
-import nl.b3p.imagetool.CombineWmscUrl;
 import nl.b3p.ogc.utils.OGCRequest;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.io.output.ByteArrayOutputStream;
@@ -392,11 +390,12 @@ public class Data2PDF extends HttpServlet {
     }
 
     private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
+        String jsonSettingsParam = FormUtils.nullIfEmpty(request.getParameter("jsonSettings"));
         String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
-        String jsonSettingsString = FormUtils.nullIfEmpty(request.getParameter("settings"));
-        JSONObject jsonSettings = new JSONObject(jsonSettingsString);
+
+        JSONObject jsonSettings = new JSONObject(jsonSettingsParam);
         CombineImageSettings settings = CombineImageSettings.fromJson(jsonSettings);
-      
+
         Map legendMap = new HashMap();
         if (legendUrls != null) {
             log.debug("legendUrls: " + legendUrls);
@@ -409,7 +408,6 @@ public class Data2PDF extends HttpServlet {
 
             settings.setLegendMap(legendMap);
         }
-
 
         String mimeType = FormUtils.nullIfEmpty(request.getParameter(OGCRequest.WMS_PARAM_FORMAT));
         if (mimeType != null && !mimeType.equals("")) {
