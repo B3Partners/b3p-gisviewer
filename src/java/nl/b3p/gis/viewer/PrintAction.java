@@ -415,7 +415,6 @@ public class PrintAction extends BaseHibernateAction {
     private String createImageUrl(HttpServletRequest request) {
         if (PrintServlet.baseImageUrl != null) {
             return PrintServlet.baseImageUrl;
-
         } else {
             String requestUrl = request.getRequestURL().toString();
 

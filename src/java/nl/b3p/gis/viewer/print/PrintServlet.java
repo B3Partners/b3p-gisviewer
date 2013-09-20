@@ -271,7 +271,7 @@ public class PrintServlet extends HttpServlet {
             }
             
             if (config.getInitParameter("baseImageUrl") != null) {
-                baseImageUrl = getServletContext().getRealPath(config.getInitParameter("baseImageUrl"));
+                baseImageUrl = config.getInitParameter("baseImageUrl");
             }
             
             fopConfig = getServletContext().getRealPath("/WEB-INF/xsl/fop.xml");
