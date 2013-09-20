@@ -9,7 +9,6 @@ import com.lowagie.text.pdf.PdfWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.MalformedURLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -269,6 +268,10 @@ public class PrintServlet extends HttpServlet {
             }
             if (config.getInitParameter("xsl_A0_Liggend") != null) {
                 xsl_A0_Liggend = getServletContext().getRealPath(config.getInitParameter("xsl_A0_Liggend"));
+            }
+            
+            if (config.getInitParameter("baseImageUrl") != null) {
+                baseImageUrl = getServletContext().getRealPath(config.getInitParameter("baseImageUrl"));
             }
             
             fopConfig = getServletContext().getRealPath("/WEB-INF/xsl/fop.xml");
