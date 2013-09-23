@@ -51,8 +51,12 @@ public class CMSAction extends BaseGisAction {
         /* Indien voor cms pagina ingelogd moet worden dan redirecten */
         CMSPagina cmsPage = getCMSPage(cmsPageId);
         Boolean loginRequired = null;
+        if(cmsPage == null){
+            
+            return new RedirectingActionForward("/http_404.do");
+        }
         
-        if (cmsPage != null && cmsPage.getLoginRequired()) {
+        if (cmsPage.getLoginRequired()) {
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
             if (user == null) {
                 String url = prettifyCMSPageUrl(request, cmsPage);
@@ -105,10 +109,11 @@ public class CMSAction extends BaseGisAction {
 
         if (cmsPage == null) {
             request.setAttribute("theme", "");
+        }else{
+            if (cmsPage.getShowPlainAndMapButton()) {
+                request.setAttribute("showPlainAndMapButton", true);
+            }
         }
 
-        if (cmsPage.getShowPlainAndMapButton()) {
-            request.setAttribute("showPlainAndMapButton", true);
-        }
     }
 }

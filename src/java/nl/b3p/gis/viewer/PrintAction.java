@@ -273,6 +273,7 @@ public class PrintAction extends BaseHibernateAction {
         /* huidige CombineImageSettings ophalen */
         CombineImageSettings originalSettings = (CombineImageSettings) request.getSession().getAttribute(imageId);
         CombineImageSettings settings = CombineImageSettings.fromJson(originalSettings.getOriginalJSON());
+        settings.setLegendMap(originalSettings.getLegendMap());// Argh, ugly ugly ugly :'(
         
 
         /* bbox klaarzetten voor xsl */
