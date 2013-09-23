@@ -116,6 +116,7 @@ public class PrintServlet extends HttpServlet {
         return settings;
     }
 
+    // ToDo: Uggh, fix this...
     public static void setSettings(CombineImageSettings settings) {
         PrintServlet.settings = settings;
     }
