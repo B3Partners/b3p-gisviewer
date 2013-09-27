@@ -321,6 +321,7 @@ public class PrintAction extends BaseHibernateAction {
 
         /* nieuw (xml) Object voor gebruik met fop */
         PrintInfo info = new PrintInfo();
+        
         info.setTitel(title);
         info.setDatum(df.format(now));
         info.setImageUrl(imageUrl);

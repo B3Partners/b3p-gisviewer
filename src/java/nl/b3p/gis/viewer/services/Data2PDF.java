@@ -68,6 +68,7 @@ public class Data2PDF extends HttpServlet {
     private static final Log log = LogFactory.getLog(Data2PDF.class);
     private static String HTMLTITLE = "Exporteer naar PDF";
     private static String xsl_data2pdf = null;
+    private static Integer MAX_PDF_RECORDS = 25;
 
     /**
      * Processes requests for both HTTP
@@ -84,6 +85,21 @@ public class Data2PDF extends HttpServlet {
         String objectIds = request.getParameter("objectIds");
         String orientation = request.getParameter("orientation");
 
+        if (gegevensbronId == null || gegevensbronId.equals("")
+                || objectIds == null || objectIds.equals("")) {
+            writeErrorMessage(response, "Ongeldige request parameters.");
+            log.error("Ongeldige request parameters.");
+
+            return;
+        }
+
+        if (xsl_data2pdf == null || xsl_data2pdf.equals("")) {
+            writeErrorMessage(response, "Xsl template niet geconfigureerd.");
+            log.error("Xsl template niet geconfigureerd.");
+
+            return;
+        }
+
         CombineImageSettings settings = null;
         try {
             settings = getCombineImageSettings(request);
@@ -98,6 +114,18 @@ public class Data2PDF extends HttpServlet {
             String decoded = URLDecoder.decode(objectIds, "UTF-8");
             String[] ids = decoded.split(",");
 
+            if (ids != null && ids.length > MAX_PDF_RECORDS) {
+
+                String msg = "Er mogen maximaal " + MAX_PDF_RECORDS + " records in een"
+                        + " pdf geexporteerd worden. Momenteel zijn er " + ids.length + " records"
+                        + " geselecteerd.";
+
+                writeErrorMessage(response, msg);
+                log.debug(msg);
+
+                return;
+            }
+
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
             if (user == null) {
                 writeErrorMessage(response, "Kan de data niet ophalen omdat u niet bent ingelogd.");
@@ -109,8 +137,6 @@ public class Data2PDF extends HttpServlet {
             if (b == null) {
                 throw new ServletException("Gegevensbron (id " + gb.getId() + ") Bron null.");
             }
-
-            /* TODO: Kaart uitsnede url aan data toevoegen */
 
             List data = null;
             String[] propertyNames = getThemaPropertyNames(gb);
@@ -125,8 +151,6 @@ public class Data2PDF extends HttpServlet {
             Date now = new Date();
             SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
 
-            String template = xsl_data2pdf;
-
             ObjectdataPdfInfo pdfInfo = new ObjectdataPdfInfo();
             pdfInfo.setTitel("Export van " + gb.getNaam());
             pdfInfo.setDatum(df.format(now));
@@ -136,7 +160,7 @@ public class Data2PDF extends HttpServlet {
             /* TODO: Objectdata kolommen obv volgordenr toevoegen ? */
             settings.setWidth(500);
             settings.setHeight(375);
-            
+
             BASE64Encoder enc = new BASE64Encoder();
             int i = 0;
             for (Object obj : data) {
@@ -155,32 +179,32 @@ public class Data2PDF extends HttpServlet {
                     log.error("Fout tijdens knutselen geometrie: ", ex);
                 }
 
-                /* Bbox uit berekenen */                
+                /* Bbox uit berekenen */
                 Envelope bbox = geom.getEnvelopeInternal();
-                
+
                 double[] dbbox = new double[4];
                 double bufferSize = 50;
-                
-                dbbox[0]=bbox.getMinX()-bufferSize;
-                dbbox[1]=bbox.getMinY()-bufferSize;
-                dbbox[2]=bbox.getMaxX()+bufferSize;
-                dbbox[3]=bbox.getMaxY()+bufferSize;
-                
+
+                dbbox[0] = bbox.getMinX() - bufferSize;
+                dbbox[1] = bbox.getMinY() - bufferSize;
+                dbbox[2] = bbox.getMaxX() + bufferSize;
+                dbbox[3] = bbox.getMaxY() + bufferSize;
+
                 /* Bbox in imageSettings */
                 settings.setBbox(dbbox);
-                
+
                 /* Maak met imageSettings plaatje */
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                
+
                 String imageUrl = "";
                 try {
                     CombineImagesHandler.combineImage(baos, settings);
 
                     byte[] imageBytes = baos.toByteArray();
-                    imageUrl = enc.encode(imageBytes);                    
+                    imageUrl = enc.encode(imageBytes);
                 } catch (Exception ex) {
                 }
-                
+
                 record.setImageUrl(imageUrl);
 
                 /* Add items */
@@ -199,7 +223,7 @@ public class Data2PDF extends HttpServlet {
             //createXmlOutput(pdfInfo, xmlFile);
 
             try {
-                createPdfOutput(pdfInfo, template, response);
+                createPdfOutput(pdfInfo, xsl_data2pdf, response);
             } catch (MalformedURLException ex) {
                 writeErrorMessage(response, ex.getMessage());
                 log.error("Fout tijdens maken pdf: ", ex);
@@ -268,6 +292,11 @@ public class Data2PDF extends HttpServlet {
 
             TransformerFactory factory = TransformerFactory.newInstance();
             Transformer transformer = factory.newTransformer(xsltSrc);
+
+            if (transformer == null) {
+                log.error("Fout tijdens inlezen xsl bestand.");
+                return;
+            }
 
             Result res = new SAXResult(fop.getDefaultHandler());
 
