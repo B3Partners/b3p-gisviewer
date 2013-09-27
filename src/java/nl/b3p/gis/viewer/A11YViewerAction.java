@@ -95,7 +95,9 @@ public class A11YViewerAction extends BaseGisAction {
             throws Exception {
 
         zoeker = new Zoeker();
-
+        
+        addCMSParam(request);
+        
         createLists(dynaForm, request);
 
         return mapping.findForward(LIST);
@@ -113,6 +115,8 @@ public class A11YViewerAction extends BaseGisAction {
     public ActionForward search(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
 
+        addCMSParam(request);
+        
         setBreadCrumb(request);
 
         showZoekVelden(dynaForm, request);
@@ -122,7 +126,9 @@ public class A11YViewerAction extends BaseGisAction {
 
     public ActionForward results(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
-
+        
+        addCMSParam(request);
+        
         showZoekResults(dynaForm, request);
 
         return mapping.findForward(RESULTS);
@@ -224,6 +230,13 @@ public class A11YViewerAction extends BaseGisAction {
         if (maxResults != null && maxResults > 0) {
             MAX_SEARCH_RESULTS = new Integer(maxResults);
         }
+        
+           
+    }
+    
+    private void addCMSParam(HttpServletRequest request) {
+        String cmsPageId = (String) request.getParameter("cmsPageId");
+        request.setAttribute("cmsPageId", cmsPageId);     
     }
 
     private List<ZoekConfiguratie> getZoekConfigs(String[] zoekerIds) {
