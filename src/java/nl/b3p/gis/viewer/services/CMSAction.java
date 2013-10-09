@@ -8,6 +8,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.viewer.BaseGisAction;
+import static nl.b3p.gis.viewer.BaseGisAction.CMS_PAGE_ID;
 import nl.b3p.gis.viewer.db.CMSMenuItem;
 import nl.b3p.gis.viewer.db.CMSPagina;
 import org.apache.commons.logging.Log;
@@ -20,7 +21,8 @@ import org.securityfilter.filter.SecurityFilter;
 public class CMSAction extends BaseGisAction {
 
     private static final Log logger = LogFactory.getLog(CMSAction.class);
-    private static final String CMS = "cms";    
+    private static final String CMS = "cms";
+    private static final String CMS_STYLE = "cmsstyle";
 
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
@@ -32,21 +34,16 @@ public class CMSAction extends BaseGisAction {
         hibProp.setAlternateForwardName(FAILURE);
         map.put(CMS, hibProp);
 
+        hibProp = new ExtendedMethodProperties(CMS_STYLE);
+        hibProp.setDefaultForwardName(CMS_STYLE);
+        hibProp.setAlternateForwardName(FAILURE);
+        map.put(CMS_STYLE, hibProp);
+        
         return map;
     }
 
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        String param = request.getParameter(CMS_PAGE_ID);
-
-        Integer cmsPageId = null;
-
-        if (param != null && !param.equals("")) {
-            cmsPageId = new Integer(param);
-        }
-
-        if (request.getParameter("id") != null) {
-            cmsPageId = Integer.parseInt(request.getParameter("id"));
-        }
+        Integer cmsPageId = this.getCMSPageId(request);
 
         /* Indien voor cms pagina ingelogd moet worden dan redirecten */
         CMSPagina cmsPage = getCMSPage(cmsPageId);
@@ -77,6 +74,30 @@ public class CMSAction extends BaseGisAction {
         }
 
         return mapping.findForward(SUCCESS);
+    }
+    
+    public ActionForward cmsstyle(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        Integer cmsPageId = this.getCMSPageId(request);
+        if (cmsPageId != null && cmsPageId > 0) {
+            populateTekstblok(request, cmsPageId);
+        }
+        return mapping.findForward(SUCCESS);
+    }
+    
+    private Integer getCMSPageId(HttpServletRequest request) {
+        Integer cmsPageId = null;
+        
+        String param = request.getParameter(CMS_PAGE_ID);
+
+        if (param != null && !param.equals("")) {
+            cmsPageId = new Integer(param);
+        }
+
+        if (request.getParameter("id") != null) {
+            cmsPageId = Integer.parseInt(request.getParameter("id"));
+        }
+        
+        return cmsPageId;
     }
 
     private void populateTekstblok(HttpServletRequest request, Integer cmsPageId) {
