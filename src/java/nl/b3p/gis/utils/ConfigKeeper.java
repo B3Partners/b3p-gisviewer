@@ -36,13 +36,13 @@ public class ConfigKeeper {
                 || setting == null || setting.length() == 0) {
             return null;
         }
-        
+
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List results = sess.createQuery("from Configuratie where property = :prop"
                 + " AND setting = :setting")
                 .setParameter("prop", property)
                 .setParameter("setting", setting).list();
-        
+
         Configuratie configuratie = null;
 
         if (results.size() == 1) {
@@ -93,365 +93,9 @@ public class ConfigKeeper {
         }
 
         if (map == null || map.size() < 1) {
-            Configuratie cfg = null;
-
-            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-
-            cfg = new Configuratie();
-            cfg.setProperty("useCookies");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("multipleActiveThemas");
-            cfg.setPropval("true");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("dataframepopupHandle");
-            cfg.setPropval("null");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("showLeftPanel");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("autoRedirect");
-            cfg.setPropval("2");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("useSortableFunction");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("layerDelay");
-            cfg.setPropval("5000");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("refreshDelay");
-            cfg.setPropval("1000");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("minBboxZoeken");
-            cfg.setPropval("1000");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("zoekConfigIds");
-            cfg.setPropval("\"-1\"");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("maxResults");
-            cfg.setPropval("25");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("usePopup");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("useDivPopup");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("usePanelControls");
-            cfg.setPropval("true");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("expandAll");
-            cfg.setPropval("true");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("tolerance");
-            cfg.setPropval("4");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("useInheritCheckbox");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("showLegendInTree");
-            cfg.setPropval("true");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("useMouseOverTabs");
-            cfg.setPropval("true");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("layoutAdminData");
-            cfg.setPropval("admindata1");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("tabs");
-            cfg.setPropval("\"themas\",\"legenda\",\"zoeken\"");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("planSelectieIds");
-            cfg.setPropval("-1");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("showRedliningTools");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("showBufferTool");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("showSelectBulkTool");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("showNeedleTool");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("showPrintTool");
-            cfg.setPropval("true");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("showLayerSelectionTool");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-            
-            cfg = new Configuratie();
-            cfg.setProperty("showGPSTool");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-            
-            cfg = new Configuratie();
-            cfg.setProperty("showEditTool");
-            cfg.setPropval("false");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("layerGrouping");
-            cfg.setPropval("lg_cluster");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("popupWidth");
-            cfg.setPropval("90%");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("popupHeight");
-            cfg.setPropval("20%");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("popupLeft");
-            cfg.setPropval("5%");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("popupTop");
-            cfg.setPropval("75%");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("defaultdataframehoogte");
-            cfg.setPropval("150");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("viewerType");
-            cfg.setPropval("flamingo");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("viewerTemplate");
-            cfg.setPropval("standalone");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("objectInfoType");
-            cfg.setPropval("popup");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("treeOrder");
-            cfg.setPropval("volgorde");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("tabWidth");
-            cfg.setPropval("300");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-            //BAG
-            cfg = new Configuratie();
-            cfg.setProperty("bagMaxBouwjaar");
-            cfg.setPropval(""+Calendar.getInstance().get(Calendar.YEAR));
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("bagMinBouwjaar");
-            cfg.setPropval("1000");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("bagMaxOpp");
-            cfg.setPropval("16000");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("bagMinOpp");
-            cfg.setPropval("0");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Integer");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("bagOppAttr");
-            cfg.setPropval("OPPERVLAKTE");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("bagBouwjaarAttr");
-            cfg.setPropval("BOUWJAAR");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("bagGebruiksfunctieAttr");
-            cfg.setPropval("GEBRUIKSFUNCTIE");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-
-            cfg = new Configuratie();
-            cfg.setProperty("bagGeomAttr");
-            cfg.setPropval("the_geom");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.String");
-            sess.save(cfg);
-            
-            cfg = new Configuratie();
-            cfg.setProperty("useUserWmsDropdown");
-            cfg.setPropval("true");
-            cfg.setSetting(appCode);
-            cfg.setType("java.lang.Boolean");
-            sess.save(cfg);
-
-            sess.flush();
+            writeDefaultApplicatie(appCode);
         }
-        
+
         try {
             map = getConfigMap(appCode);
         } catch (Exception ex) {
@@ -543,7 +187,7 @@ public class ConfigKeeper {
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Integer");
         sess.save(cfg);
-        
+
         cfg = new Configuratie();
         cfg.setProperty("defaultSearchRadius");
         cfg.setPropval("10000");
@@ -602,7 +246,7 @@ public class ConfigKeeper {
 
         cfg = new Configuratie();
         cfg.setProperty("useMouseOverTabs");
-        cfg.setPropval("true");
+        cfg.setPropval("false");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Boolean");
         sess.save(cfg);
@@ -616,7 +260,7 @@ public class ConfigKeeper {
 
         cfg = new Configuratie();
         cfg.setProperty("tabs");
-        cfg.setPropval("\"themas\",\"legenda\",\"zoeken\"");
+        cfg.setPropval("\"themas\",\"legenda\"");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.String");
         sess.save(cfg);
@@ -630,21 +274,21 @@ public class ConfigKeeper {
 
         cfg = new Configuratie();
         cfg.setProperty("showRedliningTools");
-        cfg.setPropval("false");
+        cfg.setPropval("true");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Boolean");
         sess.save(cfg);
 
         cfg = new Configuratie();
         cfg.setProperty("showBufferTool");
-        cfg.setPropval("false");
+        cfg.setPropval("true");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Boolean");
         sess.save(cfg);
 
         cfg = new Configuratie();
         cfg.setProperty("showSelectBulkTool");
-        cfg.setPropval("false");
+        cfg.setPropval("true");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Boolean");
         sess.save(cfg);
@@ -714,7 +358,7 @@ public class ConfigKeeper {
 
         cfg = new Configuratie();
         cfg.setProperty("viewerType");
-        cfg.setPropval("flamingo");
+        cfg.setPropval("openlayers");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.String");
         sess.save(cfg);
@@ -802,63 +446,66 @@ public class ConfigKeeper {
         cfg.setSetting(appCode);
         cfg.setType("java.lang.String");
         sess.save(cfg);
-        
+
         cfg = new Configuratie();
         cfg.setProperty("useUserWmsDropdown");
         cfg.setPropval("true");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Boolean");
         sess.save(cfg);
-        
+
         cfg = new Configuratie();
         cfg.setProperty("datasetDownload");
         cfg.setPropval("false");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Boolean");
         sess.save(cfg);
-        
+
         cfg = new Configuratie();
         cfg.setProperty("showServiceUrl");
         cfg.setPropval("false");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Boolean");
         sess.save(cfg);
-        
+
         cfg = new Configuratie();
-        cfg.setProperty("tilingResolutions");
-        cfg.setPropval(null);
-        cfg.setSetting(appCode);
-        cfg.setType("java.lang.String");
-        sess.save(cfg);
-        
-        cfg = new Configuratie();
-        cfg.setProperty("fullextent");
-        cfg.setPropval("\"12000,304000,280000,620000\"");
-        cfg.setSetting(appCode);
-        cfg.setType("java.lang.String");
-        sess.save(cfg);
-        
-        cfg = new Configuratie();
-        cfg.setProperty("cfg_transSliderTab");
-        cfg.setPropval("\"legenda\"");
+        cfg.setProperty("activeTab");
+        cfg.setPropval("themas");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.String");
         sess.save(cfg);
 
+        cfg = new Configuratie();
+        cfg.setProperty("transSliderTab");
+        cfg.setPropval("legenda");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.String");
+        sess.save(cfg);
+
+        String tileRes = "3440.64,1720.32,860.16,430.08,215.04,107.52,"
+                + "53.76,26.88,13.44,6.72,3.36,1.68,0.84,0.42,0.21,0.105";
+        
+        cfg = new Configuratie();
+        cfg.setProperty("tilingResolutions");
+        cfg.setPropval(tileRes);
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.String");
+        sess.save(cfg);        
+        
         sess.flush();
     }
-    
+
     public CyclomediaAccount getCyclomediaAccount(String appCode) {
         CyclomediaAccount account = null;
-        
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();        
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List results = sess.createQuery("from CyclomediaAccount where app_code = :appcode")
                 .setParameter("appcode", appCode).setMaxResults(1).list();
-        
+
         if (results != null && results.size() == 1) {
             return (CyclomediaAccount) results.get(0);
         }
-        
+
         return account;
     }
 }
