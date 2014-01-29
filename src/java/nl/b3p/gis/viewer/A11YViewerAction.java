@@ -36,6 +36,7 @@ import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.db.Applicatie;
+import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.zoeker.configuratie.Attribuut;
 import nl.b3p.zoeker.configuratie.ResultaatAttribuut;
@@ -95,9 +96,9 @@ public class A11YViewerAction extends BaseGisAction {
             throws Exception {
 
         zoeker = new Zoeker();
-        
-        addCMSParam(request);
-        
+
+        addCMSParams(request);
+
         createLists(dynaForm, request);
 
         return mapping.findForward(LIST);
@@ -115,8 +116,8 @@ public class A11YViewerAction extends BaseGisAction {
     public ActionForward search(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
 
-        addCMSParam(request);
-        
+        addCMSParams(request);
+
         setBreadCrumb(request);
 
         showZoekVelden(dynaForm, request);
@@ -126,9 +127,9 @@ public class A11YViewerAction extends BaseGisAction {
 
     public ActionForward results(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response)
             throws Exception {
-        
-        addCMSParam(request);
-        
+
+        addCMSParams(request);
+
         showZoekResults(dynaForm, request);
 
         return mapping.findForward(RESULTS);
@@ -202,7 +203,7 @@ public class A11YViewerAction extends BaseGisAction {
             app = KaartSelectieUtil.getDefaultApplicatie();
 
         }
-        
+
         if (app != null) {
             appCode = app.getCode();
             request.setAttribute("appCode", appCode);
@@ -220,23 +221,41 @@ public class A11YViewerAction extends BaseGisAction {
 
         /* Zoekers tonen voor deze Applicatie */
         String zoekConfigIds = (String) map.get("zoekConfigIds");
-        zoekConfigIds = zoekConfigIds.replace("\"", "");
-        String[] ids = zoekConfigIds.split(",");
 
-        List<ZoekConfiguratie> zcs = getZoekConfigs(ids);
-        request.setAttribute("zoekConfigs", zcs);
+        if (zoekConfigIds != null && !zoekConfigIds.isEmpty()) {
+            zoekConfigIds = zoekConfigIds.replace("\"", "");
+            String[] ids = zoekConfigIds.split(",");
+
+            List<ZoekConfiguratie> zcs = getZoekConfigs(ids);
+            request.setAttribute("zoekConfigs", zcs);
+        }
 
         Integer maxResults = (Integer) map.get("maxResults");
         if (maxResults != null && maxResults > 0) {
             MAX_SEARCH_RESULTS = new Integer(maxResults);
         }
-        
-           
     }
-    
-    private void addCMSParam(HttpServletRequest request) {
-        String cmsPageId = (String) request.getParameter("cmsPageId");
-        request.setAttribute("cmsPageId", cmsPageId);     
+
+    private void addCMSParams(HttpServletRequest request) {
+        String cmsPageId = (String) request.getParameter("cmsPageId"); 
+        CMSPagina cmsPage = null;
+        
+        if (cmsPageId != null && !cmsPageId.isEmpty()) {
+            request.setAttribute("cmsPageId", cmsPageId);
+            
+            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+            cmsPage = (CMSPagina) sess.get(CMSPagina.class, new Integer(cmsPageId));
+        } 
+        
+        if (cmsPage != null) {
+            if (cmsPage.getThema() != null) {
+                request.setAttribute("theme", cmsPage.getThema());
+            }
+            
+            if (cmsPage.getSefUrl() != null) {
+                request.setAttribute("sefUrl", cmsPage.getSefUrl());
+            }            
+        }       
     }
 
     private List<ZoekConfiguratie> getZoekConfigs(String[] zoekerIds) {
@@ -323,7 +342,7 @@ public class A11YViewerAction extends BaseGisAction {
         if (zoeker == null) {
             zoeker = new Zoeker();
         }
-        
+
         HttpSession session = request.getSession(true);
         A11YResult a11yResult = (A11YResult) session.getAttribute("a11yResult");
 
@@ -332,7 +351,7 @@ public class A11YViewerAction extends BaseGisAction {
         } else {
             results = zoeker.zoekMetConfiguratie(zc, searchStrings, MAX_SEARCH_RESULTS, new ArrayList(), true, startIndex, limit);
         }
-        
+
         if (a11yResult != null) {
             request.setAttribute("a11yResultMap", a11yResult.getResultMap());
         }
