@@ -43,6 +43,7 @@ import org.geotools.data.FeatureStore;
 import org.geotools.data.Transaction;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.FeatureCollection;
+import org.geotools.feature.FeatureIterator;
 import org.geotools.geometry.jts.JTSFactoryFinder;
 import org.geotools.jdbc.JDBCDataStore;
 import org.hibernate.Session;
@@ -293,7 +294,7 @@ public class EditFeature {
         FeatureSource fs = null;
         FeatureCollection fc = null;
         DataStore ds = null;
-        Iterator featureIt = null;
+        FeatureIterator featureIt = null;
         try {
             Bron b = gb.getBron();
             ds = b.toDatastore();
@@ -319,7 +320,7 @@ public class EditFeature {
 
             List<Point> multiPoints = new ArrayList<Point>();
             List<LineString> multiLines = new ArrayList<LineString>();
-            featureIt = fc.iterator();
+            featureIt = fc.features();
             JSONArray features = new JSONArray();
             while (featureIt.hasNext()) {
                 JSONObject feat = new JSONObject();
@@ -404,7 +405,7 @@ public class EditFeature {
             if (ds != null) {
                 ds.dispose();
             }
-            fc.close(featureIt);
+            featureIt.close();
         }
         return json;
     }

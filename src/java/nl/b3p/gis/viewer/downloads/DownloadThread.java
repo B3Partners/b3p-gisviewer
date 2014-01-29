@@ -254,7 +254,7 @@ public class DownloadThread extends Thread {
 
             } finally {
                 if (fc != null) {
-                    fc.close(it);
+                    it.close();
                 }
                 if (datastore != null) {
                     datastore.dispose();
@@ -313,7 +313,7 @@ public class DownloadThread extends Thread {
 
             } finally {
                 if (fc != null) {
-                    fc.close(it);
+                    it.close();
                 }
                 if (datastore != null) {
                     datastore.dispose();

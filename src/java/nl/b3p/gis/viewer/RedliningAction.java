@@ -385,7 +385,7 @@ public class RedliningAction extends ViewerCrudAction {
             ds.dispose();
 
             if (fc != null) {
-                fc.close(it);
+                it.close();
             }
         }
 
