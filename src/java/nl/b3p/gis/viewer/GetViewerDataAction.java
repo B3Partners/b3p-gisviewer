@@ -16,12 +16,16 @@ import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
+import static nl.b3p.gis.viewer.BaseGisAction.CMS_PAGE_ID;
 import nl.b3p.gis.viewer.admindata.CollectAdmindata;
+import nl.b3p.gis.viewer.admindata.GegevensBronBean;
+import nl.b3p.gis.viewer.admindata.RecordChildBean;
 import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
+import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
@@ -30,6 +34,7 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
@@ -221,15 +226,23 @@ public class GetViewerDataAction extends BaseGisAction {
         ArrayList themas = getThemas(mapping, dynaForm, request);
         ArrayList regels = new ArrayList();
         ArrayList ti = new ArrayList();
+        
         if (themas == null) {
             request.setAttribute("regels_list", regels);
             return mapping.findForward("admindata");
         }
+        
+        List<RecordChildBean> ggbBeans = new ArrayList();
+        if (themas != null) {
+            ggbBeans = CollectAdmindata.collectGegevensbronRecordChilds(request, themas, false);
+        }
+        
+        request.setAttribute("ggbBeans", ggbBeans);
 
         collectThemaRegels(mapping, request, themas, regels, ti, true);
         request.setAttribute("regels_list", regels);
         request.setAttribute("thema_items_list", ti);
-
+        
         return mapping.findForward("objectdata");
     }
 
@@ -242,6 +255,7 @@ public class GetViewerDataAction extends BaseGisAction {
      */
     private void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
             List themas, List regels, List ti, boolean locatie) {
+        
         for (int i = 0; i < themas.size(); i++) {
             Themas t = (Themas) themas.get(i);
             if (locatie && !t.isLocatie_thema()) {
@@ -326,7 +340,7 @@ public class GetViewerDataAction extends BaseGisAction {
         Bron b = gb.getBron(request);
 
         List<String> propnames = DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items);
-        List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, extraFilter, propnames, null, false);
+        List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, extraFilter, propnames, null, true);
         List<AdminDataRowBean> regels = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);

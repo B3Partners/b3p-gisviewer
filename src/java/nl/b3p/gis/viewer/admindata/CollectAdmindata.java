@@ -271,10 +271,10 @@ public class CollectAdmindata {
                                 count = 1;
                                 JSONObject childCQL = new JSONObject(cqlFilters.toString());
                                 //voeg het child filter toe aan het json object zodat het de volgende keer gebruikt kan worden.
-                                if (childCQL != null) {
-
+                                if (childCQL != null && childFilter != null) {
                                     childCQL.put("" + child.getId(), CQL.toCQL(childFilter));
                                 }
+                                
                                 if (count > 0) {
                                     RecordChildBean childBean = new RecordChildBean();
                                     childBean.setId(child.getId().toString());

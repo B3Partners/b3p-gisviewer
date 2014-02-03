@@ -58,7 +58,7 @@ public class BagAction extends ViewerCrudAction{
         Integer bagkaartlaagid = (Integer) instellingen.get("bagkaartlaagid");
 
         if (bagkaartlaagid == null || bagkaartlaagid < 1) {
-            addAlternateMessage(mapping, request, "Er is nog geen BAG Kaartlaag geconfigureerd door de beheerder.");
+            addAlternateMessage(mapping, request, "bag.kaartlaag.error");
             return mapping.findForward(FAILURE);
         }
         
@@ -68,16 +68,16 @@ public class BagAction extends ViewerCrudAction{
         //panden
         Gegevensbron pandengb= bagKaartLaag.getGegevensbron();
         if (pandengb==null){
-            addAlternateMessage(mapping, request, "De BAG Kaartlaag die voor de BAG module is geconfigureerd heeft geen Gegevensbron");
+            addAlternateMessage(mapping, request, "bag.kaartlaag.geen.bron");
             return mapping.findForward(FAILURE);  
         }   
         //Verblijfsobjecten
         List<Gegevensbron> childs= sess.createQuery("from Gegevensbron where parent = :p").setParameter("p", pandengb).list();
         if (childs.size()>1){
-            addAlternateMessage(mapping, request, "De Gegevensbron van de  BAG Kaartlaag die voor de BAG module is geconfigureerd heeft meerdere childs, de eerste is gekozen.");
+            addAlternateMessage(mapping, request, "bag.kaartlaag.multi.childs");
         }
         if (childs.isEmpty()){
-            addAlternateMessage(mapping, request, "De Gegevensbron van de  BAG Kaartlaag die voor de BAG module is geconfigureerd heeft geen childs");
+            addAlternateMessage(mapping, request, "bag.kaartlaag.no.child");
             return mapping.findForward(FAILURE);  
         }
         Gegevensbron verblijfsObjectengb = childs.get(0);
@@ -95,42 +95,46 @@ public class BagAction extends ViewerCrudAction{
         String bagGebruiksfunctieAttr = null;
         String bagGeomAttr = null;
 
-        if(instellingen.get("bagMaxBouwjaar")==null)
-            addAlternateMessage(mapping,request,"Geen maximaal bouwjaar ingesteld in de BAG module configuratie");
-        else
+        if(instellingen.get("bagMaxBouwjaar")==null) {
+            addAlternateMessage(mapping,request,"bag.config.no.maxbouwjaar");
+        } else {
             maxBouwJaar = (Integer) instellingen.get("bagMaxBouwjaar");
-        if(instellingen.get("bagMinBouwjaar")==null)
-            addAlternateMessage(mapping,request,"Geen minimaal bouwjaar ingesteld in de BAG module configuratie");
-        else
+        }        
+        if(instellingen.get("bagMinBouwjaar")==null) {
+            addAlternateMessage(mapping,request,"bag.config.no.minbouwjaar");
+        } else {
             minBouwJaar = (Integer) instellingen.get("bagMinBouwjaar");
-        if(instellingen.get("bagMaxOpp")==null)
-            addAlternateMessage(mapping,request,"Geen maximaal oppervlakte ingesteld in de BAG module configuratie");
-        else
+        }
+        if(instellingen.get("bagMaxOpp")==null) {
+            addAlternateMessage(mapping,request,"bag.config.no.maxopp");
+        } else {
             maxOpp = (Integer) instellingen.get("bagMaxOpp");
-        if(instellingen.get("bagMinOpp")==null)
-            addAlternateMessage(mapping,request,"Geen minimaal oppervlakte ingesteld in de BAG module configuratie");
-        else
+        }
+        if(instellingen.get("bagMinOpp")==null) {
+            addAlternateMessage(mapping,request,"bag.config.no.minopp");
+        } else {
             minOpp = (Integer) instellingen.get("bagMinOpp");
-
-        if (instellingen.get("bagBouwjaarAttr") == null)
-            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Bouwjaar niet ingevuld");
-        else
+        }
+        if (instellingen.get("bagBouwjaarAttr") == null) {
+            addAlternateMessage(mapping,request,"bag.config.no.attrib.bouwjaar");
+        } else {
             bagBouwjaarAttr = (String) instellingen.get("bagBouwjaarAttr");
-
-        if (instellingen.get("bagOppAttr") == null)
-            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Oppervlakte niet ingevuld");
-        else
+        }
+        if (instellingen.get("bagOppAttr") == null) {
+            addAlternateMessage(mapping,request,"bag.config.no.attrib.opp");
+        } else {
             bagOppAttr = (String) instellingen.get("bagOppAttr");
-
-        if (instellingen.get("bagGebruiksfunctieAttr") == null)
-            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Gebruiksfunctie niet ingevuld");
-        else
+        }
+        if (instellingen.get("bagGebruiksfunctieAttr") == null) {
+            addAlternateMessage(mapping,request,"bag.config.no.attrib.gfunctie");
+        } else {
             bagGebruiksfunctieAttr = (String) instellingen.get("bagGebruiksfunctieAttr");
-
-        if (instellingen.get("bagGeomAttr") == null)
-            addAlternateMessage(mapping,request,"In de configuratie van de BAG module is de attribuut naam voor Geometrie niet ingevuld");
-        else
+        }
+        if (instellingen.get("bagGeomAttr") == null) {
+            addAlternateMessage(mapping,request,"bag.config.no.attrib.geom");
+        } else {
             bagGeomAttr = (String) instellingen.get("bagGeomAttr");
+        }
         
         request.setAttribute("bagMaxBouwjaar", maxBouwJaar);
         request.setAttribute("bagMinBouwjaar", minBouwJaar);
@@ -145,4 +149,3 @@ public class BagAction extends ViewerCrudAction{
         return mapping.findForward(SUCCESS);
     }
 }
-
