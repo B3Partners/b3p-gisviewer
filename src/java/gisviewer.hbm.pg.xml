@@ -293,7 +293,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="icon" length="255"/>
         <property name="volgordenr" type="integer"/>
         <property name="cdate" not-null="true" type="timestamp"/>
-        <set name="cmsMenus" table="cms_menu_menuitem">
+        <set name="cmsMenus" table="cms_menu_menuitem" inverse="true">
             <key column="cms_menuitem_id"/>
             <many-to-many class="nl.b3p.gis.viewer.db.CMSMenu" column="cms_menu_id"/>
         </set>
