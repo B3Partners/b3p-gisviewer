@@ -195,6 +195,10 @@ public class ThemaData {
             cloneObj.gegevensbron = this.gegevensbron;
         }
         
+        if(this.defaultValues != null) {
+            cloneObj.defaultValues = this.defaultValues;
+        }
+        
         cloneObj.editable = this.editable;
 
         return cloneObj;
