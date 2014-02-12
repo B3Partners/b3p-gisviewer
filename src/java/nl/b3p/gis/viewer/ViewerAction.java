@@ -674,7 +674,11 @@ public class ViewerAction extends BaseGisAction {
             request.setAttribute("transSliderTab", "legenda");
         }
         /* CMS Theme klaarzetten */
-        CMSPagina cmsPage = (CMSPagina) sess.get(CMSPagina.class, cmsPageId);
+        CMSPagina cmsPage = null;
+        
+        if (cmsPageId != null && cmsPageId > 0) {
+            cmsPage = (CMSPagina) sess.get(CMSPagina.class, cmsPageId);
+        }
         
         /* cms page id op sessie zetten voor redirect uitloggen */
         if (cmsPageId != null && cmsPageId > 0) {
