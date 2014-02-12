@@ -493,18 +493,11 @@ public class ConfigKeeper {
         sess.save(cfg);  
         
         cfg = new Configuratie();
-        cfg.setProperty("showLeftInfoTab");
+        cfg.setProperty("showInfoTab");
         cfg.setPropval("false");
         cfg.setSetting(appCode);
-        cfg.setType("java.lang.Boolean");
-        sess.save(cfg);
-        
-        cfg = new Configuratie();
-        cfg.setProperty("widthLeftInfoTab");
-        cfg.setPropval("300");
-        cfg.setSetting(appCode);
-        cfg.setType("java.lang.Integer");
-        sess.save(cfg);    
+        cfg.setType("java.lang.String");
+        sess.save(cfg);  
         
         sess.flush();
     }
