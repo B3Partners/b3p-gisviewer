@@ -106,6 +106,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
         <property name="layoutadmindata"/>
         <property name="style"/>
         <many-to-one name="gegevensbron"/>
+        <property name="info_tekst" type="text"/>
     </class>
     <class name="nl.b3p.gis.viewer.db.WaardeTypen">
         <id name="id">

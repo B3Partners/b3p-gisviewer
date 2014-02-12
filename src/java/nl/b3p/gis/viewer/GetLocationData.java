@@ -716,4 +716,35 @@ public class GetLocationData {
         return new String[]{"Fout bij laden van data. Functie nog niet omgezet"};
 
     }
+    
+    public String getKaartlaagInfoTekst(Integer themaId) {
+        if (themaId == null || themaId < 1) {
+            return null;
+        }
+        
+        String infoTekst = null;
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        Transaction tx = null;
+                
+        try {
+            tx = sess.beginTransaction();
+
+            Themas thema = (Themas) sess.get(Themas.class, themaId);
+            if (thema != null) {
+                infoTekst = thema.getInfo_tekst();
+            }
+
+            tx.commit();
+
+        } catch (Exception e) {
+            log.error("Fout tijdens ophalen Kaartlaag info tekst: ", e);
+
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
+        }
+
+        return infoTekst;
+    }
 }

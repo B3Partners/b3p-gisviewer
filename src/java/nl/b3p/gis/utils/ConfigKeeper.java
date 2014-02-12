@@ -490,7 +490,21 @@ public class ConfigKeeper {
         cfg.setPropval(tileRes);
         cfg.setSetting(appCode);
         cfg.setType("java.lang.String");
-        sess.save(cfg);        
+        sess.save(cfg);  
+        
+        cfg = new Configuratie();
+        cfg.setProperty("showLeftInfoTab");
+        cfg.setPropval("false");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.Boolean");
+        sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("widthLeftInfoTab");
+        cfg.setPropval("300");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.Integer");
+        sess.save(cfg);    
         
         sess.flush();
     }

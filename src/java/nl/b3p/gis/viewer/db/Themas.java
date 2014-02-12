@@ -41,6 +41,7 @@ public class Themas implements Comparable {
     private String layoutadmindata;
     private String style;
     private Gegevensbron gegevensbron;
+    private String info_tekst;
 
     /** Creates a new instance of Themas */
     public Themas() {
@@ -268,6 +269,14 @@ public class Themas implements Comparable {
 
     public void setStyle(String style) {
         this.style = style;
+    }
+    
+    public String getInfo_tekst() {
+        return info_tekst;
+    }
+
+    public void setInfo_tekst(String info_tekst) {
+        this.info_tekst = info_tekst;
     }
 
     public int compareTo(Object o) {
