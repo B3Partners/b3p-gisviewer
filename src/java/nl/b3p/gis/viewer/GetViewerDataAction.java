@@ -17,6 +17,7 @@ import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.admindata.CollectAdmindata;
+import nl.b3p.gis.viewer.admindata.GegevensBronBean;
 import nl.b3p.gis.viewer.admindata.RecordChildBean;
 import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.Gegevensbron;
@@ -101,6 +102,7 @@ public class GetViewerDataAction extends BaseGisAction {
     /**
      * Methode is attributen ophaalt welke nodig zijn voor het tonen van de
      * administratieve data.
+     *
      * @param mapping ActionMapping
      * @param dynaForm DynaValidatorForm
      * @param request HttpServletRequest
@@ -110,8 +112,7 @@ public class GetViewerDataAction extends BaseGisAction {
      *
      * @throws Exception
      *
-     * thema_items
-     * regels
+     * thema_items regels
      */
     public ActionForward admindata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         logger.debug("Entering admindata");
@@ -121,29 +122,30 @@ public class GetViewerDataAction extends BaseGisAction {
             ggbBeans = CollectAdmindata.collectGegevensbronRecordChilds(request, themas, false);
         }
         request.setAttribute("beans", ggbBeans);
-        boolean onlyFeaturesInGeom=true;
-        if (FormUtils.nullIfEmpty(request.getParameter("onlyFeaturesInGeom"))!=null){
-            try{
-                onlyFeaturesInGeom=Boolean.parseBoolean(request.getParameter("onlyFeaturesInGeom"));
-            }catch(Exception e){
-                logger.error("Param 'onlyFeaturesInGeom' is not a boolean",e);
+        boolean onlyFeaturesInGeom = true;
+        if (FormUtils.nullIfEmpty(request.getParameter("onlyFeaturesInGeom")) != null) {
+            try {
+                onlyFeaturesInGeom = Boolean.parseBoolean(request.getParameter("onlyFeaturesInGeom"));
+            } catch (Exception e) {
+                logger.error("Param 'onlyFeaturesInGeom' is not a boolean", e);
             }
-        }  
-        
+        }
+
         String bookmarkAppcode = null;
-        if (FormUtils.nullIfEmpty(request.getParameter("bookmarkAppcode")) != null){
+        if (FormUtils.nullIfEmpty(request.getParameter("bookmarkAppcode")) != null) {
             bookmarkAppcode = request.getParameter("bookmarkAppcode");
-        }        
-        
+        }
+
         request.setAttribute("onlyFeaturesInGeom", onlyFeaturesInGeom);
         request.setAttribute("bookmarkAppcode", bookmarkAppcode);
-        
+
         return mapping.findForward(ADMINDATAFW);
     }
 
     /**
      * Methode is attributen ophaalt welke nodig zijn voor het tonen van de
      * aanvullende info.
+     *
      * @param mapping ActionMapping
      * @param dynaForm DynaValidatorForm
      * @param request HttpServletRequest
@@ -153,8 +155,7 @@ public class GetViewerDataAction extends BaseGisAction {
      *
      * @throws Exception
      *
-     * thema_items
-     * regels
+     * thema_items regels
      */
     public ActionForward aanvullendeinfo(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         Gegevensbron gb = getGegevensbron(mapping, dynaForm, request);
@@ -186,6 +187,7 @@ public class GetViewerDataAction extends BaseGisAction {
     /**
      * Methode is attributen ophaalt welke nodig zijn voor het tonen van de
      * metadata.
+     *
      * @param mapping ActionMapping
      * @param dynaForm DynaValidatorForm
      * @param request HttpServletRequest
@@ -206,6 +208,7 @@ public class GetViewerDataAction extends BaseGisAction {
     /**
      * Methode is attributen ophaalt welke nodig zijn voor het tonen van de
      * "Gebieden" tab.
+     *
      * @param mapping ActionMapping
      * @param dynaForm DynaValidatorForm
      * @param request HttpServletRequest
@@ -218,40 +221,42 @@ public class GetViewerDataAction extends BaseGisAction {
      * object_data
      *
      */
-    public ActionForward objectdata(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        ArrayList themas = getThemas(mapping, dynaForm, request);
-        ArrayList regels = new ArrayList();
-        ArrayList ti = new ArrayList();
+    public ActionForward objectdata(ActionMapping mapping, DynaValidatorForm dynaForm,
+            HttpServletRequest request, HttpServletResponse response) throws Exception {        
         
-        if (themas == null) {
-            request.setAttribute("regels_list", regels);
-            return mapping.findForward("admindata");
-        }
+        String appCode = request.getParameter("bookmarkAppcode");        
+        request.setAttribute("appCode", appCode);     
         
-        List<RecordChildBean> ggbBeans = new ArrayList();
+        List<Themas> locatieThemas = new ArrayList();
+        List<Themas> themas = getThemas(mapping, dynaForm, request);
         if (themas != null) {
-            ggbBeans = CollectAdmindata.collectGegevensbronRecordChilds(request, themas, false);
+            for (Themas t : themas) {
+                if (t.isLocatie_thema()) {
+                    locatieThemas.add(t);
+                }
+            }
+        }
+
+        List<RecordChildBean> ggbBeans = new ArrayList();
+        if (locatieThemas.size() > 0) {
+            ggbBeans = CollectAdmindata.collectGegevensbronRecordChilds(request, locatieThemas, false);
         }
         
-        request.setAttribute("ggbBeans", ggbBeans);
+        request.setAttribute("ggbBeans", ggbBeans);           
 
-        collectThemaRegels(mapping, request, themas, regels, ti, true);
-        request.setAttribute("regels_list", regels);
-        request.setAttribute("thema_items_list", ti);
-        
         return mapping.findForward("objectdata");
     }
 
     /**
      * Onderstaande code is deprecated en wordt alleen nog gebruikt voor de oude
-     * versie van bovenstaande methodes. dit moet allemaal via
-     * CollectAdmindata gaan lopen
+     * versie van bovenstaande methodes. dit moet allemaal via CollectAdmindata
+     * gaan lopen
      *
      * @deprecated
      */
     private void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
             List themas, List regels, List ti, boolean locatie) {
-        
+
         for (int i = 0; i < themas.size(); i++) {
             Themas t = (Themas) themas.get(i);
             if (locatie && !t.isLocatie_thema()) {
@@ -621,7 +626,8 @@ public class GetViewerDataAction extends BaseGisAction {
     }
 
     /**
-     *Compare 2 thema datalists voor het tonen in de admindata. (dus niet volledige vergelijking maar alleen op label en basisregel)
+     * Compare 2 thema datalists voor het tonen in de admindata. (dus niet
+     * volledige vergelijking maar alleen op label en basisregel)
      *
      * @deprecated
      */
@@ -687,8 +693,7 @@ public class GetViewerDataAction extends BaseGisAction {
      * Alle [kolomnamen] in de url worden vervangen door de waarde in de kolom.
      * Bijvoorbeeld:
      * http://plannen.kaartenbalie.nl/[planeigenaar]/[plannaam]/[planidentificyaty].html
-     * Kan dan worden:
-     * http://plannen.kaartenbalie.nl/gemeente/plansoen/p38.html
+     * Kan dan worden: http://plannen.kaartenbalie.nl/gemeente/plansoen/p38.html
      *
      * @deprecated
      */
