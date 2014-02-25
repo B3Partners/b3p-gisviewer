@@ -1,12 +1,30 @@
 package nl.b3p.gis.viewer.print;
 
-import java.util.List;
+import java.util.Map;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
 @XmlRootElement(name="info")
-@XmlType(propOrder = {"titel","datum","imageUrl","bbox","opmerking","kwaliteit","legendUrls","scale"})
+@XmlType(propOrder = {
+    "titel",
+    "datum",
+    "imageUrl",
+    "bbox",
+    "opmerking",
+    "kwaliteit",
+    "columnOneItems",
+    "columnTwoItems",
+    "columnThreeItems",
+    "legendItems",
+    "scaleColumnOne",
+    "scaleColumnTwo",
+    "scaleColumnThree",
+    "titleColumnOne",
+    "titleColumnTwo",
+    "titleColumnThree",
+    "scale"
+})
 public class PrintInfo {
     private String titel;
     private String datum;
@@ -14,7 +32,19 @@ public class PrintInfo {
     private String bbox;
     private String opmerking;
     private int kwaliteit;
-    private List<String> legendUrls;
+    private Map columnOneItems;
+    private Map columnTwoItems;
+    private Map columnThreeItems;
+    private Map legendItems;
+    
+    private String scaleColumnOne;
+    private String scaleColumnTwo;
+    private String scaleColumnThree;
+    
+    private String titleColumnOne;
+    private String titleColumnTwo;
+    private String titleColumnThree;
+    
     private Integer scale;
 
     public PrintInfo() {
@@ -74,15 +104,38 @@ public class PrintInfo {
         this.kwaliteit = kwaliteit;
     }
 
-    @XmlElement(name="legendUrls")
-    public List<String> getLegendUrls() {
-        return legendUrls;
+    public Map getColumnOneItems() {
+        return columnOneItems;
     }
 
-    public void setLegendUrls(List<String> legendUrls) {
-        this.legendUrls = legendUrls;
+    public void setColumnOneItems(Map columnOneItems) {
+        this.columnOneItems = columnOneItems;
     }
 
+    public Map getColumnTwoItems() {
+        return columnTwoItems;
+    }
+
+    public void setColumnTwoItems(Map columnTwoItems) {
+        this.columnTwoItems = columnTwoItems;
+    }
+
+    public Map getColumnThreeItems() {
+        return columnThreeItems;
+    }
+
+    public void setColumnThreeItems(Map columnThreeItems) {
+        this.columnThreeItems = columnThreeItems;
+    }
+
+    public Map getLegendItems() {
+        return legendItems;
+    }
+
+    public void setLegendItems(Map legendItems) {
+        this.legendItems = legendItems;
+    }
+    
     @XmlElement(name="scale")
     public Integer getScale() {
         return scale;
@@ -90,5 +143,53 @@ public class PrintInfo {
 
     public void setScale(Integer scale) {
         this.scale = scale;
+    }
+
+    public String getScaleColumnOne() {
+        return scaleColumnOne;
+    }
+
+    public void setScaleColumnOne(String scaleColumnOne) {
+        this.scaleColumnOne = scaleColumnOne;
+    }
+
+    public String getScaleColumnTwo() {
+        return scaleColumnTwo;
+    }
+
+    public void setScaleColumnTwo(String scaleColumnTwo) {
+        this.scaleColumnTwo = scaleColumnTwo;
+    }
+
+    public String getScaleColumnThree() {
+        return scaleColumnThree;
+    }
+
+    public void setScaleColumnThree(String scaleColumnThree) {
+        this.scaleColumnThree = scaleColumnThree;
+    }
+
+    public String getTitleColumnOne() {
+        return titleColumnOne;
+    }
+
+    public void setTitleColumnOne(String titleColumnOne) {
+        this.titleColumnOne = titleColumnOne;
+    }
+
+    public String getTitleColumnTwo() {
+        return titleColumnTwo;
+    }
+
+    public void setTitleColumnTwo(String titleColumnTwo) {
+        this.titleColumnTwo = titleColumnTwo;
+    }
+
+    public String getTitleColumnThree() {
+        return titleColumnThree;
+    }
+
+    public void setTitleColumnThree(String titleColumnThree) {
+        this.titleColumnThree = titleColumnThree;
     }
 }

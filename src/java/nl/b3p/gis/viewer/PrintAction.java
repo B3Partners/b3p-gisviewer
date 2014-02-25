@@ -24,10 +24,8 @@ package nl.b3p.gis.viewer;
 
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -68,14 +66,13 @@ public class PrintAction extends BaseHibernateAction {
     private static float footerHeight = 25;
     private static boolean addFooter = true;
     private static int maxResponseTime = 30000;
-    
     private static Integer DEFAULT_PPI = 72;
 
     @Override
     protected Map getActionMethodPropertiesMap() {
         Map map = new HashMap();
 
-        ExtendedMethodProperties hibProp = null;
+        ExtendedMethodProperties hibProp;
 
         hibProp = new ExtendedMethodProperties(PRINT);
         hibProp.setDefaultForwardName(SUCCESS);
@@ -150,7 +147,9 @@ public class PrintAction extends BaseHibernateAction {
             CombineImagesHandler.combineImage(response.getOutputStream(), settings,
                     settings.getMimeType(), maxResponseTime, username, password);
         } finally {
-            os.close();
+            if (os != null) {
+                os.close();
+            }
         }
 
         return null;
@@ -239,7 +238,7 @@ public class PrintAction extends BaseHibernateAction {
      *
      * @see
      * http://www.britishideas.com/2009/09/22/map-scales-and-printing-with-mapnik/
-    *
+     *
      */
     private Integer calcScaleForHigherPPI(Integer ppi, Integer mapWidthInMeters,
             Double paperWidthInInches) {
@@ -262,23 +261,22 @@ public class PrintAction extends BaseHibernateAction {
         boolean landscape = Boolean.valueOf(dynaForm.getString("landscape")).booleanValue();
         String outputType = FormUtils.nullIfEmpty(dynaForm.getString("outputType"));
         String remark = FormUtils.nullIfEmpty(dynaForm.getString("remark"));
-        
-        Object strPPI = dynaForm.get("ppi");        
-        
+
+        Object strPPI = dynaForm.get("ppi");
+
         Integer PPI = DEFAULT_PPI;
         if (strPPI != null) {
-             PPI =(Integer)strPPI;
-        }        
-        
+            PPI = (Integer) strPPI;
+        }
+
         /* huidige CombineImageSettings ophalen */
         CombineImageSettings originalSettings = (CombineImageSettings) request.getSession().getAttribute(imageId);
         CombineImageSettings settings = CombineImageSettings.fromJson(originalSettings.getOriginalJSON());
         settings.setLegendMap(originalSettings.getLegendMap());// Argh, ugly ugly ugly :'(
-        
 
         /* bbox klaarzetten voor xsl */
         String bbox = "";
-        if (settings != null && settings.getBbox() != null) {
+        if (settings.getBbox() != null) {
             String minx = Double.toString(settings.getBbox().getMinx());
             String miny = Double.toString(settings.getBbox().getMiny());
             String maxx = Double.toString(settings.getBbox().getMaxx());
@@ -293,7 +291,7 @@ public class PrintAction extends BaseHibernateAction {
         String imageUrl = createImageUrl(request);
 
         /* template keuze */
-        String template = null;
+        String template;
 
         if (landscape && pageSize.equals("A4")) {
             template = PrintServlet.xsl_A4_Liggend;
@@ -321,7 +319,7 @@ public class PrintAction extends BaseHibernateAction {
 
         /* nieuw (xml) Object voor gebruik met fop */
         PrintInfo info = new PrintInfo();
-        
+
         info.setTitel(title);
         info.setDatum(df.format(now));
         info.setImageUrl(imageUrl);
@@ -333,7 +331,7 @@ public class PrintAction extends BaseHibernateAction {
         String oldBBox = calculateBboxForScale(settings, currentScale);
 
         Integer newScale = (Integer) dynaForm.get("scale");
-        String newBbox = null;
+        String newBbox;
         if (newScale != null && newScale > 0) {
             newBbox = calculateBboxForScale(settings, newScale);
             info.setBbox(newBbox);
@@ -345,53 +343,88 @@ public class PrintAction extends BaseHibernateAction {
         Double paperInches = convertPaperFormatToInches(pageSize, landscape);
 
         Integer newWidthPx = calcNewMapWidthFromPPI(PPI, paperInches);
-        
+
         info.setKwaliteit(newWidthPx);
-         
-        /*
-        double maxX = settings.getBbox().getMaxx();
-        double minX = settings.getBbox().getMinx();
 
-        Double bla = Math.ceil(maxX - minX);
-        Integer currentWidth = bla.intValue();
-
-        Integer schaalEnzo = calcScaleForHigherPPI(PPI, currentWidth, paperInches);
-        logFile.debug("NEW SCALE: " + schaalEnzo);
-
-        if (schaalEnzo != null & schaalEnzo > 0) {
-            newBbox = calculateBboxForScale(settings, schaalEnzo);
-            logFile.debug("NEW BBOX: " + newBbox);
-
-            settings.setBbox(newBbox);
-            info.setBbox(newBbox);
-            info.setScale(schaalEnzo);
-            info.setKwaliteit(newWidthPx);
-        }
-        */
-
-        /* Legenda urls klaarzetten. Hier worden de aangevinkte laagnamen
-         vergeleken met de keys die al klaargezet waren in de 
-         Map<laag naam, legenda url> settings. De bijbehornede legenda url wordt
-         in een List gestopt en doorgegeven aan de xsl. */
+        /* Otherwise put legend items on new pages */
+        Map legendItemsMap = new HashMap();
+        
         String[] arr = (String[]) dynaForm.get("legendItems");
-        List<String> legendUrlsList = new ArrayList<String>();
         if (arr != null && arr.length > 0) {
-            Map legendMap = settings.getLegendMap();
-
             for (int i = 0; i < arr.length; i++) {
-                String keyStr = arr[i];
+                String key = arr[i];
 
-                if (legendMap != null && legendMap.containsKey(keyStr)) {
-                    String url = (String) legendMap.get(keyStr);
-                    legendUrlsList.add(url);
+                if (settings.getLegendMap() != null && settings.getLegendMap().containsKey(key)) {
+                    String url = (String) settings.getLegendMap().get(key);
+                    legendItemsMap.put(key, url);
                 }
             }
         }
 
-        info.setLegendUrls(legendUrlsList);
+        info.setLegendItems(legendItemsMap);
+        
+        /* Ophalen kolom instellingen */
+        String scaleColumnOne = (String) request.getParameter("scaleColumnOne");
+        String scaleColumnTwo = (String) request.getParameter("scaleColumnTwo");
+        String scaleColumnThree = (String) request.getParameter("scaleColumnThree");
+        
+        String titleColumnOne = (String) request.getParameter("titleColumnOne");
+        String titleColumnTwo = (String) request.getParameter("titleColumnTwo");
+        String titleColumnThree = (String) request.getParameter("titleColumnThree");
+        
+        if (scaleColumnOne != null && scaleColumnOne.equalsIgnoreCase("on")) {
+            info.setScaleColumnOne("on");
+        }
+        if (scaleColumnTwo != null && scaleColumnTwo.equalsIgnoreCase("on")) {
+            info.setScaleColumnTwo("on");
+        }
+        if (scaleColumnThree != null && scaleColumnThree.equalsIgnoreCase("on")) {
+            info.setScaleColumnThree("on");
+        }        
+        
+        if (titleColumnOne != null && titleColumnOne.equalsIgnoreCase("on")) {
+            info.setTitleColumnOne("on");
+        }
+        if (titleColumnTwo != null && titleColumnTwo.equalsIgnoreCase("on")) {
+            info.setTitleColumnTwo("on");
+        }
+        if (titleColumnThree != null && titleColumnThree.equalsIgnoreCase("on")) {
+            info.setTitleColumnThree("on");
+        }
+        
+        /* Ophalen radio button per kaartlaag om in juiste kolom te plaatsen */
+        Map legendItemsOne = new HashMap();
+        Map legendItemsTwo = new HashMap();
+        Map legendItemsThree = new HashMap();
+        
+        for (Map.Entry<String, String> entry : settings.getLegendMap().entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+
+            String formValue = (String) request.getParameter(key);
+            Integer column = 0;
+
+            if (formValue != null && !formValue.equals("")) {
+                column = new Integer(formValue);
+            }            
+            
+            if (column == 1) {
+                legendItemsOne.put(key, value);
+            }
+            if (column == 2) {
+                legendItemsTwo.put(key, value);
+            }
+            if (column == 3) {
+                legendItemsThree.put(key, value);
+            }
+        }
+        
+        info.setColumnOneItems(legendItemsOne);
+        info.setColumnTwoItems(legendItemsTwo);
+        info.setColumnThreeItems(legendItemsThree);
 
         /* doorgeven mimetype en template */
-        String mimeType = null;
+        String mimeType;
 
         if (outputType != null && outputType.equals(OUTPUT_PDF) || outputType.equals(OUTPUT_PDF_PRINT)) {
             mimeType = MimeConstants.MIME_PDF;
@@ -403,7 +436,7 @@ public class PrintAction extends BaseHibernateAction {
 
         /* add javascript print dialog to pdf ? */
         boolean addJavascript = false;
-        if (outputType != null && outputType.equals(OUTPUT_PDF_PRINT)) {
+        if (outputType.equals(OUTPUT_PDF_PRINT)) {
             addJavascript = true;
         }
 
