@@ -38,34 +38,36 @@ public class EditUtil {
 
     private static final Log log = LogFactory.getLog(EditUtil.class);
     private static final int QUAD_SEGS = 8;
-
     protected static final double DEFAULTTOLERANCE = 5.0;
 
     /**
      * Constructor
-     **/
+     *
+     */
     public EditUtil() throws Exception {
     }
 
     public String buffer(String wkt, Double bufferafstand) throws Exception {
 
-        if ( (wkt == null) || (wkt.length() < 1) ) {
+        if ((wkt == null) || (wkt.length() < 1)) {
             throw new Exception("Kan niet bufferen. Er is nog geen handeling geselecteerd.");
         }
 
-        if (bufferafstand == null || bufferafstand == 0)
+        if (bufferafstand == null || bufferafstand == 0) {
             throw new Exception("De bufferafstand mag niet 0 zijn.");
+        }
 
         String buffer = "";
         Geometry geom = null;
         geom = DataStoreUtil.createGeomFromWKTString(wkt);
 
-        if (geom == null || geom.isEmpty() ) {
+        if (geom == null || geom.isEmpty()) {
             throw new Exception("Kan niet bufferen. Geometrie is incorrect.");
         }
 
-        if (geom.toString().indexOf("POINT") != -1 && bufferafstand < 0)
+        if (geom.toString().indexOf("POINT") != -1 && bufferafstand < 0) {
             throw new Exception("De bufferafstand moet groter dan 0 zijn.");
+        }
 
         Geometry result = null;
 
@@ -75,20 +77,24 @@ public class EditUtil {
             result = geom.buffer(bufferafstand, QUAD_SEGS, BufferOp.CAP_ROUND);
         }
 
-        if (result == null || result.isEmpty())
+        if (result == null || result.isEmpty()) {
             throw new Exception("Resultaat buffer geeft incorrecte geometrie.");
-   
+        }
+
         Geometry poly = getLargestPolygonFromMultiPolygon(result);
 
-        if (poly == null || poly.isEmpty())
+        if (poly == null || poly.isEmpty()) {
             throw new Exception("Bufferfout bij omzetten MultiPolygon naar grootste Polygon.");
+        }
 
         buffer = poly.toText();
-        
+
         return buffer;
     }
 
-    public String getHighlightWktForThema(String themaIds, String wktPoint, String schaal, String tol) {
+    public String getHighlightWktForThema(String themaIds, String wktPoint,
+            String schaal, String tol, String currentWkt) {
+
         String wkt = null;
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -111,33 +117,36 @@ public class EditUtil {
                         Bron b = (Bron) thema.getConnectie(request);
 
                         if (b != null) {
-                            GisPrincipal user  = GisPrincipal.getGisPrincipal(request);
+                            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
 
                             if (thema.hasValidAdmindataSource(user)) {
                                 /* geom bufferen met tolerance distance */
                                 double distance = getDistance(schaal, tol);
 
-                                if (distance > 0)
+                                if (distance > 0) {
                                     geom = geom.buffer(distance);
+                                }
 
                                 Gegevensbron gb = thema.getGegevensbron();
                                 ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
 
-                                if ( (features != null) && (features.size() > 0) ) {
+                                if ((features != null) && (features.size() > 0)) {
                                     Feature f = features.get(0);
 
-                                    if (features.size() > 1)
+                                    if (features.size() > 1) {
                                         log.debug("Service geeft meerdere features terug. Eerste feature gebruikt. Wkt string = " + wkt);
+                                    }
 
-                                    if (f != null || f.getDefaultGeometryProperty() != null)
-                                        wkt = DataStoreUtil.selecteerKaartObjectWkt(f); 
+                                    if (f != null || f.getDefaultGeometryProperty() != null) {
+                                        wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
+                                    }
                                 }
 
                             }
                         }
                     }
                 }
-            }            
+            }
 
             tx.commit();
 
@@ -148,9 +157,31 @@ public class EditUtil {
                 tx.rollback();
             }
         }
-        
+
+        /* Probeer eerdere wkt te mergen met nieuw geselecteerde object wkt */
+        Geometry currentGeom;
+        Geometry newGeom;
+        Geometry mergedGeom = null;
+
+        try {
+            if (currentWkt != null && !currentWkt.equals("")) {
+                currentGeom = DataStoreUtil.createGeomFromWKTString(currentWkt);
+
+                if (currentGeom != null && wkt != null && !wkt.equals("")) {
+                    newGeom = DataStoreUtil.createGeomFromWKTString(wkt);
+                    mergedGeom = currentGeom.union(newGeom);
+                }
+            }
+
+            if (mergedGeom != null) {
+                wkt = mergedGeom.toText();
+            }
+        } catch (Exception ex) {
+            log.debug("Fout tijdens mergen wkt");
+        }
+
         if (wkt == null) {
-            log.debug("Wkt string is leeg bij selecteren kaartobject.");            
+            log.debug("Wkt string is leeg bij selecteren kaartobject.");
             return "-1";
         }
 
@@ -178,7 +209,7 @@ public class EditUtil {
 
         ArrayList<Feature> features = doQueryRedliningObject(geom, redLineGegevensbronId);
 
-        if ( (features != null) && (features.size() > 0) ) {
+        if ((features != null) && (features.size() > 0)) {
             Feature f = features.get(0);
 
             if (features.size() > 1) {
@@ -197,7 +228,7 @@ public class EditUtil {
     }
 
     private JSONObject featureToJson(Feature f) throws JSONException {
-        String wkt = "";        
+        String wkt = "";
 
         if (f != null || f.getDefaultGeometryProperty() != null) {
             wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
@@ -302,14 +333,14 @@ public class EditUtil {
 
         LineString line = single.getExteriorRing();
 
-        if (line instanceof LinearRing)
-            return new Polygon((LinearRing)line, null, new GeometryFactory(new PrecisionModel(), 28992));
+        if (line instanceof LinearRing) {
+            return new Polygon((LinearRing) line, null, new GeometryFactory(new PrecisionModel(), 28992));
+        }
 
         return null;
     }
 
-    private int getNumInteriorRings(Geometry geom)
-    {
+    private int getNumInteriorRings(Geometry geom) {
         List list = new ArrayList();
         list = PolygonExtracter.getPolygons(geom);
         Iterator iter = list.iterator();
