@@ -494,10 +494,10 @@ public class ConfigKeeper {
         
         cfg = new Configuratie();
         cfg.setProperty("showInfoTab");
-        cfg.setPropval("false");
+        cfg.setPropval("off");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.String");
-        sess.save(cfg);  
+        sess.save(cfg);
         
         sess.flush();
     }
