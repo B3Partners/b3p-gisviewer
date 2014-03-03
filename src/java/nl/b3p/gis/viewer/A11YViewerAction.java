@@ -237,25 +237,25 @@ public class A11YViewerAction extends BaseGisAction {
     }
 
     private void addCMSParams(HttpServletRequest request) {
-        String cmsPageId = (String) request.getParameter("cmsPageId"); 
+        String cmsPageId = (String) request.getParameter("cmsPageId");
         CMSPagina cmsPage = null;
-        
+
         if (cmsPageId != null && !cmsPageId.isEmpty()) {
             request.setAttribute("cmsPageId", cmsPageId);
-            
+
             Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
             cmsPage = (CMSPagina) sess.get(CMSPagina.class, new Integer(cmsPageId));
-        } 
-        
+        }
+
         if (cmsPage != null) {
             if (cmsPage.getThema() != null) {
                 request.setAttribute("theme", cmsPage.getThema());
             }
-            
+
             if (cmsPage.getSefUrl() != null) {
                 request.setAttribute("sefUrl", cmsPage.getSefUrl());
-            }            
-        }       
+            }
+        }
     }
 
     private List<ZoekConfiguratie> getZoekConfigs(String[] zoekerIds) {
@@ -263,12 +263,19 @@ public class A11YViewerAction extends BaseGisAction {
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List<ZoekConfiguratie> results = sess.createQuery("from ZoekConfiguratie"
-                + " order by naam").list();
+                + " order by naam")
+                .list();
 
         for (ZoekConfiguratie zc : results) {
             for (String id : zoekerIds) {
                 if (id != null && !id.equals("") && zc.getId() == Integer.parseInt(id)) {
-                    zcs.add(zc);
+
+                    if (zc.getForUsageIn() != null
+                            && zc.getForUsageIn().equals(ZoekConfiguratie.USE_IN_VIEWER_WEBR)
+                            || zc.getForUsageIn().equals(ZoekConfiguratie.USE_IN_WEBR)) {
+
+                        zcs.add(zc);
+                    }
                 }
             }
         }

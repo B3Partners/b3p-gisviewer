@@ -512,21 +512,30 @@ public class ViewerAction extends BaseGisAction {
         if (zoekconfiguraties != null) {
             for (int i = 0; i < zoekconfiguraties.size(); i++) {
                 ZoekConfiguratie zc = (ZoekConfiguratie) zoekconfiguraties.get(i);
-                zoekconfiguratiesJson.add(zc.toJSON());
 
-                Integer zcId = zc.getId();
-                if (zoekIngangNaam == null && zoekConfigId != null && zcId.intValue() == zoekConfigId.intValue()) {
-                    velden = zc.getZoekVelden();
-                } else if (zoekIngangNaam != null && zc.getNaam() != null && zc.getNaam().equals(zoekIngangNaam)) {
-                    velden = zc.getZoekVelden();
-                    zoekConfigId = zc.getId();
+                /* Alleen adden indien voor gebruik in viewer */
+                if (zc.getForUsageIn() != null
+                        && zc.getForUsageIn().equals(ZoekConfiguratie.USE_IN_VIEWER_WEBR)
+                        || zc.getForUsageIn().equals(ZoekConfiguratie.USE_IN_VIEWER)) {
+
+                    zoekconfiguratiesJson.add(zc.toJSON());
+
+                    Integer zcId = zc.getId();
+                    if (zoekIngangNaam == null && zoekConfigId != null && zcId.intValue() == zoekConfigId.intValue()) {
+                        velden = zc.getZoekVelden();
+                    } else if (zoekIngangNaam != null && zc.getNaam() != null && zc.getNaam().equals(zoekIngangNaam)) {
+                        velden = zc.getZoekVelden();
+                        zoekConfigId = zc.getId();
+                    }
                 }
             }
         }
+
         if (zoekconfiguraties != null) {
             request.setAttribute(ZOEKCONFIGURATIES, zoekconfiguratiesJson);
         }
 
+        /* zet params for init search */
         if (zoekConfigId != null || zoekIngangNaam != null) {
             if (velden != null) {
                 String params = "";
@@ -624,14 +633,14 @@ public class ViewerAction extends BaseGisAction {
         }
 
         //get tekstblokken
-        
-        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);          
+
+        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);
         Integer cmsPageId = null;
-        
+
         if (param != null && !param.equals("")) {
             cmsPageId = new Integer(param);
-        }        
-        
+        }
+
         List tekstBlokken = getTekstBlokken(cmsPageId);
         JSONArray jsonBlokken = getTekstBlokkenJson(tekstBlokken);
         request.setAttribute("tekstBlokken", jsonBlokken);
@@ -664,29 +673,29 @@ public class ViewerAction extends BaseGisAction {
         String transSliderTab = null;
         if (map != null) {
             transSliderTab = (String) map.get("transSliderTab");
-            
+
             if (transSliderTab != null && !transSliderTab.equals("")) {
                 request.setAttribute("transSliderTab", transSliderTab);
             }
         }
-        
+
         if (transSliderTab == null || transSliderTab.equals("")) {
             request.setAttribute("transSliderTab", "legenda");
         }
-        
+
         /* CMS Theme klaarzetten */
         CMSPagina cmsPage = null;
-        
+
         if (cmsPageId != null && cmsPageId > 0) {
             cmsPage = (CMSPagina) sess.get(CMSPagina.class, cmsPageId);
         }
-        
+
         /* cms page id op sessie zetten voor redirect uitloggen */
         if (cmsPageId != null && cmsPageId > 0) {
             request.setAttribute("cmsPageId", cmsPageId);
         }
-        
-        if (cmsPage != null && cmsPage.getThema() != null 
+
+        if (cmsPage != null && cmsPage.getThema() != null
                 && !cmsPage.getThema().equals("")) {
             request.setAttribute("theme", cmsPage.getThema());
         }
@@ -1323,7 +1332,7 @@ public class ViewerAction extends BaseGisAction {
             Tekstblok tb = (Tekstblok) it.next();
             try {
                 jsonBlokken.put(tb.toJson());
-            } catch(JSONException e) {
+            } catch (JSONException e) {
                 log.error("Fout bij converteren van tekstblok naar Json", e);
             }
         }
