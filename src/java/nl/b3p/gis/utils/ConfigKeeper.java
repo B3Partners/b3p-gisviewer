@@ -499,6 +499,34 @@ public class ConfigKeeper {
         cfg.setType("java.lang.String");
         sess.save(cfg);
         
+        cfg = new Configuratie();
+        cfg.setProperty("helpUrl");
+        cfg.setPropval(null);
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.String");
+        sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("showGoogleMapsIcon");
+        cfg.setPropval("false");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.Boolean");
+        sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("showBookmarkIcon");
+        cfg.setPropval("false");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.Boolean");
+        sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("contactUrl");
+        cfg.setPropval(null);
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.String");
+        sess.save(cfg);
+        
         sess.flush();
     }
 

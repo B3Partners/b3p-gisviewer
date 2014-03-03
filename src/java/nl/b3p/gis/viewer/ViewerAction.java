@@ -673,6 +673,7 @@ public class ViewerAction extends BaseGisAction {
         if (transSliderTab == null || transSliderTab.equals("")) {
             request.setAttribute("transSliderTab", "legenda");
         }
+        
         /* CMS Theme klaarzetten */
         CMSPagina cmsPage = null;
         
