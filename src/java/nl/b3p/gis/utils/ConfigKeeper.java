@@ -527,6 +527,13 @@ public class ConfigKeeper {
         cfg.setType("java.lang.String");
         sess.save(cfg);
         
+        cfg = new Configuratie();
+        cfg.setProperty("logoutUrl");
+        cfg.setPropval(null);
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.String");
+        sess.save(cfg);
+        
         sess.flush();
     }
 

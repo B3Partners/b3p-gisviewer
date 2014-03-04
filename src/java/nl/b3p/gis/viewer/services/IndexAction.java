@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
+import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.BaseGisAction;
 import static nl.b3p.gis.viewer.BaseGisAction.APP_AUTH;
@@ -251,12 +252,25 @@ public class IndexAction extends BaseGisAction {
         }
         
         HttpSession session = request.getSession();
-        String sessionId = session.getId();
-
+        String sessionId = session.getId();        
+        
         session.invalidate();
         logger.debug("Logged out from session: " + sessionId);
-
-        /* Uitloggen en gaan naar cms pagina */
+        
+        /* Indien er uitlog cms pagina is ingesteld dan hierheen */
+        String appCode = request.getParameter("appCode");        
+        if (appCode != null) {
+            ConfigKeeper configKeeper = new ConfigKeeper();
+            Map map = configKeeper.getConfigMap(appCode);
+            
+            String logoutUrl = (String) map.get("logoutUrl");
+            
+            if (logoutUrl != null && !logoutUrl.isEmpty()) {
+                return new RedirectingActionForward(logoutUrl);
+            }           
+        }
+        
+        /* Uitloggen en gaan naar eerdere cms pagina */
         if (cmsPageId != null && cmsPageId > 0) {
             CMSPagina cmsPage = getCMSPage(cmsPageId);
             String url = prettifyCMSPageUrl(request, cmsPage);
