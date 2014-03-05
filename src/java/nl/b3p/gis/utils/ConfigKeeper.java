@@ -386,10 +386,18 @@ public class ConfigKeeper {
 
         cfg = new Configuratie();
         cfg.setProperty("tabWidth");
-        cfg.setPropval("300");
+        cfg.setPropval("288");
         cfg.setSetting(appCode);
         cfg.setType("java.lang.Integer");
         sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("tabWidthLeft");
+        cfg.setPropval("288");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.Integer");
+        sess.save(cfg);
+        
         //BAG
         cfg = new Configuratie();
         cfg.setProperty("bagMaxBouwjaar");
