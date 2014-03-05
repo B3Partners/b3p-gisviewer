@@ -19,11 +19,13 @@ import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.admindata.CollectAdmindata;
 import nl.b3p.gis.viewer.admindata.GegevensBronBean;
 import nl.b3p.gis.viewer.admindata.RecordChildBean;
+import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
+import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
@@ -32,6 +34,7 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.validator.DynaValidatorForm;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.hibernate.Session;
 import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
@@ -138,6 +141,8 @@ public class GetViewerDataAction extends BaseGisAction {
 
         request.setAttribute("onlyFeaturesInGeom", onlyFeaturesInGeom);
         request.setAttribute("bookmarkAppcode", bookmarkAppcode);
+        
+        setCMSTheme(request);
 
         return mapping.findForward(ADMINDATAFW);
     }
@@ -181,6 +186,9 @@ public class GetViewerDataAction extends BaseGisAction {
         if (b != null) {
             request.setAttribute("regels", getThemaObjectsWithId(gb, thema_items, request));
         }
+        
+        setCMSTheme(request);
+        
         return mapping.findForward("aanvullendeinfo");
     }
 
@@ -244,7 +252,30 @@ public class GetViewerDataAction extends BaseGisAction {
         
         request.setAttribute("ggbBeans", ggbBeans);           
 
+        setCMSTheme(request);
+        
         return mapping.findForward("objectdata");
+    }
+    
+    private void setCMSTheme(HttpServletRequest request) {
+        String param = request.getParameter("cmsPageId");
+        Integer cmsPageId = null;
+        if (param != null && !param.isEmpty()) {
+            cmsPageId = new Integer(param);
+        }
+        
+        /* CMS Theme klaarzetten */
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        
+        CMSPagina cmsPage = null;        
+        if (cmsPageId != null && cmsPageId > 0) {
+            cmsPage = (CMSPagina) sess.get(CMSPagina.class, cmsPageId);
+        }
+        
+        if (cmsPage != null && cmsPage.getThema() != null
+                && !cmsPage.getThema().equals("")) {
+            request.setAttribute("theme", cmsPage.getThema());
+        }
     }
 
     /**
