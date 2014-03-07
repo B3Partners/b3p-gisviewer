@@ -13,3 +13,7 @@ values
 insert into cms_pagina (id, titel, tekst, show_plain_map_btn, cdate, cms_menu, login_required)
 values
 (1, 'Home', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam tincidunt ultrices est vitae vehicula. Morbi nulla lectus, posuere varius viverra vitae, sodales eget justo. Vestibulum fermentum mollis odio, ut sollicitudin elit luctus dictum. Nunc pellentesque a odio non pellentesque. Curabitur volutpat nisl sed semper cursus. Aliquam nibh est, pulvinar vitae neque et, aliquam gravida nisi. Sed ante est, ullamcorper vitae tincidunt vitae, interdum ac nisi.', 0, SYSDATE, 1, 0);
+
+-- re create sequence for cms_menuitem after insert
+drop sequence CMS_MENUITEM_ID_SEQ;
+create sequence CMS_MENUITEM_ID_SEQ INCREMENT BY 1 START WITH 2;
