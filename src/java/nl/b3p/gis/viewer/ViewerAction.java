@@ -1142,6 +1142,13 @@ public class ViewerAction extends BaseGisAction {
             } else {
                 jsonCluster.put("use_style", "default");
             }
+            
+            String kaartlaagInfo = th.getInfo_tekst();
+            if (kaartlaagInfo != null && !kaartlaagInfo.isEmpty()) {
+                jsonCluster.put("info_tekst", true);
+            } else {
+                jsonCluster.put("info_tekst", false);
+            }
 
             childrenArray.put(jsonCluster);
         }
