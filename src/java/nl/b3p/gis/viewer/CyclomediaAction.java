@@ -23,6 +23,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.TimeZone;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -90,7 +91,10 @@ public class CyclomediaAction extends ViewerCrudAction {
             String accountId = cycloAccount.getAccountId();
             String wachtwoord = cycloAccount.getWachtwoord();
             
-            DateFormat df = new SimpleDateFormat("yyyy-M-d H:mm");         
+            // api aangepast, seconden toegevoegd en GMT tijd ivm zomertijd
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");  
+            df.setTimeZone(TimeZone.getTimeZone("GMT"));
+            
             String date = df.format(new Date());
             String token ="X" + accountId + "&" + imageId + "&" + date + "Z";
             
