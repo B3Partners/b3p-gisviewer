@@ -1,5 +1,7 @@
 package nl.b3p.gis.viewer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import com.vividsolutions.jts.geom.Geometry;
 import java.io.UnsupportedEncodingException;
@@ -124,6 +126,7 @@ public class GetViewerDataAction extends BaseGisAction {
         if (themas != null) {
             ggbBeans = CollectAdmindata.collectGegevensbronRecordChilds(request, themas, false);
         }
+
         request.setAttribute("beans", ggbBeans);
         boolean onlyFeaturesInGeom = true;
         if (FormUtils.nullIfEmpty(request.getParameter("onlyFeaturesInGeom")) != null) {

@@ -9,3 +9,6 @@ select setval('themas_id_seq', (select max(id) from themas));
 select setval('waarde_typen_id_seq', (select max(id) from waarde_typen));
 select setval('zoekconfiguratie_id_seq', (select max(id) from zoekconfiguratie));
 select setval('zoekveld_id_seq', (select max(id) from zoekveld));
+select setval('cms_menu_id_seq', (select max(id) from cms_menu));
+select setval('cms_menuitem_id_seq', (select max(id) from cms_menuitem));
+select setval('cms_pagina_id_seq', (select max(id) from cms_pagina));

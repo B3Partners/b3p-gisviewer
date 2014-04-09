@@ -1,5 +1,7 @@
 package nl.b3p.gis.viewer.admindata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -33,6 +35,7 @@ import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
 import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.zoeker.configuratie.Bron;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.directwebremoting.WebContext;
@@ -274,7 +277,7 @@ public class CollectAdmindata {
                                 if (childCQL != null && childFilter != null) {
                                     childCQL.put("" + child.getId(), CQL.toCQL(childFilter));
                                 }
-                                
+
                                 if (count > 0) {
                                     RecordChildBean childBean = new RecordChildBean();
                                     childBean.setId(child.getId().toString());
@@ -323,11 +326,15 @@ public class CollectAdmindata {
             }
         }
 
-        /*
-         if (bean == null || bean.getRecords() == null) {
-         return null;
-         }
-         */
+        /* To JSON
+        try {
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            String json = ow.writeValueAsString(bean);
+
+            logger.debug(json);
+        } catch (Exception ex) {
+        }
+        */
 
         return bean;
     }
@@ -337,15 +344,15 @@ public class CollectAdmindata {
 
         RecordBean rb = new RecordBean();
         String adminPk = null;
-        
+
         if (gb.getAdmin_pk() != null) {
             QName qName = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk());
-            
+
             if (qName != null) {
                 adminPk = qName.getLocalPart();
             }
         }
-        
+
         if (adminPk != null) {
             rb.setId(f.getProperty(adminPk).getValue());
         }
@@ -499,17 +506,17 @@ public class CollectAdmindata {
             if (intersection != null) {
                 if (intersection instanceof LineString) {
                     Double len = intersection.getLength();
-                    
+
                     if (len >= 1000) {
                         len /= 1000;
                         result = threeDBFormat.format(len) + " km";
                     } else {
                         result = threeDBFormat.format(len) + " m";
                     }
-                    
+
                 } else {
                     Double area = intersection.getArea();
-                    
+
                     if (area >= 1000000) {
                         area /= 1000000;
                         result = threeDBFormat.format(area) + " km2";
@@ -589,6 +596,7 @@ public class CollectAdmindata {
         if (commando == null) {
             return null;
         }
+        
         if (commando.contains("[") && commando.contains("]")) {
             //vervang de eventuele csv in 1 waarde van die csv
             if (attributeName != null && attributeValue != null) {
@@ -602,10 +610,16 @@ public class CollectAdmindata {
             }
             return newCommando;
         }
+        
+        if (StringUtils.containsIgnoreCase(commando, "ReportServlet")) {
+            return commando;            
+        }
+        
         if (attributeValue != null) {
             commando += attributeValue.toString().trim();
             return commando;
         }
+        
         return null;
 
     }
