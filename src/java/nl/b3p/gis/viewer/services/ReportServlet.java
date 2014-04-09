@@ -1,6 +1,5 @@
 package nl.b3p.gis.viewer.services;
 
-import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import java.io.File;
 import java.io.IOException;
@@ -30,18 +29,13 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.sax.SAXResult;
 import javax.xml.transform.stream.StreamSource;
-import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import static nl.b3p.gis.viewer.print.PrintServlet.fontPath;
 import static nl.b3p.gis.viewer.print.PrintServlet.fopConfig;
-import static nl.b3p.gis.viewer.services.Data2PDF.createPdfOutput;
 import nl.b3p.gis.viewer.services.ObjectdataPdfInfo.Record;
-import nl.b3p.imagetool.CombineImageSettings;
-import nl.b3p.imagetool.CombineImagesHandler;
-import nl.b3p.ogc.utils.OGCRequest;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.logging.Log;
@@ -52,7 +46,6 @@ import org.apache.fop.apps.FopFactory;
 import org.apache.fop.apps.MimeConstants;
 import org.geotools.feature.simple.SimpleFeatureImpl;
 import org.hibernate.Transaction;
-import org.json.JSONObject;
 import org.opengis.feature.Feature;
 import org.opengis.feature.Property;
 import org.opengis.filter.Filter;
@@ -61,13 +54,14 @@ import sun.misc.BASE64Encoder;
 
 /**
  *
- * @author Roy
+ * @author Boy de Wit, B3Partners
  */
 public class ReportServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(Data2PDF.class);
     private static String HTMLTITLE = "Rapport";
     private static String xsl_report = null;
+    private static final String TEMP_XML_FILE = "/home/boy/dev/tmp/data.xml";
 
     /**
      * Processes requests for both HTTP
@@ -92,13 +86,6 @@ public class ReportServlet extends HttpServlet {
             log.error("Ongeldige request parameters.");
 
             return;
-        }
-
-        CombineImageSettings settings = null;
-        try {
-            settings = getCombineImageSettings(request);
-        } catch (Exception ex) {
-            log.error("Fout tijdens ophalen combine settings: ", ex);
         }
 
         Transaction tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
@@ -131,14 +118,10 @@ public class ReportServlet extends HttpServlet {
             SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
 
             ObjectdataPdfInfo pdfInfo = new ObjectdataPdfInfo();
-            pdfInfo.setTitel("Export van " + gb.getNaam());
+            pdfInfo.setTitel("Rapport " + reportType);
             pdfInfo.setDatum(df.format(now));
 
             Map<Integer, Record> records = new HashMap();
-
-            /* TODO: Objectdata kolommen obv volgordenr toevoegen ? */
-            settings.setWidth(500);
-            settings.setHeight(375);
 
             BASE64Encoder enc = new BASE64Encoder();
             int i = 0;
@@ -148,43 +131,6 @@ public class ReportServlet extends HttpServlet {
                 Record record = new ObjectdataPdfInfo.Record();
 
                 record.setId(i);
-
-                /* Geometrie ophalen */
-                String wkt = items[items.length - 1];
-                Geometry geom = null;
-                try {
-                    geom = DataStoreUtil.createGeomFromWKTString(wkt);
-                } catch (Exception ex) {
-                    log.error("Fout tijdens knutselen geometrie: ", ex);
-                }
-
-                /* Bbox uit berekenen */
-                Envelope bbox = geom.getEnvelopeInternal();
-
-                double[] dbbox = new double[4];
-                double bufferSize = 50;
-
-                dbbox[0] = bbox.getMinX() - bufferSize;
-                dbbox[1] = bbox.getMinY() - bufferSize;
-                dbbox[2] = bbox.getMaxX() + bufferSize;
-                dbbox[3] = bbox.getMaxY() + bufferSize;
-
-                /* Bbox in imageSettings */
-                settings.setBbox(dbbox);
-
-                /* Maak met imageSettings plaatje */
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-                String imageUrl = "";
-                try {
-                    CombineImagesHandler.combineImage(baos, settings);
-
-                    byte[] imageBytes = baos.toByteArray();
-                    imageUrl = enc.encode(imageBytes);
-                } catch (Exception ex) {
-                }
-
-                record.setImageUrl(imageUrl);
 
                 /* Add items */
                 for (int j = 0; j < items.length - 1; j++) {
@@ -197,11 +143,12 @@ public class ReportServlet extends HttpServlet {
             }
 
             pdfInfo.setRecords(records);
-
-            //String xmlFile = "/home/boy/dev/tmp/data.xml";
-            //createXmlOutput(pdfInfo, xmlFile);
-
+            
             try {
+                // create xml
+                createXmlOutput(pdfInfo, TEMP_XML_FILE);
+                
+                // create pdf
                 createPdfOutput(pdfInfo, xsl_report, response);
             } catch (MalformedURLException ex) {
                 writeErrorMessage(response, ex.getMessage());
@@ -227,7 +174,7 @@ public class ReportServlet extends HttpServlet {
 
             jaxbMarshaller.marshal(object, file);
         } catch (JAXBException e) {
-            log.error("Fout tijdens maken objectdata export naar xml: ", e);
+            log.error("Fout tijdens maken rapport xml: ", e);
         }
     }
 
@@ -289,14 +236,14 @@ public class ReportServlet extends HttpServlet {
 
             SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy", new Locale("NL"));
             String date = df.format(now);
-            String fileName = "Objectdata_Export_" + date + ".pdf";
+            String fileName = "Rapport_" + date + ".pdf";
 
             response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
             response.getOutputStream().write(out.toByteArray());
             response.getOutputStream().flush();
 
         } catch (Exception ex) {
-            log.error("Fout tijdens objectdata pdf export: ", ex);
+            log.error("Fout tijdens maken rapport pdf: ", ex);
         } finally {
             out.close();
         }
@@ -396,34 +343,6 @@ public class ReportServlet extends HttpServlet {
         } catch (Exception e) {
             throw new ServletException(e);
         }
-    }
-
-    private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
-        String jsonSettingsParam = FormUtils.nullIfEmpty(request.getParameter("jsonSettings"));
-        String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
-
-        JSONObject jsonSettings = new JSONObject(jsonSettingsParam);
-        CombineImageSettings settings = CombineImageSettings.fromJson(jsonSettings);
-
-        Map legendMap = new HashMap();
-        if (legendUrls != null) {
-            log.debug("legendUrls: " + legendUrls);
-            String[] arr = legendUrls.split(";");
-
-            for (int i = 0; i < arr.length; i++) {
-                String[] legendUrlsArr = arr[i].split("#");
-                legendMap.put(legendUrlsArr[0], legendUrlsArr[1]);
-            }
-
-            settings.setLegendMap(legendMap);
-        }
-
-        String mimeType = FormUtils.nullIfEmpty(request.getParameter(OGCRequest.WMS_PARAM_FORMAT));
-        if (mimeType != null && !mimeType.equals("")) {
-            settings.setMimeType(mimeType);
-        }
-
-        return settings;
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
