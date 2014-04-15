@@ -35,6 +35,7 @@ import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import static nl.b3p.gis.viewer.print.PrintServlet.fontPath;
 import static nl.b3p.gis.viewer.print.PrintServlet.fopConfig;
+import nl.b3p.gis.viewer.report.ReportInfo;
 import nl.b3p.gis.viewer.services.ObjectdataPdfInfo.Record;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.io.output.ByteArrayOutputStream;
@@ -74,23 +75,16 @@ public class ReportServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        checkRequestParams(request, response);
+
         String gegevensbronId = request.getParameter("gbId");
         String recordId = request.getParameter("recordId");
         String reportType = request.getParameter("reportType");
 
-        if (gegevensbronId == null || gegevensbronId.isEmpty()
-                || recordId == null || recordId.isEmpty()
-                || reportType == null || reportType.isEmpty()) {
-
-            writeErrorMessage(response, "Ongeldige rapport parameters.");
-            log.error("Ongeldige request parameters.");
-
-            return;
-        }
-
-        Transaction tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
+        Transaction tx = null;
         try {
-            Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
+
+            tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
 
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
             if (user == null) {
@@ -98,6 +92,7 @@ public class ReportServlet extends HttpServlet {
                 return;
             }
 
+            Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
             Bron b = gb.getBron(request);
 
             if (b == null) {
@@ -107,66 +102,116 @@ public class ReportServlet extends HttpServlet {
             List data = null;
             String[] propertyNames = getThemaPropertyNames(gb);
             try {
-                data = getData(b, gb, recordId, propertyNames);
+                data = getData(b, gb, recordId, propertyNames, false, false);
             } catch (Exception ex) {
                 writeErrorMessage(response, ex.getMessage());
                 log.error("Fout bij laden pdf data.", ex);
                 return;
             }
 
+            /* Create new ReportInfo object */
+            ReportInfo info = new ReportInfo();
+
+            info.setTitel("Nieuw Report Info Object");
+
             Date now = new Date();
             SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
+            info.setDatum(df.format(now));
 
-            ObjectdataPdfInfo pdfInfo = new ObjectdataPdfInfo();
-            pdfInfo.setTitel("Rapport " + reportType);
-            pdfInfo.setDatum(df.format(now));
+            Map<Integer, ReportInfo.Bron> bronnen = new HashMap<Integer, ReportInfo.Bron>();
 
-            Map<Integer, Record> records = new HashMap();
-
-            BASE64Encoder enc = new BASE64Encoder();
             int i = 0;
             for (Object obj : data) {
                 String[] items = (String[]) obj;
 
-                Record record = new ObjectdataPdfInfo.Record();
+                Map<Integer, String[]> records = new HashMap<Integer, String[]>();
+                records.put(i, items);
 
-                record.setId(i);
+                ReportInfo.Bron bron = createReportBron(i, ReportInfo.Bron.TABLE_TYPE.FLAT_TABLE, propertyNames, records);
+                bronnen.put(i, bron);
 
-                /* Add items */
-                for (int j = 0; j < items.length - 1; j++) {
-                    String string = items[j];
-                    record.addItem(propertyNames[j], string);
-                }
-
-                records.put(i, record);
                 i++;
             }
 
-            pdfInfo.setRecords(records);
-            
-            try {
-                // create xml
-                createXmlOutput(pdfInfo, TEMP_XML_FILE);
-                
-                // create pdf
-                createPdfOutput(pdfInfo, xsl_report, response);
-            } catch (MalformedURLException ex) {
-                writeErrorMessage(response, ex.getMessage());
-                log.error("Fout tijdens maken pdf: ", ex);
-            } catch (SAXException ex) {
-                writeErrorMessage(response, ex.getMessage());
-                log.error("Fout tijdens maken pdf: ", ex);
+            /* Recursief voor alle child Gegevensbronnen
+             * extra Records aanmaken */
+            if (gb.getChildren() != null) {
+
+                int i2 = i;
+                for (Object obj : gb.getChildren()) {
+                    Gegevensbron gbChild = (Gegevensbron) obj;
+                    
+                    Map<Integer, String[]> records = new HashMap<Integer, String[]>();
+                    
+                    List<Object> childData = null;
+                    String[] childColumns = getThemaPropertyNames(gbChild);
+                    try {
+                        childData = getData(gbChild.getBron(), gbChild, recordId, childColumns, true, false);
+                        
+                        int recordCount = 0;
+                        for (Object childItems : childData) {
+                            String[] cItems = (String[]) childItems;
+                            
+                            records.put(recordCount, cItems);
+                            recordCount++;
+                        }
+                        
+                        ReportInfo.Bron bron = createReportBron(i2, ReportInfo.Bron.TABLE_TYPE.SIMPLE_TABLE, childColumns, records);
+                        bronnen.put(i2, bron);
+
+                    } catch (Exception ex) {
+                    }
+
+                    i2++;
+                }
             }
 
+            info.setBronnen(bronnen);
+
+            // create xml
+            createXmlOutput(info, TEMP_XML_FILE);
+
+            /*
+             try {
+             createPdfOutput(pdfInfo, xsl_report, response);
+             } catch (MalformedURLException ex) {
+             writeErrorMessage(response, ex.getMessage());
+             log.error("Fout tijdens maken pdf: ", ex);
+             } catch (SAXException ex) {
+             writeErrorMessage(response, ex.getMessage());
+             log.error("Fout tijdens maken pdf: ", ex);
+             }
+             */
+
+            tx.commit();
+
         } finally {
+            if (tx != null) {
+                tx.rollback();
+            }
+
             HibernateUtil.getSessionFactory().getCurrentSession().close();
         }
     }
 
-    public static void createXmlOutput(ObjectdataPdfInfo object, String xmlFile) {
+    private ReportInfo.Bron createReportBron(Integer id,
+            ReportInfo.Bron.TABLE_TYPE type, String[] labels,
+            Map<Integer, String[]> records) {
+
+        ReportInfo.Bron bron = new ReportInfo.Bron();
+
+        bron.setId(id);
+        bron.setTableType(type);
+        bron.setLabels(labels);
+        bron.setRecords(records);
+
+        return bron;
+    }
+
+    public static void createXmlOutput(ReportInfo object, String xmlFile) {
         try {
             File file = new File(xmlFile);
-            JAXBContext jaxbContext = JAXBContext.newInstance(ObjectdataPdfInfo.class);
+            JAXBContext jaxbContext = JAXBContext.newInstance(ReportInfo.class);
             Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
 
             // output pretty printed
@@ -179,9 +224,8 @@ public class ReportServlet extends HttpServlet {
     }
 
     public static void createPdfOutput(ObjectdataPdfInfo pdfInfo, String template,
-            HttpServletResponse response) throws MalformedURLException, IOException, SAXException {
-
-        /* TODO: Ook liggend maken via orientation param ? */
+            HttpServletResponse response) throws MalformedURLException,
+            IOException, SAXException {
 
         File xslFile = new File(template);
         String path = new File(xslFile.getParent()).toURI().toString();
@@ -273,22 +317,39 @@ public class ReportServlet extends HttpServlet {
         return s;
     }
 
-    public List getData(Bron b, Gegevensbron gb, String objectId, String[] propertyNames) throws IOException, Exception {
+    public List getData(Bron b, Gegevensbron gb, String objectId,
+            String[] propertyNames, boolean isChild, boolean addGeom) throws IOException,
+            Exception {
 
         String[] pks = new String[1];
         pks[0] = objectId;
 
+        String column = null;
+        if (!isChild) {
+            column = gb.getAdmin_pk();
+        } else {
+            column = gb.getAdmin_fk();
+        }
+
         Filter filter = FilterBuilder.createOrEqualsFilter(
-                DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart(), pks);
+                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), pks);
 
         List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
         ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, true);
         ArrayList result = new ArrayList();
+
+        int len = 0;
+        if (addGeom) {
+            len = propertyNames.length + 1;
+        } else {
+            len = propertyNames.length;
+        }
+
         for (int i = 0; i < features.size(); i++) {
             Feature f = features.get(i);
 
-            String[] row = new String[propertyNames.length + 1];
+            String[] row = new String[len];
 
             for (int p = 0; p < propertyNames.length; p++) {
                 Property property = f.getProperty(propertyNames[p]);
@@ -301,9 +362,11 @@ public class ReportServlet extends HttpServlet {
 
             SimpleFeatureImpl feature = (SimpleFeatureImpl) f;
             Geometry geom = (Geometry) feature.getDefaultGeometry();
-            String wkt = geom.toText();
 
-            row[row.length - 1] = wkt;
+            if (geom != null && addGeom) {
+                String wkt = geom.toText();
+                row[row.length - 1] = wkt;
+            }
 
             result.add(row);
         }
@@ -311,9 +374,6 @@ public class ReportServlet extends HttpServlet {
         return result;
     }
 
-    /**
-     * Writes a error message to the response
-     */
     private void writeErrorMessage(HttpServletResponse response, String message) throws IOException {
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter pw = response.getWriter();
@@ -327,6 +387,24 @@ public class ReportServlet extends HttpServlet {
         pw.println("<h3>" + message + "</h3>");
         pw.println("</body>");
         pw.println("</html>");
+    }
+
+    private void checkRequestParams(HttpServletRequest request,
+            HttpServletResponse response) {
+
+        String gegevensbronId = request.getParameter("gbId");
+        String recordId = request.getParameter("recordId");
+        String reportType = request.getParameter("reportType");
+
+        if (gegevensbronId == null || gegevensbronId.isEmpty()
+                || recordId == null || recordId.isEmpty()
+                || reportType == null || reportType.isEmpty()) {
+
+            try {
+                writeErrorMessage(response, "Ongeldige rapport parameters.");
+            } catch (IOException ex) {
+            }
+        }
     }
 
     @Override
@@ -377,6 +455,6 @@ public class ReportServlet extends HttpServlet {
      */
     @Override
     public String getServletInfo() {
-        return "Short description";
+        return "Objectdata 2 Report Servlet";
     }// </editor-fold>
 }
