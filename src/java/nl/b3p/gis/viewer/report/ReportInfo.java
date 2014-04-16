@@ -1,50 +1,62 @@
 package nl.b3p.gis.viewer.report;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 @XmlRootElement(name = "reportinfo")
+@XmlType(propOrder = {
+    "titel",
+    "datum",
+    "startbron"
+})
 public class ReportInfo {
-    
+
     private String titel;
     private String datum;
-    private Map<Integer, ReportInfo.Bron> bronnen;
+    private ReportInfo.Bron startbron;
 
     public ReportInfo() {
     }
 
     @XmlAccessorType(XmlAccessType.FIELD)
+    @XmlType(propOrder = {
+        "layout",
+        "labels",
+        "records"
+    })
     public static class Bron {
 
-        public enum TABLE_TYPE {
+        public enum LAYOUT {
             FLAT_TABLE,
             SIMPLE_TABLE,
             ONE_ROW_TABLE,
             CALC_TABLE
         };
-        
-        private ReportInfo.Bron.TABLE_TYPE tableType;
-        private Integer id;
+        private ReportInfo.Bron.LAYOUT layout;
         private String[] labels;
-        private Map<Integer, String[]> records;
+        private List<ReportInfo.Record> records;
 
-        public TABLE_TYPE getTableType() {
-            return tableType;
+        public Bron() {
         }
 
-        public void setTableType(TABLE_TYPE tableType) {
-            this.tableType = tableType;
+        public Bron(ReportInfo.Bron.LAYOUT layout,
+                String[] labels, List<ReportInfo.Record> records) {
+
+            this.layout = layout;
+            this.labels = labels;
+            this.records = records;
         }
 
-        public Integer getId() {
-            return id;
+        public LAYOUT getLayout() {
+            return layout;
         }
 
-        public void setId(Integer id) {
-            this.id = id;
+        public void setLayout(LAYOUT layout) {
+            this.layout = layout;
         }
 
         public String[] getLabels() {
@@ -55,20 +67,51 @@ public class ReportInfo {
             this.labels = labels;
         }
 
-        public Map<Integer, String[]> getRecords() {
+        public List<Record> getRecords() {
             return records;
         }
 
-        public void setRecords(Map<Integer, String[]> records) {
+        public void setRecords(List<Record> records) {
             this.records = records;
         }
-        
-        public void addRecord(Integer key, String[] values) {
+
+        public void addRecord(ReportInfo.Record record) {
             if (this.records == null) {
-                this.records = new HashMap<Integer, String[]>();
+                this.records = new ArrayList<Record>();
             }
-            
-            this.records.put(key, values);  
+
+            this.records.add(record);
+        }
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    @XmlType(propOrder = {
+        "id",
+        "values",
+        "bronnen"
+    })
+    public static class Record {
+
+        private Integer id;
+        private String[] values;
+        private List<ReportInfo.Bron> bronnen;
+
+        // no arg constructor for xml
+        public Record() {
+        }
+
+        public Record(String[] values, List<ReportInfo.Bron> bronnen) {
+
+            this.values = values;
+            this.bronnen = bronnen;
+        }
+
+        public void addBron(ReportInfo.Bron bron) {
+            if (this.bronnen == null) {
+                this.bronnen = new ArrayList<Bron>();
+            }
+
+            this.bronnen.add(bron);
         }
     }
 
@@ -88,11 +131,11 @@ public class ReportInfo {
         this.datum = datum;
     }
 
-    public Map<Integer, Bron> getBronnen() {
-        return bronnen;
+    public Bron getStartbron() {
+        return startbron;
     }
 
-    public void setBronnen(Map<Integer, Bron> bronnen) {
-        this.bronnen = bronnen;
+    public void setStartbron(Bron startbron) {
+        this.startbron = startbron;
     }
 }

@@ -36,7 +36,6 @@ import nl.b3p.gis.viewer.db.ThemaData;
 import static nl.b3p.gis.viewer.print.PrintServlet.fontPath;
 import static nl.b3p.gis.viewer.print.PrintServlet.fopConfig;
 import nl.b3p.gis.viewer.report.ReportInfo;
-import nl.b3p.gis.viewer.services.ObjectdataPdfInfo.Record;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.logging.Log;
@@ -51,7 +50,6 @@ import org.opengis.feature.Feature;
 import org.opengis.feature.Property;
 import org.opengis.filter.Filter;
 import org.xml.sax.SAXException;
-import sun.misc.BASE64Encoder;
 
 /**
  *
@@ -81,9 +79,11 @@ public class ReportServlet extends HttpServlet {
         String recordId = request.getParameter("recordId");
         String reportType = request.getParameter("reportType");
 
+        Date now = new Date();
+        SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
+
         Transaction tx = null;
         try {
-
             tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
 
             GisPrincipal user = GisPrincipal.getGisPrincipal(request);
@@ -93,95 +93,30 @@ public class ReportServlet extends HttpServlet {
             }
 
             Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
-            Bron b = gb.getBron(request);
 
-            if (b == null) {
-                throw new ServletException("Gegevensbron (id " + gb.getId() + ") Bron null.");
-            }
-
-            List data = null;
-            String[] propertyNames = getThemaPropertyNames(gb);
-            try {
-                data = getData(b, gb, recordId, propertyNames, false, false);
-            } catch (Exception ex) {
-                writeErrorMessage(response, ex.getMessage());
-                log.error("Fout bij laden pdf data.", ex);
-                return;
-            }
+            Map<Integer, ReportInfo.Bron> bronnen = createReportBronnen(gb, recordId, null);
 
             /* Create new ReportInfo object */
             ReportInfo info = new ReportInfo();
-
-            info.setTitel("Nieuw Report Info Object");
-
-            Date now = new Date();
-            SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
+            info.setTitel("Rapport " + reportType);
             info.setDatum(df.format(now));
+            //info.setBronnen(bronnen);
 
-            Map<Integer, ReportInfo.Bron> bronnen = new HashMap<Integer, ReportInfo.Bron>();
-
-            int i = 0;
-            for (Object obj : data) {
-                String[] items = (String[]) obj;
-
-                Map<Integer, String[]> records = new HashMap<Integer, String[]>();
-                records.put(i, items);
-
-                ReportInfo.Bron bron = createReportBron(i, ReportInfo.Bron.TABLE_TYPE.FLAT_TABLE, propertyNames, records);
-                bronnen.put(i, bron);
-
-                i++;
-            }
-
-            /* Recursief voor alle child Gegevensbronnen
-             * extra Records aanmaken */
-            if (gb.getChildren() != null) {
-
-                int i2 = i;
-                for (Object obj : gb.getChildren()) {
-                    Gegevensbron gbChild = (Gegevensbron) obj;
-                    
-                    Map<Integer, String[]> records = new HashMap<Integer, String[]>();
-                    
-                    List<Object> childData = null;
-                    String[] childColumns = getThemaPropertyNames(gbChild);
-                    try {
-                        childData = getData(gbChild.getBron(), gbChild, recordId, childColumns, true, false);
-                        
-                        int recordCount = 0;
-                        for (Object childItems : childData) {
-                            String[] cItems = (String[]) childItems;
-                            
-                            records.put(recordCount, cItems);
-                            recordCount++;
-                        }
-                        
-                        ReportInfo.Bron bron = createReportBron(i2, ReportInfo.Bron.TABLE_TYPE.SIMPLE_TABLE, childColumns, records);
-                        bronnen.put(i2, bron);
-
-                    } catch (Exception ex) {
-                    }
-
-                    i2++;
-                }
-            }
-
-            info.setBronnen(bronnen);
-
+            ReportInfo testInfo = createTestObject();
             // create xml
-            createXmlOutput(info, TEMP_XML_FILE);
+            createXmlOutput(testInfo, TEMP_XML_FILE);
 
             /*
-             try {
-             createPdfOutput(pdfInfo, xsl_report, response);
-             } catch (MalformedURLException ex) {
-             writeErrorMessage(response, ex.getMessage());
-             log.error("Fout tijdens maken pdf: ", ex);
-             } catch (SAXException ex) {
-             writeErrorMessage(response, ex.getMessage());
-             log.error("Fout tijdens maken pdf: ", ex);
-             }
-             */
+            try {
+                createPdfOutput(info, xsl_report, response);
+            } catch (MalformedURLException ex) {
+                writeErrorMessage(response, ex.getMessage());
+                log.error("Fout tijdens maken rapport pdf: ", ex);
+            } catch (SAXException ex) {
+                writeErrorMessage(response, ex.getMessage());
+                log.error("Fout tijdens maken rapport pdf: ", ex);
+            }
+            */
 
             tx.commit();
 
@@ -193,19 +128,121 @@ public class ReportServlet extends HttpServlet {
             HibernateUtil.getSessionFactory().getCurrentSession().close();
         }
     }
+    
+    private ReportInfo createTestObject() {
+        ReportInfo info = new ReportInfo();
+        
+        info.setTitel("Rapport A");
+        
+        Date now = new Date();
+        SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
+        
+        info.setDatum(df.format(now));
+        
+        /* labels */
+        String[] labels = new String[3];
+        labels[0] = "ID";
+        labels[1] = "NAAM";
+        labels[2] = "KLEUR";
+        
+        String[] values = new String[3];
+        values[0] = "1";
+        values[1] = "Boy";
+        values[2] = "rood";
+        
+        ReportInfo.Record startRecord = new ReportInfo.Record(values, null);
+        
+        List<ReportInfo.Record> records = new ArrayList<ReportInfo.Record>();
+        records.add(startRecord);
+        
+        ReportInfo.Bron startBron = new ReportInfo.Bron(
+                ReportInfo.Bron.LAYOUT.FLAT_TABLE, labels, records);
+        
+        /* Extra bron */
+        String[] labels2 = new String[4];
+        labels2[0] = "ID";
+        labels2[1] = "NAAM";
+        labels2[2] = "HOOGTE";
+        labels2[3] = "OPP";
+        
+        String[] values2 = new String[4];
+        values2[0] = "1";
+        values2[1] = "Kees";
+        values2[2] = "10";
+        values2[3] = "110m2";
+        
+        String[] values3 = new String[4];
+        values3[0] = "2";
+        values3[1] = "Jan";
+        values3[2] = "25";
+        values3[3] = "75m2";
+        
+        ReportInfo.Record record1 = new ReportInfo.Record(values2, null);
+        ReportInfo.Record record2 = new ReportInfo.Record(values3, null);
+        
+        records = new ArrayList<ReportInfo.Record>();
+        records.add(record1);
+        records.add(record2);
+        
+        ReportInfo.Bron bron = new ReportInfo.Bron(
+                ReportInfo.Bron.LAYOUT.SIMPLE_TABLE, labels2, records);
+        
+        startRecord.addBron(bron);
+        
+        info.setStartbron(startBron);
+        
+        return info;
+    }
 
-    private ReportInfo.Bron createReportBron(Integer id,
-            ReportInfo.Bron.TABLE_TYPE type, String[] labels,
-            Map<Integer, String[]> records) {
+    private Map<Integer, ReportInfo.Bron> createReportBronnen(Gegevensbron gb,
+            String recordId, Map<Integer, ReportInfo.Bron> bronnen) {
+        
+        boolean isChild = false;
+        boolean addGeom = false;
+        ReportInfo.Bron.LAYOUT table_type = ReportInfo.Bron.LAYOUT.FLAT_TABLE;
 
-        ReportInfo.Bron bron = new ReportInfo.Bron();
+        if (bronnen == null) {
+            bronnen = new HashMap<Integer, ReportInfo.Bron>();
+        } else {
+            isChild = true;
+            table_type = ReportInfo.Bron.LAYOUT.SIMPLE_TABLE;
+        }
 
-        bron.setId(id);
-        bron.setTableType(type);
-        bron.setLabels(labels);
-        bron.setRecords(records);
+        List data = null;
+        String[] propertyNames = getThemaPropertyNames(gb);
+        try {
+            data = getData(gb.getBron(), gb, recordId, propertyNames, isChild, addGeom);
+        } catch (Exception ex) {
+            log.error("Fout bij aanmaken  ReportInfo.Bron: ", ex);
+        }
+        
+        if (data != null && data.size() < 1) {
+            return bronnen;
+        }
 
-        return bron;
+        Map<Integer, String[]> records = new HashMap<Integer, String[]>();
+
+        int i = 0;
+        for (Object obj : data) {
+            String[] items = (String[]) obj;
+
+            records.put(i, items);
+            i++;
+        }
+
+        //ReportInfo.Bron bron = new ReportInfo.Bron(i, table_type, propertyNames, records);
+        //bronnen.put(i, bron);
+
+        /* TODO: gaat mis als 1 parent 2 childs heeft! */
+        if (gb.getChildren() != null && gb.getChildren().size() > 0) {
+            for (Object obj : gb.getChildren()) {
+                Gegevensbron child = (Gegevensbron) obj;
+
+                return createReportBronnen(child, recordId, bronnen);
+            }
+        }
+
+        return bronnen;
     }
 
     public static void createXmlOutput(ReportInfo object, String xmlFile) {
@@ -223,7 +260,7 @@ public class ReportServlet extends HttpServlet {
         }
     }
 
-    public static void createPdfOutput(ObjectdataPdfInfo pdfInfo, String template,
+    public static void createPdfOutput(ReportInfo info, String template,
             HttpServletResponse response) throws MalformedURLException,
             IOException, SAXException {
 
@@ -254,8 +291,8 @@ public class ReportServlet extends HttpServlet {
             Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, foUserAgent, out);
 
             /* Setup Jaxb */
-            JAXBContext jc = JAXBContext.newInstance(ObjectdataPdfInfo.class);
-            JAXBSource src = new JAXBSource(jc, pdfInfo);
+            JAXBContext jc = JAXBContext.newInstance(ReportInfo.class);
+            JAXBSource src = new JAXBSource(jc, info);
 
             /* Setup xslt */
             Source xsltSrc = new StreamSource(xslFile);
@@ -317,12 +354,12 @@ public class ReportServlet extends HttpServlet {
         return s;
     }
 
-    public List getData(Bron b, Gegevensbron gb, String objectId,
+    public List getData(Bron b, Gegevensbron gb, String recordId,
             String[] propertyNames, boolean isChild, boolean addGeom) throws IOException,
             Exception {
 
         String[] pks = new String[1];
-        pks[0] = objectId;
+        pks[0] = recordId;
 
         String column = null;
         if (!isChild) {
