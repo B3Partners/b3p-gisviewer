@@ -13,7 +13,7 @@
         <property name="use_sql_comments">true</property>
 
         <property name="hibernate.transaction.factory_class">org.hibernate.transaction.JDBCTransactionFactory</property>
-        <property name="current_session_context_class">thread</property>
+        <property name="hibernate.current_session_context_class">thread</property>
 
         <property name="jdbc.batch_size">20</property>
 
@@ -24,7 +24,7 @@
         <mapping resource="zoeker.hbm.pg.xml"/>
         <mapping resource="openbareruimte.hbm.pg.xml"/>
 
-        <!-- Mapping files oracle
+        <!-- Mapping files oracle 
         <property name="dialect">org.hibernate.dialect.Oracle10gDialect</property>
         <property name="hibernate.jdbc.use_streams_for_binary">true</property>
         <mapping resource="gisviewer.hbm.oracle.xml"/>
