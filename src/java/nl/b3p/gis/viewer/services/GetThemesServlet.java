@@ -19,9 +19,14 @@ public class GetThemesServlet extends HttpServlet {
         String themes = "";
         
         String path = getServletContext().getRealPath("/");
-
+        
+        /* Add / or \ if needed */
+        if (!path.substring(path.length()-1).equals(File.separator)) {
+            path += File.separator;
+        }
+        
         File folder = new File(path + "themes");
-
+        
         for (final File fileEntry : folder.listFiles()) {
             if (fileEntry.isDirectory()) {
                 if (themes.equals("")) {
@@ -42,6 +47,8 @@ public class GetThemesServlet extends HttpServlet {
      *
      * @param request servlet request
      * @param response servlet response
+     * @throws javax.servlet.ServletException
+     * @throws java.io.IOException
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -55,6 +62,8 @@ public class GetThemesServlet extends HttpServlet {
      *
      * @param request servlet request
      * @param response servlet response
+     * @throws javax.servlet.ServletException
+     * @throws java.io.IOException
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -64,10 +73,11 @@ public class GetThemesServlet extends HttpServlet {
 
     /**
      * Returns a short description of the servlet.
+     * @return 
      */
     @Override
     public String getServletInfo() {
-        return "Short description";
+        return "Servlet to get a String with web/themes folder listing.";
     }
     // </editor-fold>
 }
