@@ -125,8 +125,12 @@ public class CollectAdmindata {
                     request = ctx.getHttpServletRequest();
                 }
 
-                GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-
+                GisPrincipal user = null;
+                
+                if (request != null) {
+                    user = GisPrincipal.getGisPrincipal(request);
+                }
+                
                 String layout = null;
                 layout = findDataAdminLayout(thema, user, appCode);
 

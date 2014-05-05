@@ -8,11 +8,9 @@ import java.net.MalformedURLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -63,12 +61,13 @@ public class ReportServlet extends HttpServlet {
     private static final String TEMP_XML_FILE = "/home/boy/dev/tmp/data.xml";
 
     /**
-     * Processes requests for both HTTP
-     * <code>GET</code> and
-     * <code>POST</code> methods.
+     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
+     * methods.
      *
      * @param request servlet request
      * @param response servlet response
+     * @throws javax.servlet.ServletException
+     * @throws java.io.IOException
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -94,19 +93,16 @@ public class ReportServlet extends HttpServlet {
 
             Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
 
-            Map<Integer, ReportInfo.Bron> bronnen = createReportBronnen(gb, recordId, null);
-
             /* Create new ReportInfo object */
+            ReportInfo.Bron startBron = createReportBron(gb, recordId, false);
+
             ReportInfo info = new ReportInfo();
             info.setTitel("Rapport " + reportType);
             info.setDatum(df.format(now));
-            //info.setBronnen(bronnen);
+            info.setBron(startBron);
 
-            ReportInfo testInfo = createTestObject();
-            // create xml
-            createXmlOutput(testInfo, TEMP_XML_FILE);
+            createXmlOutput(info, TEMP_XML_FILE);
 
-            /*
             try {
                 createPdfOutput(info, xsl_report, response);
             } catch (MalformedURLException ex) {
@@ -116,7 +112,6 @@ public class ReportServlet extends HttpServlet {
                 writeErrorMessage(response, ex.getMessage());
                 log.error("Fout tijdens maken rapport pdf: ", ex);
             }
-            */
 
             tx.commit();
 
@@ -128,121 +123,69 @@ public class ReportServlet extends HttpServlet {
             HibernateUtil.getSessionFactory().getCurrentSession().close();
         }
     }
-    
-    private ReportInfo createTestObject() {
-        ReportInfo info = new ReportInfo();
-        
-        info.setTitel("Rapport A");
-        
-        Date now = new Date();
-        SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
-        
-        info.setDatum(df.format(now));
-        
-        /* labels */
-        String[] labels = new String[3];
-        labels[0] = "ID";
-        labels[1] = "NAAM";
-        labels[2] = "KLEUR";
-        
-        String[] values = new String[3];
-        values[0] = "1";
-        values[1] = "Boy";
-        values[2] = "rood";
-        
-        ReportInfo.Record startRecord = new ReportInfo.Record(values, null);
-        
-        List<ReportInfo.Record> records = new ArrayList<ReportInfo.Record>();
-        records.add(startRecord);
-        
-        ReportInfo.Bron startBron = new ReportInfo.Bron(
-                ReportInfo.Bron.LAYOUT.FLAT_TABLE, labels, records);
-        
-        /* Extra bron */
-        String[] labels2 = new String[4];
-        labels2[0] = "ID";
-        labels2[1] = "NAAM";
-        labels2[2] = "HOOGTE";
-        labels2[3] = "OPP";
-        
-        String[] values2 = new String[4];
-        values2[0] = "1";
-        values2[1] = "Kees";
-        values2[2] = "10";
-        values2[3] = "110m2";
-        
-        String[] values3 = new String[4];
-        values3[0] = "2";
-        values3[1] = "Jan";
-        values3[2] = "25";
-        values3[3] = "75m2";
-        
-        ReportInfo.Record record1 = new ReportInfo.Record(values2, null);
-        ReportInfo.Record record2 = new ReportInfo.Record(values3, null);
-        
-        records = new ArrayList<ReportInfo.Record>();
-        records.add(record1);
-        records.add(record2);
-        
-        ReportInfo.Bron bron = new ReportInfo.Bron(
-                ReportInfo.Bron.LAYOUT.SIMPLE_TABLE, labels2, records);
-        
-        startRecord.addBron(bron);
-        
-        info.setStartbron(startBron);
-        
-        return info;
-    }
 
-    private Map<Integer, ReportInfo.Bron> createReportBronnen(Gegevensbron gb,
-            String recordId, Map<Integer, ReportInfo.Bron> bronnen) {
-        
-        boolean isChild = false;
-        boolean addGeom = false;
+    private ReportInfo.Bron createReportBron(
+            Gegevensbron gb,
+            String recordId, boolean isChild) {
+
         ReportInfo.Bron.LAYOUT table_type = ReportInfo.Bron.LAYOUT.FLAT_TABLE;
 
-        if (bronnen == null) {
-            bronnen = new HashMap<Integer, ReportInfo.Bron>();
-        } else {
-            isChild = true;
+        if (isChild) {
             table_type = ReportInfo.Bron.LAYOUT.SIMPLE_TABLE;
         }
 
-        List data = null;
+        /* Ophalen labels */
         String[] propertyNames = getThemaPropertyNames(gb);
+
+        /* Ophalen waardes */
+        List<Object> data = null;
         try {
-            data = getData(gb.getBron(), gb, recordId, propertyNames, isChild, addGeom);
+            data = getData(gb.getBron(), gb, recordId, propertyNames, isChild, false);
         } catch (Exception ex) {
-            log.error("Fout bij aanmaken  ReportInfo.Bron: ", ex);
-        }
-        
-        if (data != null && data.size() < 1) {
-            return bronnen;
+            log.error("Fout bij ophalen ReportInfo data ", ex);
         }
 
-        Map<Integer, String[]> records = new HashMap<Integer, String[]>();
+        /* Vullen bron object */
+        ReportInfo.Bron bron = new ReportInfo.Bron();
+        bron.setLayout(table_type);
+        bron.setLabels(propertyNames);
 
-        int i = 0;
+        List<ReportInfo.Record> records = new ArrayList<ReportInfo.Record>();
+
         for (Object obj : data) {
             String[] items = (String[]) obj;
 
-            records.put(i, items);
-            i++;
-        }
+            ReportInfo.Record record = new ReportInfo.Record();
 
-        //ReportInfo.Bron bron = new ReportInfo.Bron(i, table_type, propertyNames, records);
-        //bronnen.put(i, bron);
+            record.setId(new Integer(items[0]));
+            record.setValues(items);
 
-        /* TODO: gaat mis als 1 parent 2 childs heeft! */
-        if (gb.getChildren() != null && gb.getChildren().size() > 0) {
-            for (Object obj : gb.getChildren()) {
-                Gegevensbron child = (Gegevensbron) obj;
+            bron.addRecord(record);
 
-                return createReportBronnen(child, recordId, bronnen);
+            List<ReportInfo.Bron> subBronnen = null;
+            for (Object child : gb.getChildren()) {
+                Gegevensbron gbChild = (Gegevensbron) child;
+
+                ReportInfo.Bron childBron = createReportBron(gbChild, items[0], true);
+                if (childBron == null || childBron.getRecords().size() < 1) {
+                    continue;
+                }
+
+                if (subBronnen == null) {
+                    subBronnen = new ArrayList<ReportInfo.Bron>();
+                }
+
+                subBronnen.add(childBron);
+            }
+
+            if (subBronnen != null && subBronnen.size() > 0) {
+                for (ReportInfo.Bron childSubbron : subBronnen) {
+                    record.addBron(childSubbron);
+                }
             }
         }
 
-        return bronnen;
+        return bron;
     }
 
     public static void createXmlOutput(ReportInfo object, String xmlFile) {
@@ -252,7 +195,8 @@ public class ReportServlet extends HttpServlet {
             Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
 
             // output pretty printed
-            jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+            jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT,
+                    true);
 
             jaxbMarshaller.marshal(object, file);
         } catch (JAXBException e) {
@@ -296,32 +240,34 @@ public class ReportServlet extends HttpServlet {
 
             /* Setup xslt */
             Source xsltSrc = new StreamSource(xslFile);
-
             TransformerFactory factory = TransformerFactory.newInstance();
             Transformer transformer = factory.newTransformer(xsltSrc);
-
-            if (transformer == null) {
+            if (transformer
+                    == null) {
                 log.error("Fout tijdens inlezen xsl bestand.");
                 return;
             }
-
             Result res = new SAXResult(fop.getDefaultHandler());
-
-            if (transformer != null) {
+            if (transformer
+                    != null) {
                 transformer.transform(src, res);
             }
 
             /* Setup response */
             response.setContentType(MimeConstants.MIME_PDF);
+
             response.setContentLength(out.size());
 
             SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy", new Locale("NL"));
             String date = df.format(now);
             String fileName = "Rapport_" + date + ".pdf";
 
-            response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
-            response.getOutputStream().write(out.toByteArray());
-            response.getOutputStream().flush();
+            response.setHeader(
+                    "Content-Disposition", "attachment; filename=" + fileName);
+            response.getOutputStream()
+                    .write(out.toByteArray());
+            response.getOutputStream()
+                    .flush();
 
         } catch (Exception ex) {
             log.error("Fout tijdens maken rapport pdf: ", ex);
@@ -462,8 +408,7 @@ public class ReportServlet extends HttpServlet {
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
-     * Handles the HTTP
-     * <code>GET</code> method.
+     * Handles the HTTP <code>GET</code> method.
      *
      * @param request servlet request
      * @param response servlet response
@@ -475,8 +420,7 @@ public class ReportServlet extends HttpServlet {
     }
 
     /**
-     * Handles the HTTP
-     * <code>POST</code> method.
+     * Handles the HTTP <code>POST</code> method.
      *
      * @param request servlet request
      * @param response servlet response

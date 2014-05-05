@@ -11,13 +11,13 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(propOrder = {
     "titel",
     "datum",
-    "startbron"
+    "bron"
 })
 public class ReportInfo {
 
     private String titel;
     private String datum;
-    private ReportInfo.Bron startbron;
+    private ReportInfo.Bron bron;
 
     public ReportInfo() {
     }
@@ -106,6 +106,30 @@ public class ReportInfo {
             this.bronnen = bronnen;
         }
 
+        public Integer getId() {
+            return id;
+        }
+
+        public void setId(Integer id) {
+            this.id = id;
+        }
+
+        public String[] getValues() {
+            return values;
+        }
+
+        public void setValues(String[] values) {
+            this.values = values;
+        }
+
+        public List<Bron> getBronnen() {
+            return bronnen;
+        }
+
+        public void setBronnen(List<Bron> bronnen) {
+            this.bronnen = bronnen;
+        }
+
         public void addBron(ReportInfo.Bron bron) {
             if (this.bronnen == null) {
                 this.bronnen = new ArrayList<Bron>();
@@ -131,11 +155,11 @@ public class ReportInfo {
         this.datum = datum;
     }
 
-    public Bron getStartbron() {
-        return startbron;
+    public Bron getBron() {
+        return bron;
     }
 
-    public void setStartbron(Bron startbron) {
-        this.startbron = startbron;
+    public void setBron(Bron bron) {
+        this.bron = bron;
     }
 }
