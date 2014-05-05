@@ -115,8 +115,26 @@ public class Gegevensbron implements Comparable {
         this.parent = parent;
     }
 
-    public int compareTo(Object o) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public int compareTo(Object o) {        
+        Gegevensbron gb = (Gegevensbron)o;
+        
+        if (this == gb) {
+            return 0;
+        }
+        
+        if (this.getVolgordenr() < gb.getVolgordenr()) {
+            return -1;
+        }
+        
+        if (this.getVolgordenr() > gb.getVolgordenr()) {
+            return 1;
+        }
+        
+        if (this.getVolgordenr() == gb.getVolgordenr()) {
+            return this.getNaam().compareTo(gb.getNaam());
+        }        
+        
+        return 0;
     }
 
     public Set getThemaData() {

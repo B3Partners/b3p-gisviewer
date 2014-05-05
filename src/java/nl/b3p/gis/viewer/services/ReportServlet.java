@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +32,7 @@ import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
+import nl.b3p.gis.viewer.print.PrintServlet;
 import static nl.b3p.gis.viewer.print.PrintServlet.fontPath;
 import static nl.b3p.gis.viewer.print.PrintServlet.fopConfig;
 import nl.b3p.gis.viewer.report.ReportInfo;
@@ -97,11 +99,17 @@ public class ReportServlet extends HttpServlet {
             ReportInfo.Bron startBron = createReportBron(gb, recordId, false);
 
             ReportInfo info = new ReportInfo();
-            info.setTitel("Rapport " + reportType);
+            
+            if (reportType == null || reportType.isEmpty()) {
+                info.setTitel("Rapport");
+            } else {
+                info.setTitel(reportType);
+            }
+            
             info.setDatum(df.format(now));
             info.setBron(startBron);
 
-            createXmlOutput(info, TEMP_XML_FILE);
+            //createXmlOutput(info, TEMP_XML_FILE);
 
             try {
                 createPdfOutput(info, xsl_report, response);
@@ -147,6 +155,7 @@ public class ReportServlet extends HttpServlet {
 
         /* Vullen bron object */
         ReportInfo.Bron bron = new ReportInfo.Bron();
+        bron.setTitel(gb.getNaam());
         bron.setLayout(table_type);
         bron.setLabels(propertyNames);
 
@@ -163,18 +172,26 @@ public class ReportServlet extends HttpServlet {
             bron.addRecord(record);
 
             List<ReportInfo.Bron> subBronnen = null;
-            for (Object child : gb.getChildren()) {
+            Set children = gb.getChildren();
+            
+            /* Sort op volgordenr */
+            List<Gegevensbron> childList = new ArrayList<Gegevensbron>(children);
+            Collections.sort(childList);            
+            
+            for (Gegevensbron child : childList) {
                 Gegevensbron gbChild = (Gegevensbron) child;
 
                 ReportInfo.Bron childBron = createReportBron(gbChild, items[0], true);
-                if (childBron == null || childBron.getRecords().size() < 1) {
+                if (childBron == null || childBron.getRecords() == null ||
+                        childBron.getRecords().size() < 1) {                    
+                    
                     continue;
                 }
 
                 if (subBronnen == null) {
                     subBronnen = new ArrayList<ReportInfo.Bron>();
                 }
-
+                
                 subBronnen.add(childBron);
             }
 
@@ -387,6 +404,21 @@ public class ReportServlet extends HttpServlet {
                 writeErrorMessage(response, "Ongeldige rapport parameters.");
             } catch (IOException ex) {
             }
+        }
+    }
+    
+    private String createImageUrl(HttpServletRequest request) {
+        if (PrintServlet.baseImageUrl != null) {
+            return PrintServlet.baseImageUrl;
+        } else {
+            String requestUrl = request.getRequestURL().toString();
+
+            int lastIndex = requestUrl.lastIndexOf("/");
+
+            String basePart = requestUrl.substring(0, lastIndex);
+            String servletPart = "/services/PrintServlet?";
+
+            return basePart + servletPart;
         }
     }
 

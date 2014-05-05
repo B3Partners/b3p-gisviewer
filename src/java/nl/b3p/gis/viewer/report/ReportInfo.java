@@ -24,6 +24,7 @@ public class ReportInfo {
 
     @XmlAccessorType(XmlAccessType.FIELD)
     @XmlType(propOrder = {
+        "titel",
         "layout",
         "labels",
         "records"
@@ -36,6 +37,7 @@ public class ReportInfo {
             ONE_ROW_TABLE,
             CALC_TABLE
         };
+        private String titel;
         private ReportInfo.Bron.LAYOUT layout;
         private String[] labels;
         private List<ReportInfo.Record> records;
@@ -43,12 +45,12 @@ public class ReportInfo {
         public Bron() {
         }
 
-        public Bron(ReportInfo.Bron.LAYOUT layout,
-                String[] labels, List<ReportInfo.Record> records) {
+        public String getTitel() {
+            return titel;
+        }
 
-            this.layout = layout;
-            this.labels = labels;
-            this.records = records;
+        public void setTitel(String titel) {
+            this.titel = titel;
         }
 
         public LAYOUT getLayout() {
