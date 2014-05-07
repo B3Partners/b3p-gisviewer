@@ -32,7 +32,6 @@ import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
-import nl.b3p.gis.viewer.print.PrintServlet;
 import static nl.b3p.gis.viewer.print.PrintServlet.fontPath;
 import static nl.b3p.gis.viewer.print.PrintServlet.fopConfig;
 import nl.b3p.gis.viewer.report.ReportInfo;
@@ -58,19 +57,10 @@ import org.xml.sax.SAXException;
 public class ReportServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(Data2PDF.class);
-    private static String HTMLTITLE = "Rapport";
-    private static String xsl_report = null;
-    private static final String TEMP_XML_FILE = "/home/boy/dev/tmp/data.xml";
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws javax.servlet.ServletException
-     * @throws java.io.IOException
-     */
+    private static String xsl_report = null;
+    private static final String TEMP_XML_FILE = "/tmp/data.xml";
+
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -99,18 +89,17 @@ public class ReportServlet extends HttpServlet {
             ReportInfo.Bron startBron = createReportBron(gb, recordId, false);
 
             ReportInfo info = new ReportInfo();
-            
+
             if (reportType == null || reportType.isEmpty()) {
                 info.setTitel("Rapport");
             } else {
                 info.setTitel(reportType);
             }
-            
+
             info.setDatum(df.format(now));
             info.setBron(startBron);
 
             //createXmlOutput(info, TEMP_XML_FILE);
-
             try {
                 createPdfOutput(info, xsl_report, response);
             } catch (MalformedURLException ex) {
@@ -133,8 +122,7 @@ public class ReportServlet extends HttpServlet {
     }
 
     private ReportInfo.Bron createReportBron(
-            Gegevensbron gb,
-            String recordId, boolean isChild) {
+            Gegevensbron gb, String recordId, boolean isChild) {
 
         ReportInfo.Bron.LAYOUT table_type = ReportInfo.Bron.LAYOUT.FLAT_TABLE;
 
@@ -173,25 +161,25 @@ public class ReportServlet extends HttpServlet {
 
             List<ReportInfo.Bron> subBronnen = null;
             Set children = gb.getChildren();
-            
+
             /* Sort op volgordenr */
             List<Gegevensbron> childList = new ArrayList<Gegevensbron>(children);
-            Collections.sort(childList);            
-            
+            Collections.sort(childList);
+
             for (Gegevensbron child : childList) {
                 Gegevensbron gbChild = (Gegevensbron) child;
 
                 ReportInfo.Bron childBron = createReportBron(gbChild, items[0], true);
-                if (childBron == null || childBron.getRecords() == null ||
-                        childBron.getRecords().size() < 1) {                    
-                    
+                if (childBron == null || childBron.getRecords() == null
+                        || childBron.getRecords().size() < 1) {
+
                     continue;
                 }
 
                 if (subBronnen == null) {
                     subBronnen = new ArrayList<ReportInfo.Bron>();
                 }
-                
+
                 subBronnen.add(childBron);
             }
 
@@ -265,8 +253,7 @@ public class ReportServlet extends HttpServlet {
                 return;
             }
             Result res = new SAXResult(fop.getDefaultHandler());
-            if (transformer
-                    != null) {
+            if (transformer != null) {
                 transformer.transform(src, res);
             }
 
@@ -379,7 +366,7 @@ public class ReportServlet extends HttpServlet {
         PrintWriter pw = response.getWriter();
         pw.println("<html>");
         pw.println("<head>");
-        pw.println("<title>" + HTMLTITLE + "</title>");
+        pw.println("<title>Report message</title>");
         pw.println("<script type=\"text/javascript\"> if(window.parent && (typeof window.parent.showCsvError == 'function')) { window.parent.showCsvError(); } </script>");
         pw.println("</head>");
         pw.println("<body>");
@@ -404,21 +391,6 @@ public class ReportServlet extends HttpServlet {
                 writeErrorMessage(response, "Ongeldige rapport parameters.");
             } catch (IOException ex) {
             }
-        }
-    }
-    
-    private String createImageUrl(HttpServletRequest request) {
-        if (PrintServlet.baseImageUrl != null) {
-            return PrintServlet.baseImageUrl;
-        } else {
-            String requestUrl = request.getRequestURL().toString();
-
-            int lastIndex = requestUrl.lastIndexOf("/");
-
-            String basePart = requestUrl.substring(0, lastIndex);
-            String servletPart = "/services/PrintServlet?";
-
-            return basePart + servletPart;
         }
     }
 
