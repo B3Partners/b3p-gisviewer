@@ -1,5 +1,6 @@
 package nl.b3p.gis.viewer.report;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -94,7 +95,7 @@ public class ReportInfo {
     })
     public static class Record {
 
-        private Integer id;
+        private String id;
         private String[] values;
         private List<ReportInfo.Bron> bronnen;
 
@@ -108,11 +109,11 @@ public class ReportInfo {
             this.bronnen = bronnen;
         }
 
-        public Integer getId() {
+        public String getId() {
             return id;
         }
 
-        public void setId(Integer id) {
+        public void setId(String id) {
             this.id = id;
         }
 

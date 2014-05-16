@@ -61,14 +61,15 @@ public class ReportServlet extends HttpServlet {
     private static String xsl_report = null;
     private static final String TEMP_XML_FILE = "/tmp/data.xml";
 
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void processRequest(HttpServletRequest request,
+            HttpServletResponse response) throws ServletException, IOException {
 
         checkRequestParams(request, response);
 
         String gegevensbronId = request.getParameter("gbId");
         String recordId = request.getParameter("recordId");
         String reportType = request.getParameter("reportType");
+        String pk = request.getParameter("pk");
 
         Date now = new Date();
         SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
@@ -86,6 +87,10 @@ public class ReportServlet extends HttpServlet {
             Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
 
             /* Create new ReportInfo object */
+            if (pk != null && !pk.isEmpty()) {
+                recordId = pk;
+            }
+
             ReportInfo.Bron startBron = createReportBron(gb, recordId, false);
 
             ReportInfo info = new ReportInfo();
@@ -99,7 +104,10 @@ public class ReportServlet extends HttpServlet {
             info.setDatum(df.format(now));
             info.setBron(startBron);
 
-            //createXmlOutput(info, TEMP_XML_FILE);
+            if (log.isDebugEnabled()) {
+                createXmlOutput(info, TEMP_XML_FILE);
+            }            
+            
             try {
                 createPdfOutput(info, xsl_report, response);
             } catch (MalformedURLException ex) {
@@ -121,14 +129,20 @@ public class ReportServlet extends HttpServlet {
         }
     }
 
-    private ReportInfo.Bron createReportBron(
-            Gegevensbron gb, String recordId, boolean isChild) {
+    private ReportInfo.Bron createReportBron(Gegevensbron gb,
+            String recordId, boolean isChild) {
 
         ReportInfo.Bron.LAYOUT table_type = ReportInfo.Bron.LAYOUT.FLAT_TABLE;
 
         if (isChild) {
             table_type = ReportInfo.Bron.LAYOUT.SIMPLE_TABLE;
         }
+
+        /* TODO: 
+         * Alleen labels in record plaatsen die in basisregel staan.
+         * Bij ophalen data moet wel de waarde van de pk column nog 
+         * opgehaald kunnen worden om data op te halen van gekoppelde plusjes
+         */
 
         /* Ophalen labels */
         String[] propertyNames = getThemaPropertyNames(gb);
@@ -141,6 +155,17 @@ public class ReportServlet extends HttpServlet {
             log.error("Fout bij ophalen ReportInfo data ", ex);
         }
 
+        /* Uit Gegevensbron juiste pk column index ophalen */
+        int pkIndex = 0;
+        String pkColumn = gb.getAdmin_pk();
+
+        for (int i = 0; i < propertyNames.length; i++) {
+            String column = propertyNames[i];
+            if (column.equalsIgnoreCase(pkColumn)) {
+                pkIndex = i;
+            }
+        }
+
         /* Vullen bron object */
         ReportInfo.Bron bron = new ReportInfo.Bron();
         bron.setTitel(gb.getNaam());
@@ -148,13 +173,17 @@ public class ReportServlet extends HttpServlet {
         bron.setLabels(propertyNames);
 
         List<ReportInfo.Record> records = new ArrayList<ReportInfo.Record>();
-
         for (Object obj : data) {
             String[] items = (String[]) obj;
+            String pkValue = items[pkIndex];
+
+            for (int i = 0; i < items.length; i++) {
+                String string = items[i];
+            }
 
             ReportInfo.Record record = new ReportInfo.Record();
 
-            record.setId(new Integer(items[0]));
+            record.setId(pkValue);
             record.setValues(items);
 
             bron.addRecord(record);
@@ -169,7 +198,7 @@ public class ReportServlet extends HttpServlet {
             for (Gegevensbron child : childList) {
                 Gegevensbron gbChild = (Gegevensbron) child;
 
-                ReportInfo.Bron childBron = createReportBron(gbChild, items[0], true);
+                ReportInfo.Bron childBron = createReportBron(gbChild, pkValue, true);
                 if (childBron == null || childBron.getRecords() == null
                         || childBron.getRecords().size() < 1) {
 
@@ -193,6 +222,93 @@ public class ReportServlet extends HttpServlet {
         return bron;
     }
 
+    public String[] getThemaPropertyNames(Gegevensbron gb) {
+        Set themadata = gb.getThemaData();
+
+        Iterator it = themadata.iterator();
+        ArrayList columns = new ArrayList();
+        while (it.hasNext()) {
+            ThemaData td = (ThemaData) it.next();
+            if (td.getKolomnaam() != null) {
+                if (!columns.contains(td.getKolomnaam())) {
+
+                    if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
+                            && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
+                        
+                        // basisregel of pk column
+                        if (td.isBasisregel() ||
+                                td.getKolomnaam().equalsIgnoreCase(gb.getAdmin_pk())) {
+                            columns.add(td.getKolomnaam());
+                        }                      
+                    }
+                }
+            }
+        }
+        String[] s = new String[columns.size()];
+        for (int i = 0; i < columns.size(); i++) {
+            s[i] = (String) columns.get(i);
+        }
+        return s;
+    }
+
+    public List getData(Bron b, Gegevensbron gb, String recordId,
+            String[] propertyNames, boolean isChild, boolean addGeom) throws IOException,
+            Exception {
+
+        String[] pks = new String[1];
+        pks[0] = recordId;
+
+        String column = null;
+        if (!isChild) {
+            column = gb.getAdmin_pk();
+        } else {
+            column = gb.getAdmin_fk();
+        }
+
+        Filter filter = FilterBuilder.createOrEqualsFilter(
+                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), pks);
+
+        List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
+        List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
+
+        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, addGeom);
+        ArrayList result = new ArrayList();
+
+        int len = 0;
+        if (addGeom) {
+            len = propertyNames.length + 1;
+        } else {
+            len = propertyNames.length;
+        }
+
+        for (int i = 0; i < features.size(); i++) {
+            Feature f = features.get(i);
+
+            String[] row = new String[len];
+
+            for (int p = 0; p < propertyNames.length; p++) {
+                Property property = f.getProperty(propertyNames[p]);
+                if (property != null && property.getValue() != null && property.getValue().toString() != null) {
+                    row[p] = property.getValue().toString().trim();
+                } else {
+                    row[p] = "";
+                }
+            }
+
+            SimpleFeatureImpl feature = (SimpleFeatureImpl) f;
+            Geometry geom = (Geometry) feature.getDefaultGeometry();
+
+            if (geom != null && addGeom) {
+                String wkt = geom.toText();
+                row[row.length - 1] = wkt;
+            }
+
+            result.add(row);
+        }
+
+        return result;
+    }
+    
     public static void createXmlOutput(ReportInfo object, String xmlFile) {
         try {
             File file = new File(xmlFile);
@@ -278,87 +394,6 @@ public class ReportServlet extends HttpServlet {
         } finally {
             out.close();
         }
-    }
-
-    public String[] getThemaPropertyNames(Gegevensbron gb) {
-        Set themadata = gb.getThemaData();
-
-        Iterator it = themadata.iterator();
-        ArrayList columns = new ArrayList();
-        while (it.hasNext()) {
-            ThemaData td = (ThemaData) it.next();
-            if (td.getKolomnaam() != null) {
-                if (!columns.contains(td.getKolomnaam())) {
-
-                    if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
-                            && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
-                        columns.add(td.getKolomnaam());
-                    }
-                }
-            }
-        }
-        String[] s = new String[columns.size()];
-        for (int i = 0; i < columns.size(); i++) {
-            s[i] = (String) columns.get(i);
-        }
-        return s;
-    }
-
-    public List getData(Bron b, Gegevensbron gb, String recordId,
-            String[] propertyNames, boolean isChild, boolean addGeom) throws IOException,
-            Exception {
-
-        String[] pks = new String[1];
-        pks[0] = recordId;
-
-        String column = null;
-        if (!isChild) {
-            column = gb.getAdmin_pk();
-        } else {
-            column = gb.getAdmin_fk();
-        }
-
-        Filter filter = FilterBuilder.createOrEqualsFilter(
-                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), pks);
-
-        List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
-        List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
-        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, true);
-        ArrayList result = new ArrayList();
-
-        int len = 0;
-        if (addGeom) {
-            len = propertyNames.length + 1;
-        } else {
-            len = propertyNames.length;
-        }
-
-        for (int i = 0; i < features.size(); i++) {
-            Feature f = features.get(i);
-
-            String[] row = new String[len];
-
-            for (int p = 0; p < propertyNames.length; p++) {
-                Property property = f.getProperty(propertyNames[p]);
-                if (property != null && property.getValue() != null && property.getValue().toString() != null) {
-                    row[p] = property.getValue().toString().trim();
-                } else {
-                    row[p] = "";
-                }
-            }
-
-            SimpleFeatureImpl feature = (SimpleFeatureImpl) f;
-            Geometry geom = (Geometry) feature.getDefaultGeometry();
-
-            if (geom != null && addGeom) {
-                String wkt = geom.toText();
-                row[row.length - 1] = wkt;
-            }
-
-            result.add(row);
-        }
-
-        return result;
     }
 
     private void writeErrorMessage(HttpServletResponse response, String message) throws IOException {
