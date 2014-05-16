@@ -105,8 +105,8 @@ public class DocFetcherServlet extends HttpServlet {
          * http://domain.com/gisviewer/services/DocFetcher/abc.jpg
          */
         String uri = request.getPathInfo();
-        String lastPart = getLastBitFromUrl(uri);        
-        String fileName = transformFilename(lastPart);     
+        //String lastPart = getLastBitFromUrl(uri);        
+        String fileName = transformFilename(uri);
 
         switch (fetchMethod) {
             case FILE:
