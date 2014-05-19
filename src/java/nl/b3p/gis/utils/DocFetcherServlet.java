@@ -87,9 +87,12 @@ public class DocFetcherServlet extends HttpServlet {
                 }
             }
         }
+        
         transformedFilename = locationPrefix + transformedFilename;
         debugStr = debugStr + transformedFilename + "\"";
+        
         log.debug(debugStr);
+        
         return transformedFilename;
     }
 
@@ -107,6 +110,9 @@ public class DocFetcherServlet extends HttpServlet {
         String uri = request.getPathInfo();
         //String lastPart = getLastBitFromUrl(uri);        
         String fileName = transformFilename(uri);
+        
+        log.debug("Uri: " + uri);
+        log.debug("Filename: " + fileName);
 
         switch (fetchMethod) {
             case FILE:
