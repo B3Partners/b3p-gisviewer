@@ -71,6 +71,7 @@ public class DownloadAction extends ViewerCrudAction {
             cdt.setApplicationPath(servletpath);
 
             dispatcher.addCall(cdt);
+            request.setAttribute("emailScheduled", true);
         }else{
             addAlternateMessage(mapping, request, GENERAL_ERROR_KEY, "Er zijn geen kaarten geselecteerd");
         }        
