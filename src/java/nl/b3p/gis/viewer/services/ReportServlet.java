@@ -106,8 +106,8 @@ public class ReportServlet extends HttpServlet {
 
             if (log.isDebugEnabled()) {
                 createXmlOutput(info, TEMP_XML_FILE);
-            }            
-            
+            }
+
             try {
                 createPdfOutput(info, xsl_report, response);
             } catch (MalformedURLException ex) {
@@ -145,12 +145,12 @@ public class ReportServlet extends HttpServlet {
          */
 
         /* Ophalen labels */
-        String[] propertyNames = getThemaPropertyNames(gb);
+        String[] columnNames = getObjectDataColumns(gb);
 
         /* Ophalen waardes */
         List<Object> data = null;
         try {
-            data = getData(gb.getBron(), gb, recordId, propertyNames, isChild, false);
+            data = getData(gb.getBron(), gb, recordId, columnNames, isChild, false);
         } catch (Exception ex) {
             log.error("Fout bij ophalen ReportInfo data ", ex);
         }
@@ -159,8 +159,8 @@ public class ReportServlet extends HttpServlet {
         int pkIndex = 0;
         String pkColumn = gb.getAdmin_pk();
 
-        for (int i = 0; i < propertyNames.length; i++) {
-            String column = propertyNames[i];
+        for (int i = 0; i < columnNames.length; i++) {
+            String column = columnNames[i];
             if (column.equalsIgnoreCase(pkColumn)) {
                 pkIndex = i;
             }
@@ -170,7 +170,9 @@ public class ReportServlet extends HttpServlet {
         ReportInfo.Bron bron = new ReportInfo.Bron();
         bron.setTitel(gb.getNaam());
         bron.setLayout(table_type);
-        bron.setLabels(propertyNames);
+
+        String[] labelNames = getObjectDataLabels(gb);
+        bron.setLabels(labelNames);
 
         List<ReportInfo.Record> records = new ArrayList<ReportInfo.Record>();
         for (Object obj : data) {
@@ -222,7 +224,7 @@ public class ReportServlet extends HttpServlet {
         return bron;
     }
 
-    public String[] getThemaPropertyNames(Gegevensbron gb) {
+    public String[] getObjectDataColumns(Gegevensbron gb) {
         Set themadata = gb.getThemaData();
 
         Iterator it = themadata.iterator();
@@ -234,12 +236,12 @@ public class ReportServlet extends HttpServlet {
 
                     if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
                             && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
-                        
+
                         // basisregel of pk column
-                        if (td.isBasisregel() ||
-                                td.getKolomnaam().equalsIgnoreCase(gb.getAdmin_pk())) {
+                        if (td.isBasisregel()
+                                || td.getKolomnaam().equalsIgnoreCase(gb.getAdmin_pk())) {
                             columns.add(td.getKolomnaam());
-                        }                      
+                        }
                     }
                 }
             }
@@ -249,6 +251,37 @@ public class ReportServlet extends HttpServlet {
             s[i] = (String) columns.get(i);
         }
         return s;
+    }
+
+    public String[] getObjectDataLabels(Gegevensbron gb) {
+        List<String> columns = new ArrayList();
+
+        Iterator it = gb.getThemaData().iterator();
+        while (it.hasNext()) {
+            ThemaData td = (ThemaData) it.next();
+
+            if (td.getKolomnaam() != null
+                    && !td.getKolomnaam().equalsIgnoreCase("the_geom")
+                    && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
+
+                // basisregel of pk column
+                if (td.isBasisregel()
+                        || td.getKolomnaam().equalsIgnoreCase(gb.getAdmin_pk())) {
+
+                    if (td.getLabel() != null && !td.getLabel().isEmpty()) {
+
+                        if (!columns.contains(td.getLabel())) {
+                            columns.add(td.getLabel());
+                        }
+                    }
+                }
+            }
+        }
+
+        String[] arr = new String[columns.size()];
+        arr = columns.toArray(arr);
+
+        return arr;
     }
 
     public List getData(Bron b, Gegevensbron gb, String recordId,
@@ -308,7 +341,7 @@ public class ReportServlet extends HttpServlet {
 
         return result;
     }
-    
+
     public static void createXmlOutput(ReportInfo object, String xmlFile) {
         try {
             File file = new File(xmlFile);
