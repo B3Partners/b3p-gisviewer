@@ -5,6 +5,7 @@ import java.net.URL;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -16,6 +17,7 @@ import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.BaseGisAction;
 import static nl.b3p.gis.viewer.BaseGisAction.APP_AUTH;
 import nl.b3p.gis.viewer.db.Applicatie;
+import nl.b3p.gis.viewer.db.CMSMenuItem;
 import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.db.Clusters;
 import nl.b3p.gis.viewer.db.Themas;
@@ -23,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.*;
 import org.apache.struts.validator.DynaValidatorForm;
+import org.hibernate.Session;
 import org.securityfilter.filter.SecurityFilter;
 import org.securityfilter.filter.SecurityRequestWrapper;
 
@@ -30,8 +33,9 @@ import org.securityfilter.filter.SecurityRequestWrapper;
  * Deze Action haalt alle analyse thema's op.
  */
 public class IndexAction extends BaseGisAction {
+
     private static final Log logger = LogFactory.getLog(IndexAction.class);
-    
+
     protected static final String LOGIN = "login";
     protected static final String LOGINERROR = "loginError";
     protected static final String LOGOUT = "logout";
@@ -88,10 +92,10 @@ public class IndexAction extends BaseGisAction {
      *
      * @throws Exception
      */
-    public ActionForward unspecified(ActionMapping mapping, 
+    public ActionForward unspecified(ActionMapping mapping,
             DynaValidatorForm dynaForm, HttpServletRequest request,
-            HttpServletResponse response) throws Exception { 
-        
+            HttpServletResponse response) throws Exception {
+
         /* Forward to first page if a cms page exists */
         Integer firstCmsPageId = getFirstCMSPageId();
         String webApp = request.getContextPath();
@@ -99,7 +103,7 @@ public class IndexAction extends BaseGisAction {
         if (firstCmsPageId != null && firstCmsPageId > 0) {
             CMSPagina cmsPage = getCMSPage(firstCmsPageId);
             String url = prettifyCMSPageUrl(request, cmsPage);
-            
+
             response.sendRedirect(response.encodeRedirectURL(url));
             return null;
         }
@@ -174,6 +178,9 @@ public class IndexAction extends BaseGisAction {
             String code = findCodeinUrl(savedURL);
             logger.debug("code: " + code);
 
+            /* CMS Theme klaarzetten */
+            setCMSPageTheme(request);
+
             /* Kijken of er een gebruikerscode in de Applicatie zit */
             String appCode = findAppCodeinUrl(savedURL);
 
@@ -231,7 +238,51 @@ public class IndexAction extends BaseGisAction {
         return getDefaultForward(mapping, request);
     }
 
+    private void setCMSPageTheme(HttpServletRequest request) {
+        String savedURL = SecurityFilter.getContinueToURL(request);
+
+        Integer cmsPageId = null;
+        Map<String, String> params = getQueryMap(savedURL);
+
+        Iterator it = params.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pairs = (Map.Entry) it.next();
+
+            if (pairs.getKey().equals(CMS_PAGE_ID)) {
+                String str = (String) pairs.getValue();
+                cmsPageId = new Integer(str);
+            }
+        }
+
+        if (cmsPageId != null && cmsPageId > 0) {
+            CMSPagina cmsPage = getCMSPage(cmsPageId);
+
+            if (cmsPage != null) {
+                if (cmsPage.getThema() == null || cmsPage.getThema().equals("")) {
+                    request.setAttribute("theme", "");
+                } else {
+                    request.setAttribute("theme", cmsPage.getThema());
+                }
+            }
+
+        }
+    }
+
+    private static Map<String, String> getQueryMap(String query) {
+        String[] params = query.split("&");
+        Map<String, String> map = new HashMap<String, String>();
+        for (String param : params) {
+            String name = param.split("=")[0];
+            String value = param.split("=")[1];
+            map.put(name, value);
+        }
+        return map;
+    }
+
     public ActionForward loginError(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+        /* CMS Theme klaarzetten */
+        setCMSPageTheme(request);
 
         populateTekstblok(request, PAGE_GISVIEWER_LOGIN);
 
@@ -242,7 +293,7 @@ public class IndexAction extends BaseGisAction {
     public ActionForward logout(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         Integer cmsPageId = null;
-        if (request.getParameter("cmsPageId") != null) {            
+        if (request.getParameter("cmsPageId") != null) {
             try {
                 String nr = request.getParameter("cmsPageId");
                 cmsPageId = new Integer(nr);
@@ -250,31 +301,31 @@ public class IndexAction extends BaseGisAction {
                 logger.debug("Fout tijdens uitloggen met een cms page id.", nfe);
             }
         }
-        
+
         HttpSession session = request.getSession();
-        String sessionId = session.getId();        
-        
+        String sessionId = session.getId();
+
         session.invalidate();
         logger.debug("Logged out from session: " + sessionId);
-        
+
         /* Indien er uitlog cms pagina is ingesteld dan hierheen */
-        String appCode = request.getParameter("appCode");        
+        String appCode = request.getParameter("appCode");
         if (appCode != null) {
             ConfigKeeper configKeeper = new ConfigKeeper();
             Map map = configKeeper.getConfigMap(appCode);
-            
+
             String logoutUrl = (String) map.get("logoutUrl");
-            
+
             if (logoutUrl != null && !logoutUrl.isEmpty()) {
                 return new RedirectingActionForward(logoutUrl);
-            }           
+            }
         }
-        
+
         /* Uitloggen en gaan naar eerdere cms pagina */
         if (cmsPageId != null && cmsPageId > 0) {
             CMSPagina cmsPage = getCMSPage(cmsPageId);
             String url = prettifyCMSPageUrl(request, cmsPage);
-            
+
             return new RedirectingActionForward(url);
         }
 
