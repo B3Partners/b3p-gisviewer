@@ -22,6 +22,8 @@
  */
 package nl.b3p.gis.viewer.services;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -32,9 +34,14 @@ import java.util.Map;
 import javax.servlet.http.HttpSession;
 import nl.b3p.commons.security.XmlSecurityDatabase;
 import nl.b3p.commons.services.FormUtils;
+import nl.b3p.gis.B3PCredentials;
+import nl.b3p.gis.CredentialsParser;
 import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.wms.capabilities.WMSCapabilitiesReader;
 import nl.b3p.zoeker.configuratie.Bron;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.securityfilter.filter.SecurityRequestWrapper;
@@ -88,19 +95,19 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         } else {
             url += "&" + CAPABILITIES_QUERYSTRING;
         }
-        
+
         log.debug("Using external kb url: " + url);
-        
+
         return url;
     }
-    
+
     public static String createInternalCapabilitiesURL(String code) {
         String url = HibernateUtil.createInternalKbUrl(code);
-        
+
         if (url == null || url.equals("")) {
             url = HibernateUtil.createPersonalKbUrl(code);
         }
-        
+
         if (url.indexOf('?') == -1) {
             url += "?";
         }
@@ -111,9 +118,9 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         } else {
             url += "&" + CAPABILITIES_QUERYSTRING;
         }
-        
+
         log.debug("Using internal kb url: " + url);
-        
+
         return url;
     }
 
@@ -130,7 +137,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             String code, SecurityRequestWrapper request) {
 
         log.debug("Start authenticateHttp()");
-        
+
         WMSCapabilitiesReader wmscr = new WMSCapabilitiesReader();
         ServiceProvider sp = null;
 
@@ -172,12 +179,23 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         }
 
         key = key + "_" + ip;
-        
-        log.debug("Key: " + key);
-        
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        Date expDate = null;
 
+        log.debug("Key: " + key);
+
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        Date expDate;
+
+        /* Do user/password check at kaartenbalie */
+        if (username != null && password != null) {
+            boolean canLogin = GisSecurityRealm.canLoginKaartenbalie(username, password, ip);
+            
+            if (!canLogin) {
+                log.error("Gebruiker " + username + " is ongeldig. IP-adres: " + ip);
+                
+                return null;
+            }
+        }
+        
         try {
             /* WMS getCapabilities (serviceprovider) cachen */
             if (isInSPCache(key)) {
@@ -185,48 +203,25 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
 
                 log.debug("Retrieved from cache user " + sp.getUserName() + " using key " + key);
 
-                /* Wachtwoord controleren. Anders kun je nadat de serviceprovider
-                 * de eerste gecached is inloggen met de username zonder een geldig
-                 * wachtwoord in te vullen. Dus bekijken we of het wachtwoord voor
-                 * de gecachte serviceprovider is gezet en houden we die tegen het
-                 * ingevulde wachtwoord aan.
-                 */
-                if (username != null && username.length() > 0 && sp.getPassword() != null) {
-                    if (!sp.getPassword().equals(password)) {
-                        return null;
-                    }
-                }
-
-                /* Controleren of provider niet over datum is */
-                expDate = sp.getExpireDate();
-                if (isExpired(expDate)) {
-                    log.info("EXPIRED: Login for " + sp.getUserName() + " has expired on " + df.format(expDate));
-                    return null;
-                }
-
-            } else {                
+            } else {
                 sp = wmscr.getProvider(location, username, password, ip);
 
-                /* Controleren of provider niet over datum is */
-                expDate = sp.getExpireDate();
-
-                if (isExpired(expDate)) {
-                    log.info("EXPIRED: Login for " + sp.getUserName() + " has expired on " + df.format(expDate));
-                    return null;
-
-                } else {
-                    if (username != null && password != null && password.length() > 0) {
-                        sp.setPassword(password);
-                    }
-
-                    putInSPCache(key, sp);
-
-                    log.debug("Login new in cache for user " + sp.getUserName() + " using key " + key);
+                if (username != null && password != null && password.length() > 0) {
+                    sp.setPassword(password);
                 }
+
+                putInSPCache(key, sp);
+
+                log.debug("Login new in cache for user " + sp.getUserName() + " using key " + key);
             }
 
         } catch (Exception ex) {
-            log.error("Error reading GetCapabilities ", ex);
+            if (log.isDebugEnabled()) {
+                log.debug("Error reading GetCapabilities ", ex);
+            } else {
+                log.error("Error reading GetCapabilities: " + ex.getLocalizedMessage());
+            }            
+            
             return null;
         }
 
@@ -251,6 +246,51 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         log.debug("Login for user: " + username);
 
         return new GisPrincipal(username, password, code, sp);
+    }
+
+    /* Do user/password check at kaartenbalie */
+    public static boolean canLoginKaartenbalie(String username,
+            String password, String ip) {
+        
+        String loginKbUrl = HibernateUtil.getKbLoginUrl();
+        String kbUrl = HibernateUtil.getKbUrl();
+        
+        /* For when loginKbUrl not in web.xml */
+        if (loginKbUrl == null && kbUrl != null) {
+            if (kbUrl.lastIndexOf('/') == kbUrl.length() - 1) {
+                loginKbUrl = kbUrl + "login";
+            } else {
+                loginKbUrl = kbUrl + "/login";
+            }
+        }
+        
+        if (loginKbUrl == null || username == null ||
+                password == null || loginKbUrl.isEmpty() ||
+                username.isEmpty() || password.isEmpty()) {
+            
+            return false;
+        }
+        
+        B3PCredentials cred = new B3PCredentials();
+        cred.setUserName(username);
+        cred.setPassword(password);
+
+        HttpClient client = CredentialsParser.CommonsHttpClientCredentials(cred);
+        GetMethod method = new GetMethod(loginKbUrl);
+        method.addRequestHeader("X-Forwarded-For", ip);
+
+        try {
+            int statusCode = client.executeMethod(method);
+            if (statusCode != HttpStatus.SC_OK) {
+                return false;
+            }
+        } catch (IOException ex) {
+            return false;
+        } finally {
+            method.releaseConnection();
+        }
+
+        return true;
     }
 
     private static boolean isExpired(Date expireDate) {

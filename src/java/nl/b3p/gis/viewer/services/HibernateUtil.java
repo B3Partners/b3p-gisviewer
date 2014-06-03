@@ -47,6 +47,7 @@ public class HibernateUtil extends HttpServlet {
     private static boolean useKaartenbalieCluster = true;
     public static String kbWfsConnectieNaam = "Kaartenbalie WFS";
     public static String hibernateDialect = null;
+    private static String loginKbUrl = null;
 
     static {
         try {
@@ -161,9 +162,15 @@ public class HibernateUtil extends HttpServlet {
     public static void setInternalKbUrl(String internalKbUrl) {
         HibernateUtil.internalKbUrl = internalKbUrl;
     }
+    
+    public static String getKbLoginUrl() {
+        return loginKbUrl;
+    }
 
     /**
      * Initializes the servlet.
+     * @param config
+     * @throws javax.servlet.ServletException
      */
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -197,6 +204,10 @@ public class HibernateUtil extends HttpServlet {
             value = config.getInitParameter("themabeheerders_rol");
             if (value != null && value.length() > 0) {
                 THEMABEHEERDERS_ROL = value;
+            }
+            value = config.getInitParameter("loginKbUrl");
+            if (value != null && value.length() > 0) {
+                loginKbUrl = value;
             }
         } catch (Exception e) {
             throw new ServletException(e);
