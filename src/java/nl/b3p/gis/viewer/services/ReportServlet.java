@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -179,13 +180,15 @@ public class ReportServlet extends HttpServlet {
             String[] items = (String[]) obj;
             String pkValue = items[pkIndex];
 
-            for (int i = 0; i < items.length; i++) {
-                String string = items[i];
-            }
-
             ReportInfo.Record record = new ReportInfo.Record();
 
             record.setId(pkValue);
+
+            // remove pk from items array
+            List<String> list = new ArrayList<String>(Arrays.asList(items));
+            list.remove(pkValue);
+            items = list.toArray(new String[0]);
+
             record.setValues(items);
 
             bron.addRecord(record);
@@ -264,10 +267,8 @@ public class ReportServlet extends HttpServlet {
                     && !td.getKolomnaam().equalsIgnoreCase("the_geom")
                     && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
 
-                // basisregel of pk column
-                if (td.isBasisregel()
-                        || td.getKolomnaam().equalsIgnoreCase(gb.getAdmin_pk())) {
-
+                // basisregel labels
+                if (td.isBasisregel()) {
                     if (td.getLabel() != null && !td.getLabel().isEmpty()) {
 
                         if (!columns.contains(td.getLabel())) {
