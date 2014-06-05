@@ -187,7 +187,10 @@ public class SldServlet extends HttpServlet {
     }
 
     public Document getDefaultSld() throws Exception {
-        DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+        DocumentBuilder db = dbf.newDocumentBuilder();
+
         FileInputStream fi = new FileInputStream(defaultSldPath);
         Document doc = db.parse(fi);
         return doc;
