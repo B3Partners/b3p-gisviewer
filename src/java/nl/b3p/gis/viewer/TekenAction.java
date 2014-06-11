@@ -36,6 +36,8 @@ public class TekenAction extends ViewerCrudAction{
                 app = defaultApp;
             }
         }
+        
+        BaseGisAction.setCMSPageFromRequest(request);
 
         ConfigKeeper configKeeper = new ConfigKeeper();
         Map instellingen = configKeeper.getConfigMap(app.getCode());

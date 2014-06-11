@@ -463,6 +463,27 @@ public abstract class BaseGisAction extends BaseHibernateAction {
         return tekstBlokken;
     }
 
+    protected static void setCMSPageFromRequest(HttpServletRequest request) {
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+        
+        String param = request.getParameter(BaseGisAction.CMS_PAGE_ID);
+        Integer cmsPageId = null;
+
+        if (param != null && !param.equals("")) {
+            cmsPageId = new Integer(param);
+        }
+
+        /* CMS Theme klaarzetten */
+        if (cmsPageId != null && cmsPageId > 0) {
+            
+            CMSPagina cmsPage = (CMSPagina) sess.get(CMSPagina.class, cmsPageId);
+            request.setAttribute("cmsPageId", cmsPageId);
+            if (cmsPage != null && cmsPage.getThema() != null && !cmsPage.getThema().equals("")) {
+                request.setAttribute("theme", cmsPage.getThema());
+            }
+        }
+    }
+    
     protected CMSPagina getCMSPage(Integer pageID) {
         if (pageID == null || pageID < 1) {
             return null;
