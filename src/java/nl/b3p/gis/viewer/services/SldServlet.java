@@ -64,21 +64,33 @@ public class SldServlet extends HttpServlet {
         OutputStream out = response.getOutputStream();
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Transaction tx = sess.beginTransaction();
-        try {
-            //get parameters
-            String visibleValue[] = null;
+        try {            
+            String url = request.getRequestURL().toString();
+            log.debug("SLD Url: " + url);
+            
+            String[] visibleValue = null;
+            String themaId = null;            
+            
+            // rest params ?
+            if (FormUtils.nullIfEmpty(request.getParameter("propvalue")) != null) {
+                visibleValue = new String[1];
+                visibleValue[0] = request.getParameter("propvalue");
+            }
+            
+            // get parameters            
             if (request.getParameter("visibleValue") != null) {
                 visibleValue = request.getParameter("visibleValue").split(",");
             }
             if (visibleValue == null) {
                 throw new Exception("visibleValue is verplicht");
             }
-            //get themaId and/or clusterId
-            String themaId = null;
+            
+            //get themaId and/or clusterId            
             String clusterId = null;
             if (FormUtils.nullIfEmpty(request.getParameter("id")) != null) {
                 themaId = request.getParameter("id");
             }
+            
             if (FormUtils.nullIfEmpty(request.getParameter("themaId")) != null) {
                 themaId = request.getParameter("themaId");
             }
@@ -93,6 +105,7 @@ public class SldServlet extends HttpServlet {
             if (FormUtils.nullIfEmpty(request.getParameter("sldType")) != null) {
                 sldType = request.getParameter("sldType");
             }
+            
             //create root doc
             Document doc = getDefaultSld();
             Node root = doc.getDocumentElement();
@@ -153,6 +166,11 @@ public class SldServlet extends HttpServlet {
                 } catch (Exception e) {
                     log.debug("Error getting geometry type. Creating the style with a polygonsimbolizer.");
                 }
+                
+                if (FormUtils.nullIfEmpty(request.getParameter("propname")) != null) {
+                    sldattribuut = request.getParameter("propname");
+                }
+                
                 Node child = createNamedLayer(doc, featureType, sldattribuut, visibleValue, geometryType, sldType);
                 root.appendChild(child);
             }
@@ -235,7 +253,7 @@ public class SldServlet extends HttpServlet {
 
         rule.appendChild(filter);
         if (geometryType == null || geometryType.toLowerCase().indexOf("polygon") >= 0) {
-            rule.appendChild(createStylePolygon(doc, attribute));
+            rule.appendChild(createDashedLinePolygon(doc));
         } else if (geometryType == null || geometryType.toLowerCase().indexOf("line") >= 0) {
             rule.appendChild(createStyleLine(doc, attribute));
         } else if (geometryType == null || geometryType.toLowerCase().indexOf("point") >= 0) {
@@ -280,7 +298,6 @@ public class SldServlet extends HttpServlet {
 
     private Node createStylePolygon(Document doc, String geoProperty) {
 
-
         Node polygonSymbolizer = doc.createElement("PolygonSymbolizer");
         Node geo = doc.createElement("Geometry");
         Node propName = doc.createElementNS(OGCNS, "PropertyName");
@@ -300,6 +317,39 @@ public class SldServlet extends HttpServlet {
         stroke.appendChild(cssParam);
 
         polygonSymbolizer.appendChild(geo);
+        polygonSymbolizer.appendChild(stroke);
+        polygonSymbolizer.appendChild(fill);
+
+        return polygonSymbolizer;
+    }
+    
+    private Node createDashedLinePolygon(Document doc) {
+
+        Node polygonSymbolizer = doc.createElement("PolygonSymbolizer");
+        
+        Node stroke = doc.createElement("Stroke");
+        
+        Element cssParam1 = doc.createElement("CssParameter");
+        cssParam1.setAttribute("name", "stroke");
+        cssParam1.appendChild(doc.createTextNode("#ff0000"));
+        stroke.appendChild(cssParam1);
+        
+        Element cssParam2 = doc.createElement("CssParameter");
+        cssParam2.setAttribute("name", "stroke-width");
+        cssParam2.appendChild(doc.createTextNode("3"));
+        stroke.appendChild(cssParam2);
+        
+        Element cssParam3 = doc.createElement("CssParameter");
+        cssParam3.setAttribute("name", "stroke-dasharray");
+        cssParam3.appendChild(doc.createTextNode("10 8"));
+        stroke.appendChild(cssParam3);
+
+        Node fill = doc.createElement("Fill");
+        Element cssParam4 = doc.createElement("CssParameter");
+        cssParam4.setAttribute("name", "fill-opacity");
+        cssParam4.appendChild(doc.createTextNode("0"));
+        fill.appendChild(cssParam4);
+        
         polygonSymbolizer.appendChild(stroke);
         polygonSymbolizer.appendChild(fill);
 
