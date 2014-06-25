@@ -1,6 +1,5 @@
 package nl.b3p.gis.viewer.report;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -12,12 +11,14 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(propOrder = {
     "titel",
     "datum",
+    "image_url",
     "bron"
 })
 public class ReportInfo {
 
     private String titel;
     private String datum;
+    private String image_url;
     private ReportInfo.Bron bron;
 
     public ReportInfo() {
@@ -30,9 +31,10 @@ public class ReportInfo {
         "labels",
         "records"
     })
-    public static class Bron {
+    public static class Bron implements Comparable<Bron> {
 
         public enum LAYOUT {
+
             FLAT_TABLE,
             SIMPLE_TABLE,
             ONE_ROW_TABLE,
@@ -84,6 +86,22 @@ public class ReportInfo {
             }
 
             this.records.add(record);
+        }
+
+        /* Vergelijk de Bron obv kolomlabels. Zijn gelijk
+        als deze allemaal overeenkomen. */
+        public int compareTo(Bron other) {
+            if (getLabels().length != other.getLabels().length) {
+                return 1;
+            }
+            
+            for (int i = 0; i < getLabels().length; i++) {
+                if (!getLabels()[i].equals(other.getLabels()[i])) {
+                    return -1;
+                }
+            }
+
+            return 0;
         }
     }
 
@@ -164,5 +182,13 @@ public class ReportInfo {
 
     public void setBron(Bron bron) {
         this.bron = bron;
+    }
+
+    public String getImage_url() {
+        return image_url;
+    }
+
+    public void setImage_url(String image_url) {
+        this.image_url = image_url;
     }
 }

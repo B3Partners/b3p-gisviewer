@@ -1,5 +1,6 @@
 package nl.b3p.gis.viewer.services;
 
+import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import java.io.File;
 import java.io.IOException;
@@ -10,9 +11,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -29,6 +32,7 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.sax.SAXResult;
 import javax.xml.transform.stream.StreamSource;
+import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Gegevensbron;
@@ -36,6 +40,9 @@ import nl.b3p.gis.viewer.db.ThemaData;
 import static nl.b3p.gis.viewer.print.PrintServlet.fontPath;
 import static nl.b3p.gis.viewer.print.PrintServlet.fopConfig;
 import nl.b3p.gis.viewer.report.ReportInfo;
+import nl.b3p.imagetool.CombineImageSettings;
+import nl.b3p.imagetool.CombineImagesHandler;
+import nl.b3p.ogc.utils.OGCRequest;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.logging.Log;
@@ -46,10 +53,12 @@ import org.apache.fop.apps.FopFactory;
 import org.apache.fop.apps.MimeConstants;
 import org.geotools.feature.simple.SimpleFeatureImpl;
 import org.hibernate.Transaction;
+import org.json.JSONObject;
 import org.opengis.feature.Feature;
 import org.opengis.feature.Property;
 import org.opengis.filter.Filter;
 import org.xml.sax.SAXException;
+import sun.misc.BASE64Encoder;
 
 /**
  *
@@ -72,6 +81,17 @@ public class ReportServlet extends HttpServlet {
         String reportType = request.getParameter("reportType");
         String pk = request.getParameter("pk");
 
+        /* Kaartbeeld ophalen */
+        CombineImageSettings settings = null;
+        try {
+            settings = getCombineImageSettings(request);
+
+            settings.setWidth(500);
+            settings.setHeight(375);
+        } catch (Exception ex) {
+            log.error("Fout tijdens ophalen combine settings: ", ex);
+        }
+
         Date now = new Date();
         SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
 
@@ -92,9 +112,9 @@ public class ReportServlet extends HttpServlet {
                 recordId = pk;
             }
 
-            ReportInfo.Bron startBron = createReportBron(gb, recordId, false);
-
             ReportInfo info = new ReportInfo();
+            
+            ReportInfo.Bron startBron = createReportBron(gb, recordId, false, settings, info);
 
             if (reportType == null || reportType.isEmpty()) {
                 info.setTitel("Rapport");
@@ -130,8 +150,48 @@ public class ReportServlet extends HttpServlet {
         }
     }
 
+    private String createImageUrl(String wkt, CombineImageSettings settings) {
+        /* Geometrie ophalen */
+        Geometry geom = null;
+        try {
+            geom = DataStoreUtil.createGeomFromWKTString(wkt);
+        } catch (Exception ex) {
+            log.error("Fout tijdens knutselen geometrie: ", ex);
+        }
+
+        /* Bbox uit berekenen */
+        Envelope bbox = geom.getEnvelopeInternal();
+
+        double[] dbbox = new double[4];
+        double bufferSize = 50;
+
+        dbbox[0] = bbox.getMinX() - bufferSize;
+        dbbox[1] = bbox.getMinY() - bufferSize;
+        dbbox[2] = bbox.getMaxX() + bufferSize;
+        dbbox[3] = bbox.getMaxY() + bufferSize;
+
+        /* Bbox in imageSettings */
+        settings.setBbox(dbbox);
+
+        /* Maak met imageSettings plaatje */
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        String imageUrl = null;
+        BASE64Encoder enc = new BASE64Encoder();
+        try {
+            CombineImagesHandler.combineImage(baos, settings);
+
+            byte[] imageBytes = baos.toByteArray();
+            imageUrl = enc.encode(imageBytes);
+        } catch (Exception ex) {
+        }
+        
+        return imageUrl;
+    }
+
     private ReportInfo.Bron createReportBron(Gegevensbron gb,
-            String recordId, boolean isChild) {
+            String recordId, boolean isChild,
+            CombineImageSettings settings, ReportInfo info) {
 
         ReportInfo.Bron.LAYOUT table_type = ReportInfo.Bron.LAYOUT.FLAT_TABLE;
 
@@ -151,7 +211,14 @@ public class ReportServlet extends HttpServlet {
         /* Ophalen waardes */
         List<Object> data = null;
         try {
-            data = getData(gb.getBron(), gb, recordId, columnNames, isChild, false);
+            
+            // eerste keer wel geom ophalen voor tonen plaatje */
+            if (table_type.equals(ReportInfo.Bron.LAYOUT.FLAT_TABLE)) {
+                data = getData(gb.getBron(), gb, recordId, columnNames, isChild, true);
+            } else {
+                data = getData(gb.getBron(), gb, recordId, columnNames, isChild, false);
+            }            
+            
         } catch (Exception ex) {
             log.error("Fout bij ophalen ReportInfo data ", ex);
         }
@@ -174,15 +241,25 @@ public class ReportServlet extends HttpServlet {
 
         String[] labelNames = getObjectDataLabels(gb);
         bron.setLabels(labelNames);
-
+        
+        String imageUrl = null;
         List<ReportInfo.Record> records = new ArrayList<ReportInfo.Record>();
         for (Object obj : data) {
             String[] items = (String[]) obj;
             String pkValue = items[pkIndex];
+            
+            if (settings != null && table_type.equals(ReportInfo.Bron.LAYOUT.FLAT_TABLE)) {
+                String wkt = items[items.length - 1];
+                imageUrl = createImageUrl(wkt, settings);
+            }            
 
             ReportInfo.Record record = new ReportInfo.Record();
 
             record.setId(pkValue);
+            
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                info.setImage_url(imageUrl);
+            }
 
             // remove pk from items array
             List<String> list = new ArrayList<String>(Arrays.asList(items));
@@ -203,7 +280,7 @@ public class ReportServlet extends HttpServlet {
             for (Gegevensbron child : childList) {
                 Gegevensbron gbChild = (Gegevensbron) child;
 
-                ReportInfo.Bron childBron = createReportBron(gbChild, pkValue, true);
+                ReportInfo.Bron childBron = createReportBron(gbChild, pkValue, true, null, null);
                 if (childBron == null || childBron.getRecords() == null
                         || childBron.getRecords().size() < 1) {
 
@@ -477,6 +554,34 @@ public class ReportServlet extends HttpServlet {
         } catch (Exception e) {
             throw new ServletException(e);
         }
+    }
+
+    private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
+        String jsonSettingsParam = FormUtils.nullIfEmpty(request.getParameter("jsonSettings"));
+        String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
+
+        JSONObject jsonSettings = new JSONObject(jsonSettingsParam);
+        CombineImageSettings settings = CombineImageSettings.fromJson(jsonSettings);
+
+        Map legendMap = new HashMap();
+        if (legendUrls != null) {
+            log.debug("legendUrls: " + legendUrls);
+            String[] arr = legendUrls.split(";");
+
+            for (int i = 0; i < arr.length; i++) {
+                String[] legendUrlsArr = arr[i].split("#");
+                legendMap.put(legendUrlsArr[0], legendUrlsArr[1]);
+            }
+
+            settings.setLegendMap(legendMap);
+        }
+
+        String mimeType = FormUtils.nullIfEmpty(request.getParameter(OGCRequest.WMS_PARAM_FORMAT));
+        if (mimeType != null && !mimeType.equals("")) {
+            settings.setMimeType(mimeType);
+        }
+
+        return settings;
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
