@@ -30,8 +30,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 /**
- *
- * @author Roy
+ * This service creates sld based on url params.
+ * 
+ * @author Boy de Wit
  */
 public class SldServlet extends HttpServlet {
 
@@ -45,20 +46,30 @@ public class SldServlet extends HttpServlet {
     private String defaultSldPath;
 
     /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
+     * Writes sld to response.
+     * 
      * @param request servlet request
      * @param response servlet response
+     * 
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
      *
-     * Parameters die meegegeven kunnen worden. Voor de optonele parameters die ontbreken worden de waarden
-     * uit de web.xml gebruikt:
+     * Request kan op twee manieren:
+     * 
+     * /services/CreateSLD?visibleValue=driehoek&id=5
+     * 
      * visibleValue: In de SLD wordt deze waarde gebruikt in de 'LITERAL' voor de vergelijking. (comme gescheiden)
      * id: Gaat vervallen: gebruik themaId (comme gescheiden)
      * themaId(optioneel als clusterId is gegeven): de id's van de themas waarvoor een sld gemaakt moet worden. (comme gescheiden)
      * clusterId(optioneel als themaId is gegeven): de id's van de clusters waarvoor een sld gemaakt moet worden. (comme gescheiden)(alle thema's in een cluster)
      * sldType(o): Het type NamedLayer SLD (Ondersteund: UserStyle (default/voor highlight), LayerFeatureConstraints)
-     */
+     * 
+     * of /services/CreateSLD/propname/type/propvalue/driehoek/id/5
+     * 
+     * propname: kolom voor filter
+     * propvalue: filter waarde
+     * id: themaid van kaartlaag
+    */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         OutputStream out = response.getOutputStream();
