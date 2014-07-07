@@ -1,12 +1,15 @@
 package nl.b3p.gis.viewer.services;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
-import javax.xml.transform.Transformer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -14,11 +17,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
+import nl.b3p.gis.utils.ConfigKeeper;
+import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.Themas;
 import org.apache.commons.logging.Log;
@@ -31,7 +39,7 @@ import org.w3c.dom.Node;
 
 /**
  * This service creates sld based on url params.
- * 
+ *
  * @author Boy de Wit
  */
 public class SldServlet extends HttpServlet {
@@ -40,54 +48,58 @@ public class SldServlet extends HttpServlet {
     public static final String OGCNS = "http://www.opengis.net/ogc";
     public static final String SLDNS = "http://www.opengis.net/sld";
     public static final String SENS = "http://www.opengis.net/se";
-    public static final String SLDTYPE_NAMEDSTYLE= "NamedStyle";
+    public static final String SLDTYPE_NAMEDSTYLE = "NamedStyle";
     public static final String SLDTYPE_USERSTYLE = "UserStyle";
-    public static final String DEFAULT_STYLE= "default";
+    public static final String DEFAULT_STYLE = "default";
     private String defaultSldPath;
+
+    public static final String CFG_TEKEN_FILTER_SLD = "tekenFilterSld";
 
     /**
      * Writes sld to response.
-     * 
+     *
      * @param request servlet request
      * @param response servlet response
-     * 
+     *
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
      *
      * Request kan op twee manieren:
-     * 
+     *
      * /services/CreateSLD?visibleValue=driehoek&id=5
-     * 
-     * visibleValue: In de SLD wordt deze waarde gebruikt in de 'LITERAL' voor de vergelijking. (comme gescheiden)
-     * id: Gaat vervallen: gebruik themaId (comme gescheiden)
-     * themaId(optioneel als clusterId is gegeven): de id's van de themas waarvoor een sld gemaakt moet worden. (comme gescheiden)
-     * clusterId(optioneel als themaId is gegeven): de id's van de clusters waarvoor een sld gemaakt moet worden. (comme gescheiden)(alle thema's in een cluster)
-     * sldType(o): Het type NamedLayer SLD (Ondersteund: UserStyle (default/voor highlight), LayerFeatureConstraints)
-     * 
+     *
+     * visibleValue: In de SLD wordt deze waarde gebruikt in de 'LITERAL' voor
+     * de vergelijking. (comme gescheiden) id: Gaat vervallen: gebruik themaId
+     * (comme gescheiden) themaId(optioneel als clusterId is gegeven): de id's
+     * van de themas waarvoor een sld gemaakt moet worden. (comme gescheiden)
+     * clusterId(optioneel als themaId is gegeven): de id's van de clusters
+     * waarvoor een sld gemaakt moet worden. (comme gescheiden)(alle thema's in
+     * een cluster) sldType(o): Het type NamedLayer SLD (Ondersteund: UserStyle
+     * (default/voor highlight), LayerFeatureConstraints)
+     *
      * of /services/CreateSLD/propname/type/propvalue/driehoek/id/5
-     * 
-     * propname: kolom voor filter
-     * propvalue: filter waarde
-     * id: themaid van kaartlaag
-    */
+     *
+     * propname: kolom voor filter propvalue: filter waarde id: themaid van
+     * kaartlaag
+     */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         OutputStream out = response.getOutputStream();
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Transaction tx = sess.beginTransaction();
-        try {            
+        try {
             String url = request.getRequestURL().toString();
             log.debug("SLD Url: " + url);
-            
+
             String[] visibleValue = null;
-            String themaId = null;            
-            
+            String themaId = null;
+
             // rest params ?
             if (FormUtils.nullIfEmpty(request.getParameter("propvalue")) != null) {
                 visibleValue = new String[1];
                 visibleValue[0] = request.getParameter("propvalue");
             }
-            
+
             // get parameters            
             if (request.getParameter("visibleValue") != null) {
                 visibleValue = request.getParameter("visibleValue").split(",");
@@ -95,13 +107,13 @@ public class SldServlet extends HttpServlet {
             if (visibleValue == null) {
                 throw new Exception("visibleValue is verplicht");
             }
-            
+
             //get themaId and/or clusterId            
             String clusterId = null;
             if (FormUtils.nullIfEmpty(request.getParameter("id")) != null) {
                 themaId = request.getParameter("id");
             }
-            
+
             if (FormUtils.nullIfEmpty(request.getParameter("themaId")) != null) {
                 themaId = request.getParameter("themaId");
             }
@@ -116,15 +128,15 @@ public class SldServlet extends HttpServlet {
             if (FormUtils.nullIfEmpty(request.getParameter("sldType")) != null) {
                 sldType = request.getParameter("sldType");
             }
-            
+
             //create root doc
             Document doc = getDefaultSld();
             Node root = doc.getDocumentElement();
             //create thema list
             List<Themas> themaList = new ArrayList();
             if (themaId != null) {
-                String[] themaIds=themaId.split(",");
-                for (int i=0;i < themaIds.length; i++){
+                String[] themaIds = themaId.split(",");
+                for (int i = 0; i < themaIds.length; i++) {
                     Themas th = SpatialUtil.getThema(themaIds[i]);
                     if (th == null) {
                         log.error("Can't find thema with id: " + themaId);
@@ -135,8 +147,8 @@ public class SldServlet extends HttpServlet {
             }
             //get the list of themas in the cluster
             if (clusterId != null) {
-                String[] clusterIds= clusterId.split(",");
-                for (int i=0; i < clusterIds.length; i++){
+                String[] clusterIds = clusterId.split(",");
+                for (int i = 0; i < clusterIds.length; i++) {
                     try {
                         Integer cid = Integer.parseInt(clusterIds[i]);
                         List<Themas> clusterThemaList = getClusterThemas(cid);
@@ -149,6 +161,13 @@ public class SldServlet extends HttpServlet {
                         log.error("clusterId is NAN: " + clusterIds[i]);
                     }
                 }
+            }
+
+            // sld config uit db halen
+            String sldPart = null;
+            String appCode = request.getParameter("appcode");
+            if (appCode != null && !appCode.isEmpty()) {
+                sldPart = getTekenKaartlaagSLDPart(sess, appCode);
             }
 
             for (int i = 0; i < themaList.size(); i++) {
@@ -177,24 +196,26 @@ public class SldServlet extends HttpServlet {
                 } catch (Exception e) {
                     log.debug("Error getting geometry type. Creating the style with a polygonsimbolizer.");
                 }
-                
+
                 if (FormUtils.nullIfEmpty(request.getParameter("propname")) != null) {
                     sldattribuut = request.getParameter("propname");
                 }
-                
-                Node child = createNamedLayer(doc, featureType, sldattribuut, visibleValue, geometryType, sldType);
+
+                Node child = createNamedLayer(doc, featureType, sldattribuut, visibleValue, geometryType, sldType, sldPart);
                 root.appendChild(child);
             }
+
             DOMSource domSource = new DOMSource(doc);
             Transformer t = TransformerFactory.newInstance().newTransformer();
             response.setContentType("text/xml");
             t.transform(domSource, new StreamResult(out));
-
+            
             tx.commit();
         } catch (Exception e) {
             if (tx.isActive()) {
                 tx.rollback();
             }
+
             log.error("Fout bij maken sld: ", e);
             response.setContentType("text/html;charset=UTF-8");
             PrintWriter pw = new PrintWriter(out);
@@ -207,6 +228,19 @@ public class SldServlet extends HttpServlet {
     private List<Themas> getClusterThemas(Integer id) throws Exception {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         return sess.createQuery("from Themas where cluster=:p").setInteger("p", id).list();
+    }
+
+    private String getTekenKaartlaagSLDPart(Session sess, String appCode) {
+
+        String sld = null;
+        ConfigKeeper keeper = new ConfigKeeper();
+        Configuratie cfg = keeper.getConfiguratie(CFG_TEKEN_FILTER_SLD, appCode);
+
+        if (cfg != null) {
+            sld = cfg.getPropval();
+        }
+
+        return sld;
     }
 
     private String getGeomtryType(Themas t, HttpServletRequest request) throws Exception {
@@ -224,30 +258,45 @@ public class SldServlet extends HttpServlet {
         Document doc = db.parse(fi);
         return doc;
     }
-    public Node createNamedLayer(Document doc, String featureName, String attribute, String[] value, String geometryType, String sldType) {
-        return createNamedLayer(doc,featureName,attribute,value,geometryType,sldType,false);
+
+    public Node createNamedLayer(Document doc, String featureName, String attribute,
+            String[] value, String geometryType, String sldType) {
+
+        return createNamedLayer(doc, featureName, attribute, value, geometryType,
+                sldType, false, null);
     }
-    public Node createNamedLayer(Document doc, String featureName, String attribute, String[] value, String geometryType, String sldType,boolean not) {
+
+    public Node createNamedLayer(Document doc, String featureName, String attribute,
+            String[] value, String geometryType, String sldType, String sldPart) {
+
+        return createNamedLayer(doc, featureName, attribute, value, geometryType,
+                sldType, false, sldPart);
+    }
+
+    public Node createNamedLayer(Document doc, String featureName, String attribute,
+            String[] value, String geometryType, String sldType, boolean not,
+            String sldPart) {
+
         Node name = doc.createElementNS(SLDNS, "Name");
         name.appendChild(doc.createTextNode(featureName));
         Node namedLayer = doc.createElementNS(SLDNS, "NamedLayer");
         namedLayer.appendChild(name);
 
         if (sldType.equalsIgnoreCase(SLDTYPE_USERSTYLE)) {
-            Node featureTypeStyle = createFeatureTypeStyle(doc, attribute, value, geometryType);
+            Node featureTypeStyle = createFeatureTypeStyle(doc, attribute, value, geometryType, sldPart);
             Node userStyle = doc.createElementNS(SLDNS, "UserStyle");
             userStyle.appendChild(featureTypeStyle);
             namedLayer.appendChild(userStyle);
         } else if (sldType.equalsIgnoreCase(SLDTYPE_NAMEDSTYLE)) {
             //Node layerFeatureConstraints = createLayerFeatureConstraints(doc, attribute, value, geometryType);
             Node layerFeatureConstraints = doc.createElementNS(SLDNS, "LayerFeatureConstraints");
-            Node featureTypeConstraints = createFeatureTypeConstraint(doc, attribute, value,not);
+            Node featureTypeConstraints = createFeatureTypeConstraint(doc, attribute, value, not);
 
             layerFeatureConstraints.appendChild(featureTypeConstraints);
             namedLayer.appendChild(layerFeatureConstraints);
 
-            Node namedStyle=doc.createElementNS(SLDNS,"NamedStyle");
-            Node styleName=doc.createElementNS(SLDNS, "Name");
+            Node namedStyle = doc.createElementNS(SLDNS, "NamedStyle");
+            Node styleName = doc.createElementNS(SLDNS, "Name");
             styleName.appendChild(doc.createTextNode(DEFAULT_STYLE));
             namedStyle.appendChild(styleName);
             namedLayer.appendChild(namedStyle);
@@ -255,28 +304,61 @@ public class SldServlet extends HttpServlet {
         return namedLayer;
     }
 
-    public Node createFeatureTypeStyle(Document doc, String attribute, String[] value, String geometryType) {
+    public Node createFeatureTypeStyle(Document doc, String attribute, String[] value,
+            String geometryType) {
+
+        return createFeatureTypeStyle(doc, attribute, value, geometryType, null);
+    }
+
+    private Node createSldNode(String xml, Document doc) throws Exception {
+        Document doc2 = DocumentBuilderFactory
+                .newInstance()
+                .newDocumentBuilder()
+                .parse(new ByteArrayInputStream(xml.getBytes()));
+        
+        Node node = doc.importNode(doc2.getDocumentElement(), true);
+        
+        return node;
+    }
+
+    public Node createFeatureTypeStyle(Document doc, String attribute, String[] value,
+            String geometryType, String sldPart) {
 
         Node featureTypeStyle = doc.createElementNS(SLDNS, "FeatureTypeStyle");
         Node rule = doc.createElement("Rule");
 
-        Node filter = createFilter(doc, attribute, value,false);
+        Node filter = createFilter(doc, attribute, value, false);
 
-        rule.appendChild(filter);
-        if (geometryType == null || geometryType.toLowerCase().indexOf("polygon") >= 0) {
-            rule.appendChild(createDashedLinePolygon(doc));
-        } else if (geometryType == null || geometryType.toLowerCase().indexOf("line") >= 0) {
-            rule.appendChild(createStyleLine(doc, attribute));
-        } else if (geometryType == null || geometryType.toLowerCase().indexOf("point") >= 0) {
-            rule.appendChild(createStylePoint(doc, attribute));
+        rule.appendChild(filter);        
+        
+        Node sldNode = null;
+        if (sldPart != null && !sldPart.isEmpty()) {
+            try {
+                sldNode = createSldNode(sldPart, doc);
+            } catch (Exception ex) {
+            }
+        }        
+        
+        /* insert application config sld style into document otherwise
+        use hardcoded defaults below */
+        if (sldNode != null) {
+            rule.appendChild(sldNode);
+        } else {
+            if (geometryType == null || geometryType.toLowerCase().indexOf("polygon") >= 0) {
+                rule.appendChild(createDashedLinePolygon(doc));
+            } else if (geometryType == null || geometryType.toLowerCase().indexOf("line") >= 0) {
+                rule.appendChild(createStyleLine(doc, attribute));
+            } else if (geometryType == null || geometryType.toLowerCase().indexOf("point") >= 0) {
+                rule.appendChild(createStylePoint(doc, attribute));
+            }
         }
 
         featureTypeStyle.appendChild(rule);
+
         return featureTypeStyle;
     }
 
-    private Node createStylePoint(Document doc, String geoProperty) {
-
+    private static Node createStylePoint(Document doc, String geoProperty) {
 
         Node pointSymbolizer = doc.createElement("PointSymbolizer");
         Node geo = doc.createElement("Geometry");
@@ -333,23 +415,23 @@ public class SldServlet extends HttpServlet {
 
         return polygonSymbolizer;
     }
-    
-    private Node createDashedLinePolygon(Document doc) {
+
+    private static Node createDashedLinePolygon(Document doc) {
 
         Node polygonSymbolizer = doc.createElement("PolygonSymbolizer");
-        
+
         Node stroke = doc.createElement("Stroke");
-        
+
         Element cssParam1 = doc.createElement("CssParameter");
         cssParam1.setAttribute("name", "stroke");
         cssParam1.appendChild(doc.createTextNode("#ff0000"));
         stroke.appendChild(cssParam1);
-        
+
         Element cssParam2 = doc.createElement("CssParameter");
         cssParam2.setAttribute("name", "stroke-width");
         cssParam2.appendChild(doc.createTextNode("3"));
         stroke.appendChild(cssParam2);
-        
+
         Element cssParam3 = doc.createElement("CssParameter");
         cssParam3.setAttribute("name", "stroke-dasharray");
         cssParam3.appendChild(doc.createTextNode("10 8"));
@@ -360,15 +442,72 @@ public class SldServlet extends HttpServlet {
         cssParam4.setAttribute("name", "fill-opacity");
         cssParam4.appendChild(doc.createTextNode("0"));
         fill.appendChild(cssParam4);
-        
+
         polygonSymbolizer.appendChild(stroke);
         polygonSymbolizer.appendChild(fill);
 
         return polygonSymbolizer;
     }
 
-    private Node createStyleLine(Document doc, String geoProperty) {
+    public static String getDefaultPolygonStyle()
+            throws ParserConfigurationException {
 
+        Document doc = getEmptyDocument();
+        Node childNode = createDashedLinePolygon(doc);
+        doc.appendChild(childNode);
+
+        return docToString(doc);
+    }
+
+    public static String getDefaultLineStyle()
+            throws ParserConfigurationException {
+
+        Document doc = getEmptyDocument();
+        Node childNode = createStyleLine(doc, "");
+        doc.appendChild(childNode);
+
+        return docToString(doc);
+    }
+
+    public static String getDefaultPointStyle()
+            throws ParserConfigurationException {
+
+        Document doc = getEmptyDocument();
+        Node childNode = createStylePoint(doc, "");
+        doc.appendChild(childNode);
+
+        return docToString(doc);
+    }
+
+    private static String docToString(Document doc) {
+        try {
+            StringWriter sw = new StringWriter();
+            TransformerFactory tf = TransformerFactory.newInstance();
+            Transformer transformer = tf.newTransformer();
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+
+            transformer.transform(new DOMSource(doc), new StreamResult(sw));
+            return sw.toString();
+        } catch (Exception ex) {
+            log.debug("Fout omzetten Document naar xml");
+            return null;
+        }
+    }
+
+    private static Document getEmptyDocument()
+            throws ParserConfigurationException {
+
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+        DocumentBuilder db = dbf.newDocumentBuilder();
+
+        return db.newDocument();
+    }
+
+    private static Node createStyleLine(Document doc, String geoProperty) {
 
         Node lineSymbolizer = doc.createElement("LineSymbolizer");
         Node geo = doc.createElement("Geometry");
@@ -396,19 +535,19 @@ public class SldServlet extends HttpServlet {
         return lineSymbolizer;
     }
 
-    private Node createFilter(Document doc, String attribute, String[] value,boolean not) {
+    private Node createFilter(Document doc, String attribute, String[] value, boolean not) {
         Node filter = doc.createElementNS(OGCNS, "Filter");
 
-        Node nodeToUse=filter;
-        if (not){
-            Node notFilter = doc.createElementNS(OGCNS,"Not");
+        Node nodeToUse = filter;
+        if (not) {
+            Node notFilter = doc.createElementNS(OGCNS, "Not");
             filter.appendChild(notFilter);
-            nodeToUse=notFilter;
+            nodeToUse = notFilter;
         }
         if (value.length > 1) {
             Node orFilter = doc.createElementNS(OGCNS, "Or");
             nodeToUse.appendChild(orFilter);
-            nodeToUse=orFilter;
+            nodeToUse = orFilter;
         }
 
         for (int i = 0; i < value.length; i++) {
@@ -426,9 +565,9 @@ public class SldServlet extends HttpServlet {
         return filter;
     }
 
-    private Node createFeatureTypeConstraint(Document doc, String attribute, String[] value,boolean not) {
+    private Node createFeatureTypeConstraint(Document doc, String attribute, String[] value, boolean not) {
         Node featureTypeConstraint = doc.createElementNS(SLDNS, "FeatureTypeConstraint");
-        Node filter = createFilter(doc, attribute, value,not);
+        Node filter = createFilter(doc, attribute, value, not);
         featureTypeConstraint.appendChild(filter);
         return featureTypeConstraint;
     }
@@ -448,6 +587,7 @@ public class SldServlet extends HttpServlet {
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
      * Handles the HTTP <code>GET</code> method.
+     *
      * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
@@ -461,6 +601,7 @@ public class SldServlet extends HttpServlet {
 
     /**
      * Handles the HTTP <code>POST</code> method.
+     *
      * @param request servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
@@ -474,6 +615,7 @@ public class SldServlet extends HttpServlet {
 
     /**
      * Returns a short description of the servlet.
+     *
      * @return a String containing servlet description
      */
     @Override

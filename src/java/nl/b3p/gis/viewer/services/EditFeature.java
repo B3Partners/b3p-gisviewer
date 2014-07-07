@@ -547,7 +547,7 @@ public class EditFeature {
     public Boolean removeFeature(String json) throws JSONException {
         JSONObject feat = new JSONObject(json);
 
-        String fid = feat.getString("fid");
+        String fid = Integer.toString(feat.getInt("fid"));
         Integer gbId = feat.getInt("gegevensbronId");
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         org.hibernate.Transaction tx = null;

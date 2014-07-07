@@ -51,6 +51,8 @@ public class TekenAction extends ViewerCrudAction{
         request.setAttribute("tekenTekstOnder", instellingen.get("tekenTekstOnder"));
         request.setAttribute("tekenPlaatje", instellingen.get("tekenPlaatje"));
         request.setAttribute("tekenGegevensbron", instellingen.get("tekenGegevensbron"));
+        request.setAttribute("tekenFilterColumn", instellingen.get("tekenFilterColumn"));
+        
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         
         return mapping.findForward(SUCCESS);
