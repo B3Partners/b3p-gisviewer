@@ -119,7 +119,7 @@ along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
             <generator class="identity"/>
         </id>
         <property name="property"/>
-        <property name="propval"/>
+        <property name="propval" type="text"/>
         <property name="setting"/>
         <property column="soort" name="type"/>
     </class>
