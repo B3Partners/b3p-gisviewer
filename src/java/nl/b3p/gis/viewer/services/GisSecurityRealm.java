@@ -22,7 +22,8 @@
  */
 package nl.b3p.gis.viewer.services;
 
-import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
@@ -31,7 +32,18 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpSession;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import nl.b3p.commons.security.XmlSecurityDatabase;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.B3PCredentials;
@@ -42,11 +54,14 @@ import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.securityfilter.filter.SecurityRequestWrapper;
 import org.securityfilter.realm.ExternalAuthenticatedRealm;
 import org.securityfilter.realm.FlexibleRealmInterface;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthenticatedRealm {
 
@@ -188,31 +203,50 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         /* Do user/password check at kaartenbalie */
         if (username != null && password != null) {
             boolean canLogin = GisSecurityRealm.canLoginKaartenbalie(username, password, ip);
-            
+
             if (!canLogin) {
                 log.error("Gebruiker " + username + " is ongeldig. IP-adres: " + ip);
-                
+
                 return null;
             }
         }
+
         
         try {
-            /* WMS getCapabilities (serviceprovider) cachen */
-            if (isInSPCache(key)) {
+            /* 
+                WMS getCapabilities (serviceprovider) cachen.
+                Als 'cacheOnDisk' en 'cacheOnDiskPath' params niet
+                in web.xml staan plaatst hij de ServiceProvider
+                objecten in geheugen (HashMap)            
+            */
+            Boolean cacheOnDisk = HibernateUtil.cacheOnDisk;
+            if (cacheOnDisk != null && cacheOnDisk && isCachedOnDisk(key)) {
+                sp = readCacheFromDisk(key);
+
+                log.debug("User from DISK cache " + sp.getUserName() + " using key " + key);
+            }
+
+            if (cacheOnDisk ==null || !cacheOnDisk && isInSPCache(key)) {
                 sp = getFromSPCache(key);
 
-                log.debug("Retrieved from cache user " + sp.getUserName() + " using key " + key);
+                log.debug("User from MEM cache " + sp.getUserName() + " using key " + key);
 
-            } else {
+            } else if (sp == null) {
                 sp = wmscr.getProvider(location, username, password, ip);
 
                 if (username != null && password != null && password.length() > 0) {
                     sp.setPassword(password);
                 }
 
-                putInSPCache(key, sp);
+                if (cacheOnDisk != null && cacheOnDisk) {
+                    writeCacheToDisk(key, sp);
 
-                log.debug("Login new in cache for user " + sp.getUserName() + " using key " + key);
+                    log.debug("Login new in DISK cache for user " + sp.getUserName() + " using key " + key);
+                } else {
+                    putInSPCache(key, sp);
+
+                    log.debug("Login new in MEM for user " + sp.getUserName() + " using key " + key);
+                }
             }
 
         } catch (Exception ex) {
@@ -220,8 +254,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                 log.debug("Error reading GetCapabilities ", ex);
             } else {
                 log.error("Error reading GetCapabilities: " + ex.getLocalizedMessage());
-            }            
-            
+            }
+
             return null;
         }
 
@@ -251,10 +285,10 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     /* Do user/password check at kaartenbalie */
     public static boolean canLoginKaartenbalie(String username,
             String password, String ip) {
-        
+
         String loginKbUrl = HibernateUtil.getKbLoginUrl();
         String kbUrl = HibernateUtil.getKbUrl();
-        
+
         /* For when loginKbUrl not in web.xml */
         if (loginKbUrl == null && kbUrl != null) {
             if (kbUrl.lastIndexOf('/') == kbUrl.length() - 1) {
@@ -263,14 +297,14 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                 loginKbUrl = kbUrl + "/login";
             }
         }
-        
-        if (loginKbUrl == null || username == null ||
-                password == null || loginKbUrl.isEmpty() ||
-                username.isEmpty() || password.isEmpty()) {
-            
+
+        if (loginKbUrl == null || username == null
+                || password == null || loginKbUrl.isEmpty()
+                || username.isEmpty() || password.isEmpty()) {
+
             return false;
         }
-        
+
         B3PCredentials cred = new B3PCredentials();
         cred.setUserName(username);
         cred.setPassword(password);
@@ -355,9 +389,92 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         return (ServiceProvider) perUserNameSPCache.get(userName);
     }
 
-    public static synchronized void flushSPCache() {
-        perUserNameSPCache = new HashMap();
+    private static boolean isCachedOnDisk(String key) {
+        String cacheOnDiskPath = HibernateUtil.cacheOnDiskPath;
 
-        log.info("Cache WMS leeggemaakt.");
+        String fileName = cacheOnDiskPath + key + ".xml";
+
+        File f = new File(fileName);
+        if (f.exists() && !f.isDirectory()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void writeCacheToDisk(String key, ServiceProvider sp) {
+        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder docBuilder = null;
+
+        try {
+            docBuilder = docFactory.newDocumentBuilder();
+        } catch (ParserConfigurationException ex) {
+        }
+
+        Document doc = docBuilder.newDocument();
+        Element rootElement = doc.createElement("WMT_MS_Capabilities");
+        doc.appendChild(rootElement);
+
+        Element spElem = sp.toElement(doc, rootElement);
+
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        Transformer transformer = null;
+
+        try {
+            transformer = transformerFactory.newTransformer();
+        } catch (TransformerConfigurationException ex) {
+            Logger.getLogger(GisSecurityRealm.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        String cacheOnDiskPath = HibernateUtil.cacheOnDiskPath;
+        String fileName = cacheOnDiskPath + key + ".xml";
+
+        DOMSource source = new DOMSource(doc);
+        StreamResult result = new StreamResult(new File(fileName));
+
+        try {
+            transformer.transform(source, result);
+        } catch (TransformerException ex) {
+        }
+    }
+
+    private static ServiceProvider readCacheFromDisk(String key) {
+        String cacheOnDiskPath = HibernateUtil.cacheOnDiskPath;
+        String fileName = cacheOnDiskPath + key + ".xml";
+        File file = new File(fileName);
+
+        ByteArrayInputStream in = null;
+        try {
+            in = new ByteArrayInputStream(FileUtils.readFileToByteArray(file));
+        } catch (IOException ex) {
+        }
+
+        WMSCapabilitiesReader wmsReader = new WMSCapabilitiesReader();
+        ServiceProvider serviceProvider = wmsReader.getProvider(in);
+
+        return serviceProvider;
+    }
+
+    public static synchronized void flushSPCache() {
+        boolean cacheOnDisk = HibernateUtil.cacheOnDisk;
+
+        if (cacheOnDisk) {
+            try {
+                String dir = HibernateUtil.cacheOnDiskPath;
+                File directory = new File(dir);
+
+                FileUtils.cleanDirectory(directory);
+            } catch (IOException ex) {
+                log.error("Fout tijdens verwijderen disk cache.", ex);
+            }
+            
+            log.debug("Cache on DISK WMS leeggemaakt.");
+        } else {
+            perUserNameSPCache.clear();
+            //perUserNameSPCache = null;
+            //perUserNameSPCache = new HashMap();
+            
+            log.debug("Cache in MEMORY WMS leeggemaakt.");
+        }
     }
 }

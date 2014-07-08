@@ -49,6 +49,9 @@ public class HibernateUtil extends HttpServlet {
     public static String hibernateDialect = null;
     private static String loginKbUrl = null;
 
+    public static Boolean cacheOnDisk = false;
+    public static String cacheOnDiskPath = null;
+
     static {
         try {
             Configuration config = new Configuration();
@@ -162,13 +165,14 @@ public class HibernateUtil extends HttpServlet {
     public static void setInternalKbUrl(String internalKbUrl) {
         HibernateUtil.internalKbUrl = internalKbUrl;
     }
-    
+
     public static String getKbLoginUrl() {
         return loginKbUrl;
     }
 
     /**
      * Initializes the servlet.
+     *
      * @param config
      * @throws javax.servlet.ServletException
      */
@@ -208,6 +212,13 @@ public class HibernateUtil extends HttpServlet {
             value = config.getInitParameter("loginKbUrl");
             if (value != null && value.length() > 0) {
                 loginKbUrl = value;
+            }
+            
+            if (config.getInitParameter("cacheOnDisk") != null) {
+                cacheOnDisk = Boolean.parseBoolean(config.getInitParameter("cacheOnDisk"));
+            }
+            if (config.getInitParameter("cacheOnDiskPath") != null) {
+                cacheOnDiskPath = config.getInitParameter("cacheOnDiskPath");
             }
         } catch (Exception e) {
             throw new ServletException(e);
