@@ -193,9 +193,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             ip = "invalidIp";
         }
 
-        key = key + "_" + ip;
-
-        log.debug("Key: " + key);
+        //key = key + "_" + ip;
+        //log.debug("Key: " + key);
 
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         Date expDate;
@@ -210,7 +209,6 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                 return null;
             }
         }
-
         
         try {
             /* 
