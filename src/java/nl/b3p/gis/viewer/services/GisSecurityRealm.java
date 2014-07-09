@@ -32,8 +32,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -195,7 +193,6 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
 
         //key = key + "_" + ip;
         //log.debug("Key: " + key);
-
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         Date expDate;
 
@@ -209,14 +206,14 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                 return null;
             }
         }
-        
+
         try {
             /* 
-                WMS getCapabilities (serviceprovider) cachen.
-                Als 'cacheOnDisk' en 'cacheOnDiskPath' params niet
-                in web.xml staan plaatst hij de ServiceProvider
-                objecten in geheugen (HashMap)            
-            */
+             WMS getCapabilities (serviceprovider) cachen.
+             Als 'cacheOnDisk' en 'cacheOnDiskPath' params niet
+             in web.xml staan plaatst hij de ServiceProvider
+             objecten in geheugen (HashMap)            
+             */
             Boolean cacheOnDisk = HibernateUtil.cacheOnDisk;
             if (cacheOnDisk != null && cacheOnDisk && isCachedOnDisk(key)) {
                 sp = readCacheFromDisk(key);
@@ -224,7 +221,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
                 log.debug("User from DISK cache " + sp.getUserName() + " using key " + key);
             }
 
-            if (cacheOnDisk ==null || !cacheOnDisk && isInSPCache(key)) {
+            if (cacheOnDisk == null || !cacheOnDisk && isInSPCache(key)) {
                 sp = getFromSPCache(key);
 
                 log.debug("User from MEM cache " + sp.getUserName() + " using key " + key);
@@ -421,7 +418,6 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         try {
             transformer = transformerFactory.newTransformer();
         } catch (TransformerConfigurationException ex) {
-            Logger.getLogger(GisSecurityRealm.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         String cacheOnDiskPath = HibernateUtil.cacheOnDiskPath;
@@ -433,6 +429,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         try {
             transformer.transform(source, result);
         } catch (TransformerException ex) {
+            log.error("Error writing cache to disk: ", ex);
         }
     }
 
@@ -465,13 +462,13 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             } catch (IOException ex) {
                 log.error("Fout tijdens verwijderen disk cache.", ex);
             }
-            
+
             log.debug("Cache on DISK WMS leeggemaakt.");
         } else {
             perUserNameSPCache.clear();
             //perUserNameSPCache = null;
             //perUserNameSPCache = new HashMap();
-            
+
             log.debug("Cache in MEMORY WMS leeggemaakt.");
         }
     }
