@@ -195,6 +195,8 @@ public class ReportServlet extends HttpServlet {
 
         ReportInfo.Bron.LAYOUT table_type = ReportInfo.Bron.LAYOUT.FLAT_TABLE;
 
+        String wkt = null;
+        
         if (isChild) {
             table_type = ReportInfo.Bron.LAYOUT.SIMPLE_TABLE;
         }
@@ -210,15 +212,13 @@ public class ReportServlet extends HttpServlet {
 
         /* Ophalen waardes */
         List<Object> data = null;
-        try {
-            
-            // eerste keer wel geom ophalen voor tonen plaatje */
+        try {                    
+            // eerste keer wkt ophalen voor tonen plaatje */
             if (table_type.equals(ReportInfo.Bron.LAYOUT.FLAT_TABLE)) {
-                data = getData(gb.getBron(), gb, recordId, columnNames, isChild, true);
-            } else {
-                data = getData(gb.getBron(), gb, recordId, columnNames, isChild, false);
-            }            
+                wkt = getWktForImageUrl(gb.getBron(), gb, recordId, columnNames);
+            }
             
+            data = getData(gb.getBron(), gb, recordId, columnNames, isChild);           
         } catch (Exception ex) {
             log.error("Fout bij ophalen ReportInfo data ", ex);
         }
@@ -248,8 +248,9 @@ public class ReportServlet extends HttpServlet {
             String[] items = (String[]) obj;
             String pkValue = items[pkIndex];
             
-            if (settings != null && table_type.equals(ReportInfo.Bron.LAYOUT.FLAT_TABLE)) {
-                String wkt = items[items.length - 1];
+            if (settings != null && table_type.equals(ReportInfo.Bron.LAYOUT.FLAT_TABLE) 
+                    && wkt != null) {
+                
                 imageUrl = createImageUrl(wkt, settings);
             }            
 
@@ -262,8 +263,13 @@ public class ReportServlet extends HttpServlet {
             }
 
             // remove pk from items array
-            List<String> list = new ArrayList<String>(Arrays.asList(items));
-            list.remove(pkValue);
+            List<String> list = new ArrayList<String>(Arrays.asList(items));            
+            
+            /* pk waarden voor onderliggende tabellen niet tonen in pdf */
+            if (isChild) {
+                list.remove(pkValue);
+            }            
+            
             items = list.toArray(new String[0]);
 
             record.setValues(items);
@@ -363,7 +369,7 @@ public class ReportServlet extends HttpServlet {
     }
 
     public List getData(Bron b, Gegevensbron gb, String recordId,
-            String[] propertyNames, boolean isChild, boolean addGeom) throws IOException,
+            String[] propertyNames, boolean isChild) throws IOException,
             Exception {
 
         String[] pks = new String[1];
@@ -379,18 +385,20 @@ public class ReportServlet extends HttpServlet {
         Filter filter = FilterBuilder.createOrEqualsFilter(
                 DataStoreUtil.convertFullnameToQName(column).getLocalPart(), pks);
 
-        List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
+        List<ThemaData> items = SpatialUtil.getThemaData(gb, true);
+        
+        /* eerste keer Rapport item eraf halen */
+        if (!isChild) {
+            int lastIdx = items.size() -1;
+            items.remove(lastIdx);
+        }
+        
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
 
-        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, addGeom);
+        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, false);
         ArrayList result = new ArrayList();
 
-        int len = 0;
-        if (addGeom) {
-            len = propertyNames.length + 1;
-        } else {
-            len = propertyNames.length;
-        }
+        int len = propertyNames.length;
 
         for (int i = 0; i < features.size(); i++) {
             Feature f = features.get(i);
@@ -406,18 +414,43 @@ public class ReportServlet extends HttpServlet {
                 }
             }
 
-            SimpleFeatureImpl feature = (SimpleFeatureImpl) f;
-            Geometry geom = (Geometry) feature.getDefaultGeometry();
-
-            if (geom != null && addGeom) {
-                String wkt = geom.toText();
-                row[row.length - 1] = wkt;
-            }
-
             result.add(row);
         }
 
         return result;
+    }
+    
+    private String getWktForImageUrl(Bron b, Gegevensbron gb, String recordId,
+            String[] propertyNames) throws Exception {
+
+        String wkt = null;
+        
+        String[] pks = new String[1];
+        pks[0] = recordId;
+
+        String column = gb.getAdmin_pk();
+
+        Filter filter = FilterBuilder.createOrEqualsFilter(
+                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), pks);
+
+        List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
+        List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
+
+        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, true);
+        ArrayList result = new ArrayList();
+        
+        for (int i = 0; i < features.size(); i++) {
+            Feature f = features.get(i);
+
+            SimpleFeatureImpl feature = (SimpleFeatureImpl) f;
+            Geometry geom = (Geometry) feature.getDefaultGeometry();
+
+            if (geom != null) {
+                wkt = geom.toText();
+            }
+        }
+
+        return wkt;    
     }
 
     public static void createXmlOutput(ReportInfo object, String xmlFile) {

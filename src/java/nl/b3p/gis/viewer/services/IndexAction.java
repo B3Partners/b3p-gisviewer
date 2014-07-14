@@ -268,14 +268,22 @@ public class IndexAction extends BaseGisAction {
         }
     }
 
-    private static Map<String, String> getQueryMap(String query) {
+    private static Map<String, String> getQueryMap(String query) {        
+        if (query == null || query.isEmpty()) {
+            return new HashMap();
+        }
+        
         String[] params = query.split("&");
         Map<String, String> map = new HashMap<String, String>();
-        for (String param : params) {
-            String name = param.split("=")[0];
-            String value = param.split("=")[1];
-            map.put(name, value);
+        
+        for (String param : params) {            
+            try {
+                String name = param.split("=")[0];
+                String value = param.split("=")[1];
+                map.put(name, value);
+            } catch (ArrayIndexOutOfBoundsException ex) {}
         }
+        
         return map;
     }
 

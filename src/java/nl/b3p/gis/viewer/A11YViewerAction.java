@@ -376,14 +376,17 @@ public class A11YViewerAction extends BaseGisAction {
             ZoekResultaat r = (ZoekResultaat) results.get(0);
             request.setAttribute("count", r.getCount());
 
-            if (r.getCount() < limit) {
-                limit = r.getCount();
-            }
-
             boolean startLocation = false;
-            for (ZoekResultaatAttribuut attr : r.getAttributen()) {
-                if (attr.getType() == Attribuut.START_GEOMETRY_TYPE) {
-                    startLocation = true;
+
+            if (r != null) {
+                if (r.getCount() < limit) {
+                    limit = r.getCount();
+                }
+
+                for (ZoekResultaatAttribuut attr : r.getAttributen()) {
+                    if (attr.getType() == Attribuut.START_GEOMETRY_TYPE) {
+                        startLocation = true;
+                    }
                 }
             }
 
