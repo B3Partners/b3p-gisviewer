@@ -42,6 +42,7 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import javax.xml.ws.http.HTTPException;
 import nl.b3p.commons.security.XmlSecurityDatabase;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.B3PCredentials;
@@ -49,6 +50,7 @@ import nl.b3p.gis.CredentialsParser;
 import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.wms.capabilities.WMSCapabilitiesReader;
 import nl.b3p.zoeker.configuratie.Bron;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.GetMethod;
@@ -173,7 +175,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             key = username;
         }
 
-        if (key == null) {
+        if (key == null || key.isEmpty()) {
             return null;
         }
 
@@ -187,17 +189,16 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             }
         }
 
-        if (ip == null) {
-            ip = "invalidIp";
-        }
+        log.debug("Username: " + username + ", Password: "
+                + password + ", Code: " + code + ", Key: "
+                + key + ", Ip: " + ip);
 
-        //key = key + "_" + ip;
-        //log.debug("Key: " + key);
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        Date expDate;
+        /* Do user/password check at kaartenbalie. */
+        if (username != null && code == null || code.isEmpty() || code.equals("")
+                || code.equalsIgnoreCase("null")) {
 
-        /* Do user/password check at kaartenbalie */
-        if (username != null && password != null) {
+            log.debug("Checking login with kaartenbalie!");
+
             boolean canLogin = GisSecurityRealm.canLoginKaartenbalie(username, password, ip);
 
             if (!canLogin) {
@@ -299,6 +300,12 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
 
             return false;
         }
+        
+        /* url aanpassen aanroepen via /kaartenbalie/login/*
+        Dan hoeft de loginKbUrl niet perse in de web.xml te staan. */
+        if (loginKbUrl.contains("/services")) {
+            loginKbUrl = loginKbUrl.replaceAll("/services/", "/");
+        }        
 
         B3PCredentials cred = new B3PCredentials();
         cred.setUserName(username);
@@ -309,11 +316,22 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         method.addRequestHeader("X-Forwarded-For", ip);
 
         try {
+            log.debug("method url: " + loginKbUrl);
+            
             int statusCode = client.executeMethod(method);
+            
+            log.debug("Status code: " + statusCode);
             if (statusCode != HttpStatus.SC_OK) {
                 return false;
             }
-        } catch (IOException ex) {
+        } catch (IOException ioex) {
+            log.debug("IOException False: ", ioex);
+            return false;
+        } catch (HTTPException httpex) {
+            log.debug("HTTPException False: ", httpex);
+            return false;
+        } catch (Exception ex) {
+            log.debug("Exception False: ", ex);
             return false;
         } finally {
             method.releaseConnection();
@@ -385,6 +403,10 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     }
 
     private static boolean isCachedOnDisk(String key) {
+        if (key == null || key.isEmpty()) {
+            return false;
+        }
+
         String cacheOnDiskPath = HibernateUtil.cacheOnDiskPath;
 
         String fileName = cacheOnDiskPath + key + ".xml";
@@ -398,6 +420,10 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     }
 
     private static void writeCacheToDisk(String key, ServiceProvider sp) {
+        if (key == null || sp == null || key.isEmpty()) {
+            return;
+        }
+
         DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder docBuilder = null;
 
@@ -434,6 +460,10 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
     }
 
     private static ServiceProvider readCacheFromDisk(String key) {
+        if (key == null || key.isEmpty()) {
+            return null;
+        }
+
         String cacheOnDiskPath = HibernateUtil.cacheOnDiskPath;
         String fileName = cacheOnDiskPath + key + ".xml";
         File file = new File(fileName);
