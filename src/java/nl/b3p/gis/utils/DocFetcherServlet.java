@@ -32,9 +32,9 @@ public class DocFetcherServlet extends HttpServlet {
 
         HTTP, FILE
     }
-    protected static String locationPrefix;
-    protected static int directoryKeepDepth;
-    protected static FetchMethod fetchMethod;
+    protected String locationPrefix;
+    protected int directoryKeepDepth;
+    protected FetchMethod fetchMethod;
 
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
