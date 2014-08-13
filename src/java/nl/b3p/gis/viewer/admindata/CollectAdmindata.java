@@ -1,7 +1,5 @@
 package nl.b3p.gis.viewer.admindata;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -126,11 +124,11 @@ public class CollectAdmindata {
                 }
 
                 GisPrincipal user = null;
-                
+
                 if (request != null) {
                     user = GisPrincipal.getGisPrincipal(request);
                 }
-                
+
                 String layout = null;
                 layout = findDataAdminLayout(thema, user, appCode);
 
@@ -190,6 +188,20 @@ public class CollectAdmindata {
 
                     List<Feature> features = null;
                     features = DataStoreUtil.getFeatures(b, gb, geom, parentCqlFilter, propnames, null, collectGeom);
+
+                    /* 
+                     * TODO: Tijdelijke fix voor ophalen features cyclomedia wfs via 
+                     * geotools. De intersects filter niet te werken maar het bbox
+                     * filter wel. Op r. 408 van de DataStoreUtil.createIntersectFilter
+                     * zegt de wfs wel dat hij de intersects fully support maar er komen
+                     * geen features terug met dat filter.
+                     */
+                    if (features == null || features.size() < 1) {
+                        if (gb.getBron().getUrl().contains("wfs")) {
+                            features = DataStoreUtil.getWfsFeaturesWithGeotools(gb, geom);
+                        }
+                    }
+
                     //featuretype waarmee gekeken kan worden of er een geometry in de feature zit. 
                     DataStore tempDatastore = b.toDatastore();
                     SimpleFeatureType featureType = null;
@@ -272,7 +284,6 @@ public class CollectAdmindata {
                                 /*if (feature.getDefaultGeometry()!=null)
                                  featureGeom=(Geometry) feature.getDefaultGeometry();*/
 
-
                                 //count = getAantalChildRecords(child, childFilter, featureGeom);
                                 //altijd childs tonen.
                                 count = 1;
@@ -331,15 +342,14 @@ public class CollectAdmindata {
         }
 
         /* To JSON
-        try {
-            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-            String json = ow.writeValueAsString(bean);
+         try {
+         ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+         String json = ow.writeValueAsString(bean);
 
-            logger.debug(json);
-        } catch (Exception ex) {
-        }
-        */
-
+         logger.debug(json);
+         } catch (Exception ex) {
+         }
+         */
         return bean;
     }
 
@@ -600,7 +610,7 @@ public class CollectAdmindata {
         if (commando == null) {
             return null;
         }
-        
+
         if (commando.contains("[") && commando.contains("]")) {
             //vervang de eventuele csv in 1 waarde van die csv
             if (attributeName != null && attributeValue != null) {
@@ -614,16 +624,16 @@ public class CollectAdmindata {
             }
             return newCommando;
         }
-        
+
         if (StringUtils.containsIgnoreCase(commando, "ReportServlet")) {
-            return commando;            
+            return commando;
         }
-        
+
         if (attributeValue != null) {
             commando += attributeValue.toString().trim();
             return commando;
         }
-        
+
         return null;
 
     }

@@ -55,6 +55,7 @@ import org.geotools.filter.FilterCapabilities;
 import org.geotools.filter.FilterTransformer;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.filter.text.cql2.CQLException;
+import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.util.logging.Log4JLoggerFactory;
 import org.geotools.util.logging.Logging;
@@ -69,18 +70,20 @@ import org.opengis.feature.type.GeometryType;
 import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
+import org.opengis.geometry.BoundingBox;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.TransformException;
 
 /**
  * B3partners B.V. http://www.b3partners.nl
- * @author Roy
- * Created on 17-jun-2010, 17:12:27
+ *
+ * @author Roy Created on 17-jun-2010, 17:12:27
  */
 public class DataStoreUtil {
 
     private static final FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
     private static final Log log = LogFactory.getLog(GetViewerDataAction.class);
-    
+
     public static final int maxFeatures = 1000;
     public static final int MAX_COORDS_WKT = 250;
 
@@ -95,14 +98,19 @@ public class DataStoreUtil {
     }
 
     /**
-     * Haal de features op van het Thema
-     * De 3 mogelijke filters worden gecombineerd als ze gevuld zijn (1: ThemaFilter, 2: ExtraFilter 3: GeometryFilter)
-     * LETOP!: De DataStore wordt in deze functie geopend en gesloten. Als je dus al een datastore hebt geopend, gebruik dan de functie
-     * waarin je de DataStore mee kan geven.
+     * Haal de features op van het Thema De 3 mogelijke filters worden
+     * gecombineerd als ze gevuld zijn (1: ThemaFilter, 2: ExtraFilter 3:
+     * GeometryFilter) LETOP!: De DataStore wordt in deze functie geopend en
+     * gesloten. Als je dus al een datastore hebt geopend, gebruik dan de
+     * functie waarin je de DataStore mee kan geven.
+     *
      * @param t Het thema waarvan de features moeten worden opgehaald
-     * @param geom De geometrie waarmee de features moeten intersecten (mag null zijn)
-     * @param extraFilter een extra filter dat wordt gebruikt om de features op te halen
-     * @param maximum Het maximum aantal features die gereturned moeten worden. (default is geset op 1000)
+     * @param geom De geometrie waarmee de features moeten intersecten (mag null
+     * zijn)
+     * @param extraFilter een extra filter dat wordt gebruikt om de features op
+     * te halen
+     * @param maximum Het maximum aantal features die gereturned moeten worden.
+     * (default is geset op 1000)
      *
      */
     public static ArrayList<Feature> getFeatures(Bron b, Gegevensbron gb, Geometry geom, Filter extraFilter, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
@@ -130,10 +138,73 @@ public class DataStoreUtil {
         }
     }
 
+    public static List<Feature> getWfsFeaturesWithGeotools(Gegevensbron gb,
+            Geometry geom) {
+
+        List<Feature> features = new ArrayList();
+        if (gb == null || gb.getBron() == null) {
+            return features;
+        }
+
+        QName ftName = convertFullnameToQName(gb.getAdmin_tabel());
+        try {
+            DataStore ds = gb.getBron().toDatastore();
+
+            FeatureSource fs = null;
+            FeatureIterator fi = null;
+
+            if (ds instanceof WFS_1_1_0_DataStore) {
+                fs = ds.getFeatureSource(new NameImpl(ftName.getNamespaceURI(), ftName.getLocalPart()));
+            } else {
+                fs = ds.getFeatureSource(ftName.getLocalPart());
+            }
+
+            SimpleFeatureType featureType = (SimpleFeatureType) fs.getSchema();
+            if (featureType != null) {
+                Filter filter = getBboxFilter(featureType, geom);
+                fi = fs.getFeatures(filter).features();
+
+                try {
+                    while (fi.hasNext()) {
+                        features.add(fi.next());
+                    }
+                } finally {
+                    if (fs != null) {
+                        fi.close();
+                    }
+                }
+            }            
+        } catch (IOException ioex) {
+            log.error("Fout ophalen features.", ioex);
+        } catch (Exception ioex) {
+            log.error("Fout omzetten datastore.", ioex);
+        }
+
+        return features;
+    }
+
+    private static Filter getBboxFilter(SimpleFeatureType featureType, Geometry geom) {
+        String geometryPropertyName = featureType.getGeometryDescriptor().getLocalName();
+
+        FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
+
+        CoordinateReferenceSystem targetCRS = featureType.getGeometryDescriptor()
+                .getCoordinateReferenceSystem();
+
+        BoundingBox bbox = null;
+        try {
+            bbox = JTS.toEnvelope(geom).toBounds(targetCRS);
+        } catch (TransformException tex) {
+            log.error("Fout omzetten naar bbox.", tex);
+        }        
+        
+        return ff.bbox(ff.property(geometryPropertyName), bbox);
+    }
+
     /**
-     * De beste functie om te gebruiken. Open en dispose de DataStore zelf bij het meegeven.
-     * Alle filters zijn gecombineerd in Filter f. (geometry filter en extra filter)
-     * Het adminfilter wordt automatisch toegevoegd.
+     * De beste functie om te gebruiken. Open en dispose de DataStore zelf bij
+     * het meegeven. Alle filters zijn gecombineerd in Filter f. (geometry
+     * filter en extra filter) Het adminfilter wordt automatisch toegevoegd.
      */
     public static ArrayList<Feature> getFeatures(DataStore ds, Gegevensbron gb, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
         FeatureCollection fc = getFeatureCollection(ds, gb, f, propNames, maximum, collectGeom);
@@ -255,7 +326,7 @@ public class DataStoreUtil {
             }
 
             /*Als een themaDataObject van het type query is en er zitten [] in
-            dan moeten deze ook worden opgehaald*/
+             dan moeten deze ook worden opgehaald*/
             Iterator<ThemaData> it = SpatialUtil.getThemaData(gb, false).iterator();
             while (it.hasNext()) {
                 ThemaData td = it.next();
@@ -381,8 +452,9 @@ public class DataStoreUtil {
     }
 
     /**
-     * Haal het thema schema op van de datastore. Dit is het schema van het feature type dat bij thema
-     * als Admin_tabel is ingevuld. zie ook getSchema(DataStore,String);
+     * Haal het thema schema op van de datastore. Dit is het schema van het
+     * feature type dat bij thema als Admin_tabel is ingevuld. zie ook
+     * getSchema(DataStore,String);
      */
     public static SimpleFeatureType getSchema(DataStore ds, Themas t) throws Exception {
 
@@ -393,27 +465,33 @@ public class DataStoreUtil {
     }
 
     /**
-     * Haalt het schema op van de featureType met de naam: 'featureName'
-     * Als het log op DebugEnabled staat dan wordt er in het log ook een lijst met mogelijke schemas getoond.
+     * Haalt het schema op van de featureType met de naam: 'featureName' Als het
+     * log op DebugEnabled staat dan wordt er in het log ook een lijst met
+     * mogelijke schemas getoond.
      */
     public static SimpleFeatureType getSchema(DataStore ds, String featureName) throws Exception {
         QName ftName = convertFullnameToQName(featureName);
         try {
             if (ds instanceof WFS_1_1_0_DataStore) {
                 return ds.getSchema(new NameImpl(ftName.getNamespaceURI(), ftName.getLocalPart()));
-            }
-            return ds.getSchema(ftName.getLocalPart());
+            } else {
+                SimpleFeatureType sft = ds.getFeatureSource(ftName.getLocalPart()).getSchema();
+            
+                return sft;
+                
+                //return ds.getSchema(ftName.getLocalPart());
+            }            
         } catch (Exception e) {
 
             // NPE indien schema niet opgehaald kan worden,
             // wij maken er een leeg schema van
             //FeatureTypeBuilder ftb = FeatureTypeBuilder.newInstance(ftName.getLocalPart());
             SimpleFeatureTypeBuilder sftb = new SimpleFeatureTypeBuilder();
-            
+
             if (ftName != null) {
                 sftb.setName(ftName.getLocalPart());
             }
-            
+
             return sftb.buildFeatureType();
             //  throw e;
         }
@@ -446,8 +524,9 @@ public class DataStoreUtil {
     }
 
     /**
-     * Haal het thema schema op van de datastore. Dit is het schema van het feature type dat bij thema
-     * als Admin_tabel is ingevuld. zie ook getSchema(DataStore,String);
+     * Haal het thema schema op van de datastore. Dit is het schema van het
+     * feature type dat bij thema als Admin_tabel is ingevuld. zie ook
+     * getSchema(DataStore,String);
      */
     public static SimpleFeatureType getSchema(DataStore ds, Gegevensbron gb) throws Exception {
 
@@ -470,7 +549,8 @@ public class DataStoreUtil {
     }
 
     /**
-     * Geeft een lijst terug met String objecten waarin de mogelijke attributeNames staan.
+     * Geeft een lijst terug met String objecten waarin de mogelijke
+     * attributeNames staan.
      */
     public static List<String> getAttributeNames(DataStore ds, String featureName) throws Exception {
         QName ftName = convertFullnameToQName(featureName);
@@ -623,7 +703,7 @@ public class DataStoreUtil {
 
     /**
      * Wordt nu niet gebruikt, maar dit is wel de best plaats voor later
-     * 
+     *
      * @param params
      * @return
      * @throws IOException
@@ -723,7 +803,7 @@ public class DataStoreUtil {
             }
         }
         return null;
-    }    
+    }
 
     public static String convertFeature2WKT(Feature f, boolean fallback) {
         if (f == null || f.getDefaultGeometryProperty() == null) {
@@ -776,7 +856,7 @@ public class DataStoreUtil {
         DataStore ds = DataStoreFinder.getDataStore(params);
 
         /*omdat de WFS_1_0_0_Datastore niet met de opengis filters werkt even toevoegen dat
-        er simpelle vergelijkingen kunnen worden gedaan. (de meeste servers kunnen dit natuurlijk);*/
+         er simpelle vergelijkingen kunnen worden gedaan. (de meeste servers kunnen dit natuurlijk);*/
         if (ds instanceof WFS_1_0_0_DataStore) {
             WFS_1_0_0_DataStore wfs100ds = (WFS_1_0_0_DataStore) ds;
             WFSCapabilities wfscap = wfs100ds.getCapabilities();
@@ -804,7 +884,6 @@ public class DataStoreUtil {
         String prefixedFTName = "demowfs_rivieren_nl";
 //        String prefixedFTName = "app:roowfs_Bestemmingsplangebied";
         QName ftName = convertFullnameToQName(prefixedFTName);
-
 
         DefaultQuery query = null;
         SimpleFeatureType sft = null;
@@ -876,8 +955,8 @@ public class DataStoreUtil {
         WFSDataStore wfsDatastore = null;
         try {
             Map params = new HashMap();
-            String url =
-                    "http://acceptatie.prvlimburg.nl/geoservices/wion";
+            String url
+                    = "http://acceptatie.prvlimburg.nl/geoservices/wion";
             if (!url.endsWith("&") && !url.endsWith("?")) {
                 url += url.indexOf("?") >= 0 ? "&" : "?";
             }
@@ -885,10 +964,10 @@ public class DataStoreUtil {
             params.put(WFSDataStoreFactory.TIMEOUT.key, 30000);
             params.put(WFSDataStoreFactory.URL.key, url
                     + "Request=GetCapabilities&Service=WFS&Version=1.0.0");
-            wfsDatastore =
-                    (WFSDataStore) DataStoreFinder.getDataStore(params);
-            FilterFactory2 ff =
-                    CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
+            wfsDatastore
+                    = (WFSDataStore) DataStoreFinder.getDataStore(params);
+            FilterFactory2 ff
+                    = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
 
             String typeName = "BUIS_DUIKERS";
             String property = "msGeometry";
