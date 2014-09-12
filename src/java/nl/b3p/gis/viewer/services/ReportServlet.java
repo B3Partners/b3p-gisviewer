@@ -277,19 +277,25 @@ public class ReportServlet extends HttpServlet {
             bron.addRecord(record);
 
             List<ReportInfo.Bron> subBronnen = null;
+            
             Set children = gb.getChildren();
 
             /* Sort op volgordenr */
-            List<Gegevensbron> childList = new ArrayList<Gegevensbron>(children);
-            Collections.sort(childList);
+            List<Gegevensbron> childList = new ArrayList<Gegevensbron>(children);                   
+            try {
+                if (childList.size() > 0) {
+                    Collections.sort(childList);
+                }                
+            } catch (Exception ex) {
+                log.debug("Fout tijdens sorteren gegevensbronnen: ", ex);
+            }
 
             for (Gegevensbron child : childList) {
                 Gegevensbron gbChild = (Gegevensbron) child;
 
-                ReportInfo.Bron childBron = createReportBron(gbChild, pkValue, true, null, null);
+                ReportInfo.Bron childBron = createReportBron(gbChild, pkValue, true, null, null);               
                 if (childBron == null || childBron.getRecords() == null
                         || childBron.getRecords().size() < 1) {
-
                     continue;
                 }
 

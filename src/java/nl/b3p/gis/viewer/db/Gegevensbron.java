@@ -122,6 +122,14 @@ public class Gegevensbron implements Comparable {
             return 0;
         }
         
+        if (this.getVolgordenr() == null) {
+            return -1;
+        }
+        
+        if (gb.getVolgordenr() == null) {
+            return 1;
+        }
+        
         if (this.getVolgordenr() < gb.getVolgordenr()) {
             return -1;
         }
@@ -130,7 +138,7 @@ public class Gegevensbron implements Comparable {
             return 1;
         }
         
-        if (this.getVolgordenr() == gb.getVolgordenr()) {
+        if (this.getVolgordenr() == gb.getVolgordenr().intValue()) {
             return this.getNaam().compareTo(gb.getNaam());
         }        
         

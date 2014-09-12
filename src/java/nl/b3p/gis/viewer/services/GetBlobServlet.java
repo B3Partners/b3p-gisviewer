@@ -1,6 +1,7 @@
 package nl.b3p.gis.viewer.services;
 
 import java.io.*;
+import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -52,13 +53,13 @@ public class GetBlobServlet extends HttpServlet {
                 Integer id = new Integer(recordId);
                 String adminTabel = gb.getAdmin_tabel();
                 String primaryKey = gb.getAdmin_pk();
-
+                
                 Object obj = getBlob(id, columnName, adminTabel, primaryKey, conn);
 
                 if (obj != null && mimeType != null && !mimeType.contains("html")) {
-                    byte[] arr = convertObjectToByteArray(obj);
+                    byte[] arr = convertObjectToByteArray(obj);                    
                     createBinary(response, arr, mimeType, columnName);
-                } else if (obj != null && mimeType != null && mimeType.contains("html")) {
+                } else if (obj != null && mimeType != null && mimeType.contains("html")) {                    
                     createHtml(response, obj);
                 } else {
                     writeMessage(response, "Geen document gevonden.");
@@ -66,13 +67,16 @@ public class GetBlobServlet extends HttpServlet {
 
                 tx.commit();
             } catch (Exception e) {
+                log.error("Fout tijdens ophalen blob: ", e);
+                
+                writeMessage(response, "Fout tijdens ophalen blob.");
+                
                 if (tx.isActive()) {
                     tx.rollback();
                 }
             } finally {
                 DbUtils.close(conn);
             }
-
         } else {
             writeMessage(response, "Verplichte parameters ontbreken.");
         }
@@ -80,19 +84,34 @@ public class GetBlobServlet extends HttpServlet {
 
     private byte[] convertObjectToByteArray(Object obj)
             throws IOException {
+        
+        byte[] arr = null;
+        
+        if (obj instanceof Blob) {
+            try {
+                Blob b = (Blob) obj;
+
+                arr = b.getBytes(1, (int) b.length());
+            } catch (Exception ex) {
+                log.error("Fout bij omzetten naar blob");
+            }
+
+            return arr;
+        }
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutput objOut = null;
-
-        byte[] arr = null;
-
+        
         try {
             objOut = new ObjectOutputStream(bos);
             objOut.writeObject(obj);
-
+            
             arr = bos.toByteArray();
         } finally {
-            objOut.close();
+            if (objOut != null) {
+                objOut.close();
+            }
+            
             bos.close();
         }
 
@@ -144,14 +163,14 @@ public class GetBlobServlet extends HttpServlet {
         }
 
         String sql = "select " + column + " from " + table + " where " + pk + " = ?";
-
+        
         try {
             return new QueryRunner().query(conn, sql, new ResultSetHandler<Object>() {
                 public Object handle(ResultSet rs) throws SQLException {
                     Object obj = null;
 
                     while (rs.next()) {
-                        obj = rs.getObject(1);
+                        obj = rs.getBlob(1);
                     }
 
                     return obj;
@@ -175,17 +194,29 @@ public class GetBlobServlet extends HttpServlet {
 
                 /* TODO: make generic for postgres and oracle. DataSource ?*/
                 Class.forName("oracle.jdbc.driver.OracleDriver");
-
-                /* TODO: See if ORCL.BAG can also work for SID */
-
-                return DriverManager.getConnection(b.getUrl(), connectionProps);
-
+                
+                String url = replaceSchema(b.getUrl());
+                
+                return DriverManager.getConnection(url, connectionProps);
             } catch (Exception ex) {
                 log.error("Fout bij maken connectie: ", ex);
             }
         }
 
         return null;
+    }
+    
+    private String replaceSchema(String url) {
+        if (url != null) {
+            int idxLast = url.lastIndexOf(":");
+            int idxLastDot = url.lastIndexOf(".");
+            
+            if (idxLastDot > idxLast) {
+                url = url.substring(0, idxLastDot);
+            }            
+        }
+
+        return url;
     }
 
     private void writeMessage(HttpServletResponse response, String message) {
