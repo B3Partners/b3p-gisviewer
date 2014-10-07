@@ -5,25 +5,38 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.ProxySelector;
+import java.util.Arrays;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.StreamCopy;
-import org.apache.commons.httpclient.Credentials;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.UsernamePasswordCredentials;
-import org.apache.commons.httpclient.auth.AuthScope;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.SystemDefaultRoutePlanner;
 
 public class DocFetcherServlet extends HttpServlet {
 
-    private static final String host = AuthScope.ANY_HOST;
-    private static final int port = AuthScope.ANY_PORT;
+    private static final String host = null;
+    private static final int port = -1;
     private static final int RTIMEOUT = 20000;
     private static final String DEFAULT_MIME_TYPE = "application/octet-stream";
     private static Log log = LogFactory.getLog(DocFetcherServlet.class);
@@ -172,35 +185,60 @@ public class DocFetcherServlet extends HttpServlet {
         String contentType = null;
         InputStream input = null;
 
-        HttpClient client = new HttpClient();
-        client.getHttpConnectionManager().
-                getParams().setConnectionTimeout(RTIMEOUT);
+           RequestConfig defaultRequestConfig = RequestConfig.custom()
+            .setStaleConnectionCheckEnabled(false)
+            .setTargetPreferredAuthSchemes(Arrays.asList(AuthSchemes.BASIC))
+            .setProxyPreferredAuthSchemes(Arrays.asList(AuthSchemes.BASIC))
+            .setConnectionRequestTimeout(RTIMEOUT)
+            .build();
+        
+        HttpClientBuilder hcb = HttpClients.custom()
+                .setDefaultRequestConfig(defaultRequestConfig);
 
+        HttpClientContext context = HttpClientContext.create();
         if (username != null && password != null) {
-            client.getParams().setAuthenticationPreemptive(true);
-            Credentials defaultcreds = new UsernamePasswordCredentials(username, password);
-            AuthScope authScope = new AuthScope(host, port);
-            client.getState().setCredentials(authScope, defaultcreds);
-        }
+            HttpHost targetHost = new HttpHost(host, port);
+            CredentialsProvider credentialsProvider = 
+                    new BasicCredentialsProvider();
+            Credentials defaultcreds = 
+                    new UsernamePasswordCredentials(username, password);
+            AuthScope authScope = 
+                    new AuthScope(targetHost.getHostName(), targetHost.getPort());
+            credentialsProvider.setCredentials(authScope, defaultcreds);
 
-        // Create a method instance.
-        GetMethod method = new GetMethod(location);
+            hcb = hcb.setDefaultCredentialsProvider(credentialsProvider);
+        }
+        //Use standard JRE proxy selector to obtain proxy information 
+        SystemDefaultRoutePlanner routePlanner = 
+                new SystemDefaultRoutePlanner(ProxySelector.getDefault());
+        hcb.setRoutePlanner(routePlanner); 
+        
+        CloseableHttpClient client = hcb.build();
+        
+        HttpPost post = new HttpPost(location);
+        CloseableHttpResponse iresponse = client.execute(post, context);
 
         try {
-            int statusCode = client.executeMethod(method);
-            if (statusCode != HttpStatus.SC_OK) {
-                log.error("Host: " + location + " error: " + method.getStatusLine().getReasonPhrase());
+
+            int statusCode = iresponse.getStatusLine().getStatusCode();
+            HttpEntity entity = iresponse.getEntity();
+            input = entity.getContent();
+            
+            if (statusCode != 200) {
+                log.error("Host: " + location + " error: " + iresponse.getStatusLine().getReasonPhrase());
                 response.sendError(HttpServletResponse.SC_NOT_FOUND,
                         "Document " + headerFileName + " ("
-                        + method.getStatusLine().getReasonPhrase()
+                        + iresponse.getStatusLine().getReasonPhrase()
                         + ")");
                 return;
             }
-            if (method.getResponseHeader("Content-Type") != null) {
-                contentType = method.getResponseHeader("Content-Type").getValue();
+            
+            Header header = entity.getContentType();
+            if (header == null || header.getValue().isEmpty()) {
+                contentType = "image/png";
+            } else {
+                contentType = header.getValue();
             }
-
-            input = method.getResponseBodyAsStream();
 
             response.setContentType(contentType);
             response.addHeader("Content-Disposition", "attachment; filename=" + headerFileName);
@@ -213,13 +251,12 @@ public class DocFetcherServlet extends HttpServlet {
                     input.close();
                 }
             }
+
         } catch (Exception e) {
             log.error("Exception bij sturen document voor " + location, e);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Fout tijdens sturen document: " + e.getClass() + ": " + e.getMessage());
         } finally {
-            // Release the connection.
-            method.releaseConnection();
+            iresponse.close();
         }
-
     }
 }

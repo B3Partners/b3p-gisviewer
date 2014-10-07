@@ -26,7 +26,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.security.Principal;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -42,21 +41,19 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import javax.xml.ws.http.HTTPException;
 import nl.b3p.commons.security.XmlSecurityDatabase;
 import nl.b3p.commons.services.FormUtils;
-import nl.b3p.gis.B3PCredentials;
-import nl.b3p.gis.CredentialsParser;
+import nl.b3p.commons.services.B3PCredentials;
+import nl.b3p.commons.services.HttpClientConfigured;
 import nl.b3p.wms.capabilities.ServiceProvider;
 import nl.b3p.wms.capabilities.WMSCapabilitiesReader;
 import nl.b3p.zoeker.configuratie.Bron;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.securityfilter.filter.SecurityRequestWrapper;
 import org.securityfilter.realm.ExternalAuthenticatedRealm;
 import org.securityfilter.realm.FlexibleRealmInterface;
@@ -310,31 +307,33 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         B3PCredentials cred = new B3PCredentials();
         cred.setUserName(username);
         cred.setPassword(password);
+        cred.setUrl(loginKbUrl);
+        cred.setPreemptive(true);
 
-        HttpClient client = CredentialsParser.CommonsHttpClientCredentials(cred);
-        GetMethod method = new GetMethod(loginKbUrl);
-        method.addRequestHeader("X-Forwarded-For", ip);
+        HttpClientConfigured hcc = new HttpClientConfigured(cred);
+        log.debug("method url: " + loginKbUrl);
+        HttpGet request = new HttpGet(loginKbUrl);
+        request.addHeader("X-Forwarded-For", ip);
 
+        HttpResponse response = null;
         try {
-            log.debug("method url: " + loginKbUrl);
-            
-            int statusCode = client.executeMethod(method);
-            
+            response = hcc.execute(request);
+            int statusCode = response.getStatusLine().getStatusCode();
             log.debug("Status code: " + statusCode);
-            if (statusCode != HttpStatus.SC_OK) {
+            if (statusCode != 200) {
                 return false;
             }
-        } catch (IOException ioex) {
-            log.debug("IOException False: ", ioex);
-            return false;
-        } catch (HTTPException httpex) {
-            log.debug("HTTPException False: ", httpex);
-            return false;
-        } catch (Exception ex) {
+        } catch (IOException ex) {
             log.debug("Exception False: ", ex);
             return false;
         } finally {
-            method.releaseConnection();
+            if (response instanceof CloseableHttpResponse) {
+                try {
+                    ((CloseableHttpResponse)response).close();
+                } catch (IOException ex) {
+                    log.debug("Error closing: ", ex);
+                }
+            }
         }
 
         return true;

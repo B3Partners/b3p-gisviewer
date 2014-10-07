@@ -16,7 +16,10 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.rtf.RtfWriter2;
 import java.io.IOException;
+import java.net.ProxySelector;
+import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 import javax.servlet.ServletConfig;
@@ -25,15 +28,32 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
+import nl.b3p.commons.services.B3PCredentials;
+import nl.b3p.commons.services.HttpClientConfigured;
 import nl.b3p.imagetool.CombineImageSettings;
-import org.apache.commons.httpclient.Credentials;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.UsernamePasswordCredentials;
-import org.apache.commons.httpclient.auth.AuthScope;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.AuthCache;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.impl.auth.BasicScheme;
+import org.apache.http.impl.client.BasicAuthCache;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.SystemDefaultRoutePlanner;
+import org.apache.http.util.EntityUtils;
 
 /**
  *
@@ -42,8 +62,6 @@ import org.apache.commons.logging.LogFactory;
 public class CreateMapPDF extends HttpServlet {
 
     private static final int RTIMEOUT = 20000;
-    private static final String host = AuthScope.ANY_HOST; // "localhost";
-    private static final int port = AuthScope.ANY_PORT;
     private static final Log log = LogFactory.getLog(CreateMapPDF.class);
     private static final String METADATA_TITLE = "Kaartexport B3P Gisviewer";
     private static final String METADATA_AUTHOR = "B3P Gisviewer";
@@ -313,39 +331,35 @@ public class CreateMapPDF extends HttpServlet {
     }
 
     private Image getImage(String mapUrl, HttpServletRequest request) throws IOException, Exception {
-        String username = null;
-        String password = null;
         GisPrincipal gp = GisPrincipal.getGisPrincipal(request);
+        B3PCredentials credentials = new B3PCredentials();
         if (gp != null) {
-            username = gp.getName();
-            password = gp.getPassword();
+            credentials.setUserName(gp.getName());
+            credentials.setPassword(gp.getPassword());
         }
+        credentials.setUrl(mapUrl);
+        credentials.setPreemptive(true);
+        
+        HttpClientConfigured hcc = new HttpClientConfigured(credentials);
+        HttpGet httpget = new HttpGet(mapUrl);
+        HttpResponse response = hcc.execute(httpget);
 
-        HttpClient client = new HttpClient();
-        client.getHttpConnectionManager().
-                getParams().setConnectionTimeout(RTIMEOUT);
-
-        if (username != null && password != null) {
-//            client.getParams().setAuthenticationPreemptive(true);
-            Credentials defaultcreds = new UsernamePasswordCredentials(username, password);
-            AuthScope authScope = new AuthScope(host, port);
-//            client.getState().setCredentials(authScope, defaultcreds);
-        }
-
-
-        // Create a method instance.
-        GetMethod method = new GetMethod(mapUrl);
         try {
-            int statusCode = client.executeMethod(method);
-            if (statusCode != HttpStatus.SC_OK) {
-                log.error("Host: " + mapUrl + " error: " + method.getStatusLine().getReasonPhrase());
-                throw new Exception("Host: " + mapUrl + " error: " + method.getStatusLine().getReasonPhrase());
+
+            int statusCode = response.getStatusLine().getStatusCode();
+            HttpEntity entity = response.getEntity();
+            if (statusCode != 200) {
+                log.error("Host: " + mapUrl + " error: " + response.getStatusLine().getReasonPhrase());
+                throw new Exception("Host: " + mapUrl + " error: " + response.getStatusLine().getReasonPhrase());
             }
-            byte[] ba = method.getResponseBody();
-             return Image.getInstance(ba);
+            
+            byte[] ba = EntityUtils.toString(entity).getBytes();
+            return Image.getInstance(ba);
+            
         } finally {
-            // Release the connection.
-            method.releaseConnection();
+            if (response instanceof CloseableHttpResponse) {
+                ((CloseableHttpResponse)response).close();
+            }
         }
     }
 
