@@ -327,13 +327,8 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             log.debug("Exception False: ", ex);
             return false;
         } finally {
-            if (response instanceof CloseableHttpResponse) {
-                try {
-                    ((CloseableHttpResponse)response).close();
-                } catch (IOException ex) {
-                    log.debug("Error closing: ", ex);
-                }
-            }
+            hcc.close(response);
+            hcc.close();
         }
 
         return true;

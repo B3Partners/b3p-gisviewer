@@ -357,9 +357,8 @@ public class CreateMapPDF extends HttpServlet {
             return Image.getInstance(ba);
             
         } finally {
-            if (response instanceof CloseableHttpResponse) {
-                ((CloseableHttpResponse)response).close();
-            }
+            hcc.close(response);
+            hcc.close();
         }
     }
 
