@@ -284,11 +284,10 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
 
         /* For when loginKbUrl not in web.xml */
         if (loginKbUrl == null && kbUrl != null) {
-            if (kbUrl.lastIndexOf('/') == kbUrl.length() - 1) {
-                loginKbUrl = kbUrl + "login";
-            } else {
-                loginKbUrl = kbUrl + "/login";
-            }
+            if (kbUrl.contains("/services")) {
+                loginKbUrl = kbUrl;
+                loginKbUrl = loginKbUrl.replaceAll("/services", "/login");
+            }        
         }
 
         if (loginKbUrl == null || username == null
@@ -298,11 +297,6 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             return false;
         }
         
-        /* url aanpassen aanroepen via /kaartenbalie/login/*
-        Dan hoeft de loginKbUrl niet perse in de web.xml te staan. */
-        if (loginKbUrl.contains("/services")) {
-            loginKbUrl = loginKbUrl.replaceAll("/services/", "/");
-        }        
 
         B3PCredentials cred = new B3PCredentials();
         cred.setUserName(username);
