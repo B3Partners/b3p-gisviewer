@@ -52,7 +52,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.securityfilter.filter.SecurityRequestWrapper;
 import org.securityfilter.realm.ExternalAuthenticatedRealm;
@@ -186,8 +185,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             }
         }
 
-        log.debug("Username: " + username + ", Password: "
-                + password + ", Code: " + code + ", Key: "
+        log.debug("Username: " + username + ", Password: ****, Code: " + code + ", Key: "
                 + key + ", Ip: " + ip);
 
         /* Do user/password check at kaartenbalie. */
