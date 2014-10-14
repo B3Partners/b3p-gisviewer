@@ -404,9 +404,18 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
 
         return false;
     }
+    
+    private static boolean isCachePathValid() {
+        String cacheOnDiskPath = HibernateUtil.cacheOnDiskPath;
+        File f = new File(cacheOnDiskPath);
+        if (f.isDirectory()) {
+            return true;
+        }
+        return false;
+    }
 
     private static void writeCacheToDisk(String key, ServiceProvider sp) {
-        if (key == null || sp == null || key.isEmpty()) {
+        if (key == null || sp == null || key.isEmpty() || !isCachePathValid()) {
             return;
         }
 
