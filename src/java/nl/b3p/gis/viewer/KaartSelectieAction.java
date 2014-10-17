@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -47,9 +46,8 @@ import nl.b3p.gis.viewer.services.DownloadServlet;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
-import nl.b3p.ogc.sld.SldNamedLayer;
-import nl.b3p.ogc.sld.SldReader;
 import nl.b3p.ogc.sld.SldUserStyle;
+import nl.b3p.ogc.sld.SldWriter;
 import nl.b3p.ogc.utils.KBConfiguration;
 import nl.b3p.ogc.utils.OGCConstants;
 import nl.b3p.ogc.utils.OGCRequest;
@@ -623,46 +621,36 @@ public class KaartSelectieAction extends BaseGisAction {
 
         sess.save(us);
         
-        /* Sld url opslaan en styles bij juiste layers opslaan */
-        /* NamedLayers uit Sld ophalen */
-        SldReader sldReader = new SldReader();
-        List<SldNamedLayer> namedLayers = null;
-        if (sldUrl != null && !sldUrl.equals("")) {            
-            namedLayers = sldReader.getNamedLayersByUrl(sldUrl);
-        }
-
-        Set<UserLayer> layerSet = us.getUser_layers();
-        Iterator dwIter = layerSet.iterator();
-
-        while (dwIter.hasNext()) {
-            UserLayer layer = (UserLayer) dwIter.next();
-
-            /* Kijken of voor deze layer UserStyles in bijbehorende NamedLayer
-             * voorkomen. Zo ja, deze als Style opslaan in database */
-            if (namedLayers != null && namedLayers.size() > 0) {
-                Set<Style> styles = getSldStylesSet(namedLayers,layer);                                
-                Iterator<Style> styleIt = styles.iterator();
-                while(styleIt.hasNext()){
-                    Style style = styleIt.next();
-                    
-                    layer.setSld_part(style.getSldPart());
-                    
-                    UserLayerStyle uls = new UserLayerStyle();
-                    uls.setLayerid(layer);
-                    
-                    if (layer.getName() == null && layer.getName().equals("")) {
-                        uls.setName(style.getName() + "_SLD" );  
-                    } else {
-                        uls.setName(layer.getName());
-                    }                                      
-                    
-                    layer.addStyle(uls);
-                    
-                    sess.save(layer);
-                }
-            }
+        // Sld url opslaan en styles bij juiste layers opslaan
+        // NamedLayers uit Sld ophalen
+        SldWriter sldwriter = new SldWriter();
+        if (sldUrl != null && !sldUrl.equals("")) {
+            sldwriter.parseByUrl(sldUrl);
         }
         
+        // Kijken of voor deze layer UserStyles in bijbehorende NamedLayer
+        // voorkomen. Zo ja, deze als Style opslaan in database 
+        Set<UserLayer> layerSet = us.getUser_layers();
+        for (UserLayer userLayer : layerSet) {
+            //get only the userStyles for this layer
+            List<SldUserStyle> userStyles = sldwriter.getUserStyles(userLayer.getName());
+
+            for (SldUserStyle userStyle : userStyles) {
+                //TODO Wat gebeurt hier? telkens weer ander sldpart in zelfde
+                //var opslaan?? of is er altijd maar één userStyle?
+                userLayer.setSld_part(userStyle.getSldPart());
+                UserLayerStyle uls = new UserLayerStyle();
+                uls.setLayerid(userLayer);
+                if (userLayer.getName() == null && userLayer.getName().equals("")) {
+                    uls.setName(userStyle.getName() + "_SLD");
+                } else {
+                    uls.setName(userLayer.getName());
+                }
+                userLayer.addStyle(uls);
+            }
+            sess.save(userLayer);
+        }
+       
         session.setAttribute("appCode", code);
         request.setAttribute("appCodeSaved", code);
 
@@ -705,7 +693,7 @@ public class KaartSelectieAction extends BaseGisAction {
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
-
+    
     public ActionForward deleteWMSServices(ActionMapping mapping, DynaValidatorForm dynaForm,
             HttpServletRequest request, HttpServletResponse response) throws Exception {
         
@@ -1423,36 +1411,11 @@ public class KaartSelectieAction extends BaseGisAction {
 
         return false;
     }
-
     
-    
-    
-    private Set<Style> getSldStylesSet(List<SldNamedLayer> allNamedLayers, UserLayer layer)
-            throws Exception {
-
-        Set<Style> styles = new HashSet<Style>();
-        SldReader sldReader = new SldReader();
-        //get only the named layers for this layer
-        List<SldNamedLayer> namedLayers=sldReader.getNamedLayers(allNamedLayers, layer.getName());
-        
-        for (SldNamedLayer namedLayer : namedLayers) {
-            List<SldUserStyle> userStyles = namedLayer.getUserStyles();//sldReader.getUserStyles(namedLayer);
-
-            for (SldUserStyle userStyle : userStyles) {
-                Style style = new Style();
-                //style.setLayer(layer);
-                style.setName(userStyle.getName());
-                style.setTitle(userStyle.getName());
-                style.setSldPart(userStyle.getSldPart());
-                styles.add(style);
-            }            
-        }
-        return styles;
-    }
-
     private String getUniqueStyleName(Set<Style> styles, String name) throws Exception {        
         return getUniqueStyleName(styles,name,null);
     }
+    
     private String getUniqueStyleName(Set<Style> styles, String name, Integer tries) throws Exception {    
         if (tries!=null && tries==10)
             throw new Exception("Can't create unique name for style");

@@ -25,7 +25,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import nl.b3p.gis.viewer.db.UserLayer;
-import nl.b3p.ogc.sld.SldNamedLayer;
 import nl.b3p.ogc.sld.SldWriter;
 import nl.b3p.wms.capabilities.Layer;
 import nl.b3p.wms.capabilities.Style;
@@ -59,11 +58,11 @@ public class UserLayerSldServlet extends HttpServlet {
         if (ids != null || !ids.equals("")) {
             String[] layerids = ids.split(",");            
             List<Style> styles = getKbStyles(layerids);          
-            SldWriter sldWriter = new SldWriter();
             
             try {
-                List<SldNamedLayer> namedLayers = sldWriter.createNamedLayersWithKBStyles(styles);
-                String body = sldWriter.createSLD(namedLayers);
+                SldWriter sldWriter = new SldWriter();
+                sldWriter.addNamedLayers(sldWriter.createNamedLayersWithKBStyles(styles));
+                String body = sldWriter.createSLD();
                 createSld(body, response);     
             } catch (SAXParseException sax) {
                 log.error("SLD is ongeldig voor layerids: " + ids);

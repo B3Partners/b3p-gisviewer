@@ -94,6 +94,7 @@ public class CMSAction extends BaseGisAction {
         }
 
         if (request.getParameter("id") != null) {
+            //java.lang.NumberFormatException: For input string: "1;jsessionid=0333FE9E7400BD3AA20839364E60F93B"
             cmsPageId = Integer.parseInt(request.getParameter("id"));
         }
         
