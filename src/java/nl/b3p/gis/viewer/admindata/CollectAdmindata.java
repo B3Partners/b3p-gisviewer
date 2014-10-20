@@ -189,8 +189,8 @@ public class CollectAdmindata {
                     List<Feature> features = null;
                     features = DataStoreUtil.getFeatures(b, gb, geom, parentCqlFilter, propnames, null, collectGeom);
 
-                    /* 
-                     * TODO: Tijdelijke fix voor ophalen features cyclomedia wfs via 
+                    /*
+                     * TODO: Tijdelijke fix voor ophalen features cyclomedia wfs via
                      * geotools. De intersects filter niet te werken maar het bbox
                      * filter wel. Op r. 408 van de DataStoreUtil.createIntersectFilter
                      * zegt de wfs wel dat hij de intersects fully support maar er komen
@@ -202,7 +202,7 @@ public class CollectAdmindata {
                         }
                     }
 
-                    //featuretype waarmee gekeken kan worden of er een geometry in de feature zit. 
+                    //featuretype waarmee gekeken kan worden of er een geometry in de feature zit.
                     DataStore tempDatastore = b.toDatastore();
                     SimpleFeatureType featureType = null;
                     try {
@@ -247,6 +247,9 @@ public class CollectAdmindata {
                                 Gegevensbron child = (Gegevensbron) iter4.next();
 
                                 String fkField = child.getAdmin_fk();
+                                if(record.getId() == null){
+                                    continue;
+                                }
                                 String recordId = record.getId().toString();
 
                                 Filter childFilter = null;
