@@ -18,12 +18,19 @@ public class Gegevensbron implements Comparable {
 
     private String naam;
     private Bron bron;
-    private String admin_tabel;
+    //tabel van deze gegevensbron
+    private String admin_tabel; 
+    //pk van deze gegevensbron
     private String admin_pk;
     private String admin_query;
+    //parent gegevensbron waar deze gegevensbron van afhankelijk is
     private Gegevensbron parent;
     private Set children = new HashSet();
-    private String admin_fk;
+    //kolom van deze gegevensbron welke verwijst naar admin_pk van parent
+    //dit moet anders: parent_pk
+    private String admin_fk; 
+    //kolom van de gegevensbron welke verwijst naar instelbare key van parent
+    //TODO private String parent_pk; 
     private String admin_tabel_opmerkingen;
     private Integer volgordenr;
     private boolean editable;
@@ -204,5 +211,19 @@ public class Gegevensbron implements Comparable {
     public void setGeometryeditable(boolean geometryeditable) {
         this.geometryeditable = geometryeditable;
     }
+
+    /**
+     * @return the parent_pk
+     */
+//    public String getParent_pk() {
+//        return parent_pk;
+//    }
+
+    /**
+     * @param parent_pk the parent_pk to set
+     */
+//    public void setParent_pk(String parent_pk) {
+//        this.parent_pk = parent_pk;
+//    }
     
 }
