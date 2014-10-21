@@ -5,6 +5,7 @@ import com.vividsolutions.jts.geom.Geometry;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -52,6 +54,7 @@ import org.apache.fop.apps.Fop;
 import org.apache.fop.apps.FopFactory;
 import org.apache.fop.apps.MimeConstants;
 import org.geotools.feature.simple.SimpleFeatureImpl;
+import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.json.JSONObject;
 import org.opengis.feature.Feature;
@@ -62,91 +65,79 @@ import sun.misc.BASE64Encoder;
 
 /**
  *
- * @author Boy de Wit, B3Partners
+ * @author Chris van Lith
  */
 public class ReportServlet extends HttpServlet {
 
-    private static final Log log = LogFactory.getLog(Data2PDF.class);
+    private static final Log log = LogFactory.getLog(ReportServlet.class);
 
     private static String xsl_report = null;
-    private static final String TEMP_XML_FILE = "/tmp/data.xml";
+    private static String PK_ONLY = "only pk no basisregel";
 
     protected void processRequest(HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException {
-
-        checkRequestParams(request, response);
-
-        String gegevensbronId = request.getParameter("gbId");
-        String recordId = request.getParameter("recordId");
-        String reportType = request.getParameter("reportType");
-        String pk = request.getParameter("pk");
-
-        /* Kaartbeeld ophalen */
-        CombineImageSettings settings = null;
         try {
-            settings = getCombineImageSettings(request);
+            checkRequestParams(request);
 
+            String gegevensbronId = request.getParameter("gbId");
+            String recordId = request.getParameter("recordId");
+            String reportType = request.getParameter("reportType");
+            String pk = request.getParameter("pk");
+
+            /* Kaartbeeld ophalen */
+            CombineImageSettings settings = null;
+            settings = getCombineImageSettings(request);
             settings.setWidth(500);
             settings.setHeight(375);
-        } catch (Exception ex) {
-            log.error("Fout tijdens ophalen combine settings: ", ex);
-        }
 
-        Date now = new Date();
-        SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
+            Date now = new Date();
+            SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
 
-        Transaction tx = null;
-        try {
-            tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
-
-            GisPrincipal user = GisPrincipal.getGisPrincipal(request);
-            if (user == null) {
-                writeErrorMessage(response, "Kan de data niet ophalen omdat u niet bent ingelogd.");
-                return;
-            }
-
-            Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
-
-            /* Create new ReportInfo object */
-            if (pk != null && !pk.isEmpty()) {
-                recordId = pk;
-            }
-
-            ReportInfo info = new ReportInfo();
-            
-            ReportInfo.Bron startBron = createReportBron(gb, recordId, false, settings, info);
-
-            if (reportType == null || reportType.isEmpty()) {
-                info.setTitel("Rapport");
-            } else {
-                info.setTitel(reportType);
-            }
-
-            info.setDatum(df.format(now));
-            info.setBron(startBron);
-
-            if (log.isDebugEnabled()) {
-                createXmlOutput(info, TEMP_XML_FILE);
-            }
-
+            Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+            Transaction t=null;
             try {
+                t=sess.beginTransaction();
+
+                GisPrincipal user = GisPrincipal.getGisPrincipal(request);
+                if (user == null) {
+                    throw new Exception("Kan de data niet ophalen omdat u niet bent ingelogd.");
+                }
+
+                Gegevensbron gb = SpatialUtil.getGegevensbron(gegevensbronId);
+
+                /* Create new ReportInfo object */
+                if (pk != null && !pk.isEmpty()) {
+                    recordId = pk;
+                }
+
+                ReportInfo info = new ReportInfo();
+                ReportInfo.Bron startBron = createReportBron(gb, recordId, false, settings, info);
+
+                if (reportType == null || reportType.isEmpty()) {
+                    info.setTitel("Rapport");
+                } else {
+                    info.setTitel(reportType);
+                }
+
+                info.setDatum(df.format(now));
+                info.setBron(startBron);
+
+                if (log.isDebugEnabled()) {
+                    createXmlOutput(info);
+                }
+
                 createPdfOutput(info, xsl_report, response);
-            } catch (MalformedURLException ex) {
-                writeErrorMessage(response, ex.getMessage());
-                log.error("Fout tijdens maken rapport pdf: ", ex);
-            } catch (SAXException ex) {
-                writeErrorMessage(response, ex.getMessage());
-                log.error("Fout tijdens maken rapport pdf: ", ex);
+                
+                t.commit();
+
+            } finally {
+                if (sess.isOpen()) {
+                    sess.close();
+                }
             }
-
-            tx.commit();
-
-        } finally {
-            if (tx != null) {
-                tx.rollback();
-            }
-
-            HibernateUtil.getSessionFactory().getCurrentSession().close();
+        } catch (Exception e) {
+            log.error(e);
+            writeErrorMessage(response, e.getMessage());
         }
     }
 
@@ -191,118 +182,84 @@ public class ReportServlet extends HttpServlet {
 
     private ReportInfo.Bron createReportBron(Gegevensbron gb,
             String recordId, boolean isChild,
-            CombineImageSettings settings, ReportInfo info) {
+            CombineImageSettings settings, ReportInfo info) throws Exception {
+        
+        if (gb==null) {
+            throw new Exception("Geen gegevensbron gevonden");
+        }
 
         ReportInfo.Bron.LAYOUT table_type = ReportInfo.Bron.LAYOUT.FLAT_TABLE;
-
-        String wkt = null;
-        
         if (isChild) {
             table_type = ReportInfo.Bron.LAYOUT.SIMPLE_TABLE;
         }
 
-        /* TODO: 
-         * Alleen labels in record plaatsen die in basisregel staan.
-         * Bij ophalen data moet wel de waarde van de pk column nog 
-         * opgehaald kunnen worden om data op te halen van gekoppelde plusjes
-         */
-
-        /* Ophalen labels */
-        String[] columnNames = getObjectDataColumns(gb);
-
-        /* Ophalen waardes */
-        List<Object> data = null;
-        try {                    
-            // eerste keer wkt ophalen voor tonen plaatje */
-            if (table_type.equals(ReportInfo.Bron.LAYOUT.FLAT_TABLE)) {
-                wkt = getWktForImageUrl(gb.getBron(), gb, recordId, columnNames);
-            }
-            
-            data = getData(gb.getBron(), gb, recordId, columnNames, isChild);           
-        } catch (Exception ex) {
-            log.error("Fout bij ophalen ReportInfo data ", ex);
+        // Ophalen labels plus pk kolom
+        Map<String,String> dataColumns = getObjectDataColumns(gb);
+        if (dataColumns==null || dataColumns.isEmpty()) {
+            throw new Exception("Geen kolommen gevonden voor gegevensbron: " + gb.getNaam());
         }
-
-        /* Uit Gegevensbron juiste pk column index ophalen */
-        int pkIndex = 0;
         String pkColumn = gb.getAdmin_pk();
-
-        for (int i = 0; i < columnNames.length; i++) {
-            String column = columnNames[i];
-            if (column.equalsIgnoreCase(pkColumn)) {
-                pkIndex = i;
+        
+        // eerste keer wkt ophalen voor tonen plaatje
+        String wkt = null;
+        if (table_type.equals(ReportInfo.Bron.LAYOUT.FLAT_TABLE)) {
+            wkt = getWktForImageUrl(gb.getBron(), gb, recordId);
+        }
+        // Ophalen waardes via met alle kolomnamen plus pk
+        List<String> columnNames = new ArrayList<String>();
+        columnNames.addAll(dataColumns.keySet());
+        List<Map> data = getData(gb.getBron(), gb, recordId, columnNames, isChild); 
+        
+        // Bepaal alle kolomnamen in basisregel
+        List<String> basisregelColumnNames = new ArrayList<String>();
+        for (String cn : dataColumns.keySet()) {
+            if (!dataColumns.get(cn).equals(PK_ONLY)) {
+                basisregelColumnNames.add(cn);
             }
         }
-
-        /* Vullen bron object */
+        
+        // Vullen bron object
         ReportInfo.Bron bron = new ReportInfo.Bron();
         bron.setTitel(gb.getNaam());
         bron.setLayout(table_type);
 
-        String[] labelNames = getObjectDataLabels(gb);
-        bron.setLabels(labelNames);
-        
         String imageUrl = null;
-        List<ReportInfo.Record> records = new ArrayList<ReportInfo.Record>();
-        for (Object obj : data) {
-            String[] items = (String[]) obj;
-            String pkValue = items[pkIndex];
-            
+        for (Map<String,String> row : data) {
+            String pkValue = row.get(pkColumn);
             if (settings != null && table_type.equals(ReportInfo.Bron.LAYOUT.FLAT_TABLE) 
                     && wkt != null) {
-                
                 imageUrl = createImageUrl(wkt, settings);
             }            
-
             ReportInfo.Record record = new ReportInfo.Record();
-
             record.setId(pkValue);
-            
             if (imageUrl != null && !imageUrl.isEmpty()) {
                 info.setImage_url(imageUrl);
             }
 
-            // remove pk from items array
-            List<String> list = new ArrayList<String>(Arrays.asList(items));            
-            
-            /* pk waarden voor onderliggende tabellen niet tonen in pdf */
-            if (isChild) {
-                list.remove(pkValue);
-            }            
-            
-            items = list.toArray(new String[0]);
-
-            record.setValues(items);
-
+            String[] values = new String[basisregelColumnNames.size()];
+            for (int i=0; i < basisregelColumnNames.size(); i++) {
+               values[i] = row.get(basisregelColumnNames.get(i));
+            }
+            record.setValues(values);
             bron.addRecord(record);
-
             List<ReportInfo.Bron> subBronnen = null;
-            
             Set children = gb.getChildren();
-
-            /* Sort op volgordenr */
-            List<Gegevensbron> childList = new ArrayList<Gegevensbron>(children);                   
-            try {
-                if (childList.size() > 0) {
-                    Collections.sort(childList);
-                }                
-            } catch (Exception ex) {
-                log.debug("Fout tijdens sorteren gegevensbronnen: ", ex);
+            // Sort op volgordenr
+            List<Gegevensbron> childList = new ArrayList<Gegevensbron>(children);
+            if (childList.size() > 0) {
+                Collections.sort(childList);
             }
 
             for (Gegevensbron child : childList) {
                 Gegevensbron gbChild = (Gegevensbron) child;
-
                 ReportInfo.Bron childBron = createReportBron(gbChild, pkValue, true, null, null);               
                 if (childBron == null || childBron.getRecords() == null
                         || childBron.getRecords().size() < 1) {
                     continue;
                 }
-
                 if (subBronnen == null) {
                     subBronnen = new ArrayList<ReportInfo.Bron>();
                 }
-
                 subBronnen.add(childBron);
             }
 
@@ -312,111 +269,74 @@ public class ReportServlet extends HttpServlet {
                 }
             }
         }
+        
+        String[] labelNames = new String[basisregelColumnNames.size()];
+        for (int i = 0; i < basisregelColumnNames.size(); i++) {
+            labelNames[i] = dataColumns.get(basisregelColumnNames.get(i));
+        }
+        bron.setLabels(labelNames);
 
         return bron;
     }
 
-    public String[] getObjectDataColumns(Gegevensbron gb) {
+    public Map<String,String> getObjectDataColumns(Gegevensbron gb) {
         Set themadata = gb.getThemaData();
+        if (themadata==null || themadata.isEmpty()) {
+            return null;
+        }
+        List tdList = new ArrayList();
+        tdList.addAll(themadata);
+        Collections.sort(tdList);
 
-        Iterator it = themadata.iterator();
-        ArrayList columns = new ArrayList();
+        Iterator it = tdList.iterator();
+        Map<String,String> dataColumns = new LinkedHashMap<String,String>();
         while (it.hasNext()) {
             ThemaData td = (ThemaData) it.next();
             if (td.getKolomnaam() != null) {
-                if (!columns.contains(td.getKolomnaam())) {
-
-                    if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
-                            && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
-
-                        // basisregel of pk column
-                        if (td.isBasisregel()
-                                || td.getKolomnaam().equalsIgnoreCase(gb.getAdmin_pk())) {
-                            columns.add(td.getKolomnaam());
-                        }
+                if (!dataColumns.containsKey(td.getKolomnaam())) {
+                    // pk column
+                    if (td.getKolomnaam().equalsIgnoreCase(gb.getAdmin_pk())) {
+                        dataColumns.put(td.getKolomnaam(), PK_ONLY);
                     }
                 }
-            }
-        }
-        String[] s = new String[columns.size()];
-        for (int i = 0; i < columns.size(); i++) {
-            s[i] = (String) columns.get(i);
-        }
-        return s;
-    }
-
-    public String[] getObjectDataLabels(Gegevensbron gb) {
-        List<String> columns = new ArrayList();
-
-        Iterator it = gb.getThemaData().iterator();
-        while (it.hasNext()) {
-            ThemaData td = (ThemaData) it.next();
-
-            if (td.getKolomnaam() != null
-                    && !td.getKolomnaam().equalsIgnoreCase("the_geom")
-                    && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
-
-                // basisregel labels
+                // basisregel
                 if (td.isBasisregel()) {
-                    if (td.getLabel() != null && !td.getLabel().isEmpty()) {
-
-                        if (!columns.contains(td.getLabel())) {
-                            columns.add(td.getLabel());
-                        }
-                    }
+                    dataColumns.put(td.getKolomnaam(), td.getLabel());
                 }
             }
         }
-
-        String[] arr = new String[columns.size()];
-        arr = columns.toArray(arr);
-
-        return arr;
+        return dataColumns;
     }
 
-    public List getData(Bron b, Gegevensbron gb, String recordId,
-            String[] propertyNames, boolean isChild) throws IOException,
+    public List<Map> getData(Bron b, Gegevensbron gb, String recordId,
+            List<String> propertyNames, boolean isChild) throws IOException,
             Exception {
-
-        String[] pks = new String[1];
-        pks[0] = recordId;
-
+        
+        //creeer filter voor de juiste records obv kolomnaam en id
         String column = null;
         if (!isChild) {
             column = gb.getAdmin_pk();
         } else {
             column = gb.getAdmin_fk();
         }
-
         Filter filter = FilterBuilder.createOrEqualsFilter(
-                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), pks);
+                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), 
+                new String[] {recordId});
 
-        List<ThemaData> items = SpatialUtil.getThemaData(gb, true);
-        
-        /* eerste keer Rapport item eraf halen */
-        if (!isChild) {
-            int lastIdx = items.size() -1;
-            items.remove(lastIdx);
-        }
-        
-        List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
-
-        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, false);
-        ArrayList result = new ArrayList();
-
-        int len = propertyNames.length;
+        List<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propertyNames, null, false);
+        List result = new ArrayList();
 
         for (int i = 0; i < features.size(); i++) {
             Feature f = features.get(i);
 
-            String[] row = new String[len];
+            Map<String,String> row = new HashMap<String,String>();
 
-            for (int p = 0; p < propertyNames.length; p++) {
-                Property property = f.getProperty(propertyNames[p]);
+            for (int p = 0; p < propertyNames.size(); p++) {
+                Property property = f.getProperty(propertyNames.get(p));
                 if (property != null && property.getValue() != null && property.getValue().toString() != null) {
-                    row[p] = property.getValue().toString().trim();
+                    row.put(propertyNames.get(p), property.getValue().toString().trim());
                 } else {
-                    row[p] = "";
+                    row.put(propertyNames.get(p), "-");
                 }
             }
 
@@ -426,24 +346,19 @@ public class ReportServlet extends HttpServlet {
         return result;
     }
     
-    private String getWktForImageUrl(Bron b, Gegevensbron gb, String recordId,
-            String[] propertyNames) throws Exception {
+    private String getWktForImageUrl(Bron b, Gegevensbron gb, String recordId) throws Exception {
 
         String wkt = null;
-        
-        String[] pks = new String[1];
-        pks[0] = recordId;
-
         String column = gb.getAdmin_pk();
 
         Filter filter = FilterBuilder.createOrEqualsFilter(
-                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), pks);
+                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), 
+                new String[] {recordId});
 
         List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
 
         ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, true);
-        ArrayList result = new ArrayList();
         
         for (int i = 0; i < features.size(); i++) {
             Feature f = features.get(i);
@@ -459,25 +374,20 @@ public class ReportServlet extends HttpServlet {
         return wkt;    
     }
 
-    public static void createXmlOutput(ReportInfo object, String xmlFile) {
-        try {
-            File file = new File(xmlFile);
-            JAXBContext jaxbContext = JAXBContext.newInstance(ReportInfo.class);
-            Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+    public static void createXmlOutput(ReportInfo object) throws Exception {
+        JAXBContext jaxbContext = JAXBContext.newInstance(ReportInfo.class);
+        Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
 
-            // output pretty printed
-            jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT,
-                    true);
-
-            jaxbMarshaller.marshal(object, file);
-        } catch (JAXBException e) {
-            log.error("Fout tijdens maken rapport xml: ", e);
-        }
+        // output pretty printed
+        jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT,
+                true);
+        StringWriter sw = new StringWriter();
+        jaxbMarshaller.marshal(object, sw);
+        log.debug("xml data for report:" + sw.toString());
     }
 
     public static void createPdfOutput(ReportInfo info, String template,
-            HttpServletResponse response) throws MalformedURLException,
-            IOException, SAXException {
+            HttpServletResponse response) throws Exception {
 
         File xslFile = new File(template);
         String path = new File(xslFile.getParent()).toURI().toString();
@@ -539,8 +449,6 @@ public class ReportServlet extends HttpServlet {
             response.getOutputStream()
                     .flush();
 
-        } catch (Exception ex) {
-            log.error("Fout tijdens maken rapport pdf: ", ex);
         } finally {
             out.close();
         }
@@ -561,8 +469,7 @@ public class ReportServlet extends HttpServlet {
         pw.println("</html>");
     }
 
-    private void checkRequestParams(HttpServletRequest request,
-            HttpServletResponse response) {
+    private void checkRequestParams(HttpServletRequest request) throws Exception {
 
         String gegevensbronId = request.getParameter("gbId");
         String recordId = request.getParameter("recordId");
@@ -571,11 +478,7 @@ public class ReportServlet extends HttpServlet {
         if (gegevensbronId == null || gegevensbronId.isEmpty()
                 || recordId == null || recordId.isEmpty()
                 || reportType == null || reportType.isEmpty()) {
-
-            try {
-                writeErrorMessage(response, "Ongeldige rapport parameters.");
-            } catch (IOException ex) {
-            }
+            throw new Exception("Ongeldige rapport parameters.");
         }
     }
 

@@ -1,13 +1,11 @@
 package nl.b3p.gis.viewer.db;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class ThemaData {
+public class ThemaData  implements Comparable {
 
     private Integer id;
     private String label;
@@ -234,4 +232,31 @@ public class ThemaData {
         }
         return json;
     }
+
+    public int compareTo(Object o) {        
+        ThemaData td = (ThemaData)o;
+        
+        if (this == td) {
+            return 0;
+        }
+        
+        if (this.getDataorder() == null) {
+            return -1;
+        }
+        
+        if (td.getDataorder() == null) {
+            return 1;
+        }
+        
+        if (this.getDataorder() < td.getDataorder()) {
+            return -1;
+        }
+        
+        if (this.getDataorder() > td.getDataorder()) {
+            return 1;
+        }
+                
+        return 0;
+    }
+
 }
