@@ -12,4 +12,4 @@ values
 
 insert into cms_pagina (id, titel, tekst, show_plain_map_btn, cdate, cms_menu, login_required)
 values
-(1, 'Home', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam tincidunt ultrices est vitae vehicula. Morbi nulla lectus, posuere varius viverra vitae, sodales eget justo. Vestibulum fermentum mollis odio, ut sollicitudin elit luctus dictum. Nunc pellentesque a odio non pellentesque. Curabitur volutpat nisl sed semper cursus. Aliquam nibh est, pulvinar vitae neque et, aliquam gravida nisi. Sed ante est, ullamcorper vitae tincidunt vitae, interdum ac nisi.', false, now(), 1, false);
+(1, 'Home', '<vul hier uw tekst in>', false, now(), 1, false);
