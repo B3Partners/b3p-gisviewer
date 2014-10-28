@@ -852,7 +852,7 @@ public class DataStoreUtil {
         params.put(WFSDataStoreFactory.URL.key, url);
         params.put(WFSDataStoreFactory.TIMEOUT.key, 60000);
         params.put(WFSDataStoreFactory.USERNAME.key, "Beheerder");
-        params.put(WFSDataStoreFactory.PASSWORD.key, "***REMOVED***");
+        params.put(WFSDataStoreFactory.PASSWORD.key, "*****");
         DataStore ds = DataStoreFinder.getDataStore(params);
 
         /*omdat de WFS_1_0_0_Datastore niet met de opengis filters werkt even toevoegen dat

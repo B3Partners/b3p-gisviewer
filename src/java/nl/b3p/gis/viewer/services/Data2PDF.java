@@ -36,8 +36,6 @@ import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
-import static nl.b3p.gis.viewer.print.PrintServlet.fontPath;
-import static nl.b3p.gis.viewer.print.PrintServlet.fopConfig;
 import nl.b3p.gis.viewer.services.ObjectdataPdfInfo.Record;
 import nl.b3p.imagetool.CombineImageSettings;
 import nl.b3p.imagetool.CombineImagesHandler;
@@ -69,6 +67,9 @@ public class Data2PDF extends HttpServlet {
     private static String HTMLTITLE = "Exporteer naar PDF";
     private static String xsl_data2pdf = null;
     private static Integer MAX_PDF_RECORDS = 25;
+    
+    public static String fopConfig = null;
+    public static String fontPath = null;
 
     /**
      * Processes requests for both HTTP
