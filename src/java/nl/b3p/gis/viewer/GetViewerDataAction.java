@@ -1,7 +1,5 @@
 package nl.b3p.gis.viewer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import com.vividsolutions.jts.geom.Geometry;
 import java.io.UnsupportedEncodingException;
@@ -19,7 +17,6 @@ import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
 import nl.b3p.gis.viewer.admindata.CollectAdmindata;
-import nl.b3p.gis.viewer.admindata.GegevensBronBean;
 import nl.b3p.gis.viewer.admindata.RecordChildBean;
 import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.db.DataTypen;

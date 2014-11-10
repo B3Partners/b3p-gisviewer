@@ -25,6 +25,7 @@ import nl.b3p.gis.utils.KaartSelectieUtil;
 import nl.b3p.gis.viewer.ViewerAction;
 import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Clusters;
+import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.db.Themas;
@@ -185,9 +186,10 @@ public class CollectAdmindata {
                     if (cql != null && cql.length() > 0) {
                         parentCqlFilter = CQL.toFilter(cql);
                     }
-
+                    
+                    Integer maximum = getMaxNumberOfFeatures(appCode);
                     List<Feature> features = null;
-                    features = DataStoreUtil.getFeatures(b, gb, geom, parentCqlFilter, propnames, null, collectGeom);
+                    features = DataStoreUtil.getFeatures(b, gb, geom, parentCqlFilter, propnames, maximum, collectGeom);
 
                     /*
                      * TODO: Tijdelijke fix voor ophalen features cyclomedia wfs via
@@ -344,15 +346,6 @@ public class CollectAdmindata {
             }
         }
 
-        /* To JSON
-         try {
-         ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-         String json = ow.writeValueAsString(bean);
-
-         logger.debug(json);
-         } catch (Exception ex) {
-         }
-         */
         return bean;
     }
 
@@ -1121,4 +1114,25 @@ public class CollectAdmindata {
             return null;
         }
     }
+    
+    private Integer getMaxNumberOfFeatures(String appCode) {
+
+        Integer maximum = null;
+        ConfigKeeper keeper = new ConfigKeeper();
+        Configuratie cfg = keeper.getConfiguratie(ConfigKeeper.MAX_RESULTS, appCode);
+
+        if (cfg != null && cfg.getType().contains("Integer")) {
+            maximum = new Integer(cfg.getPropval());
+        }
+
+        return maximum;
+    }
+
+    public static void main(String [] args) throws CQLException {
+        String cql = "aaa = null";
+        Filter parentCqlFilter = CQL.toFilter(cql);
+        System.out.println(parentCqlFilter);
+    }
+    
+    
 }

@@ -18,6 +18,8 @@ public class ConfigKeeper {
 
     private static final Log log = LogFactory.getLog(ConfigKeeper.class);
 
+    public static final String MAX_RESULTS = "maxResults";
+
     public ConfigKeeper() {
     }
 

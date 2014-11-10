@@ -82,7 +82,7 @@ import org.opengis.referencing.operation.TransformException;
 public class DataStoreUtil {
 
     private static final FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
-    private static final Log log = LogFactory.getLog(GetViewerDataAction.class);
+    private static final Log log = LogFactory.getLog(DataStoreUtil.class);
 
     public static final int maxFeatures = 1000;
     public static final int MAX_COORDS_WKT = 250;
