@@ -41,15 +41,11 @@ public class KaartSelectieUtil {
     
     private static final Log log = LogFactory.getLog(KaartSelectieUtil.class);
 
-    public static String APPCODE = null;  
-
     public static void populateKaartSelectieForm(String appCode, HttpServletRequest request)
             throws JSONException, Exception {
 
-        APPCODE = appCode;
-
-        setKaartlagenTree(request);
-        setUserServiceTrees(request);
+        setKaartlagenTree(request, appCode);
+        setUserServiceTrees(request, appCode);
     }
 
     public static String[] addDefaultOnValues(String[] defaults, String[] current) {
@@ -275,7 +271,7 @@ public class KaartSelectieUtil {
         return app;
     }
 
-    private static void setKaartlagenTree(HttpServletRequest request) 
+    private static void setKaartlagenTree(HttpServletRequest request, String appCode) 
             throws JSONException, Exception {        
         List ctl = SpatialUtil.getValidClusters();
 
@@ -290,7 +286,7 @@ public class KaartSelectieUtil {
         
         JSONObject treeObject = null;
         if (user != null) {
-            treeObject = createJasonObject(rootClusterMap, user);
+            treeObject = createJasonObject(rootClusterMap, user, appCode);
             
             if (treeObject != null) {
                 request.setAttribute("tree", treeObject);
@@ -298,13 +294,11 @@ public class KaartSelectieUtil {
         }
     }
 
-    private static void setUserServiceTrees(HttpServletRequest request) throws JSONException, Exception {
+    private static void setUserServiceTrees(HttpServletRequest request, String appCode) throws JSONException, Exception {
         List<JSONObject> servicesTrees = new ArrayList();
 
         /* user services ophalen */
-        String code = APPCODE;
-
-        List<UserService> services = getUserServices(code);
+        List<UserService> services = getUserServices(appCode);
 
         /* per service een tree maken */
         for (UserService service : services) {
@@ -481,7 +475,7 @@ public class KaartSelectieUtil {
         return children;
     }
 
-    private static JSONObject createJasonObject(Map rootClusterMap, GisPrincipal user) throws JSONException {
+    private static JSONObject createJasonObject(Map rootClusterMap, GisPrincipal user, String appCode) throws JSONException {
         JSONObject root = new JSONObject().put("id", "root").put("type", "root").put("title", "root");
         if (rootClusterMap == null || rootClusterMap.isEmpty()) {
             return root;
@@ -492,8 +486,8 @@ public class KaartSelectieUtil {
         }
 
         /* ophalen user kaartgroepen en kaartlagen */
-        List<UserKaartgroep> groepen = getUserKaartGroepen(APPCODE);
-        List<UserKaartlaag> lagen = getUserKaartLagen(APPCODE);
+        List<UserKaartgroep> groepen = getUserKaartGroepen(appCode);
+        List<UserKaartlaag> lagen = getUserKaartLagen(appCode);
 
         root.put("children", getSubClusters(clusterMaps, null, user, 0, groepen, lagen));
 

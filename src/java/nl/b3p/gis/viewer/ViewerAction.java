@@ -48,7 +48,6 @@ import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.utils.KaartSelectieUtil;
-import static nl.b3p.gis.viewer.BaseGisAction.CMS_PAGE_ID;
 import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.CMSPagina;
 import nl.b3p.gis.viewer.db.Clusters;
