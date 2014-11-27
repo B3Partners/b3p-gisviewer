@@ -182,6 +182,13 @@ public class ConfigKeeper {
         cfg.setSetting(appCode);
         cfg.setType("java.lang.String");
         sess.save(cfg);
+        
+        cfg = new Configuratie();
+        cfg.setProperty("zoekenAutoIdentify");
+        cfg.setPropval("true");
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.Boolean");
+        sess.save(cfg);
 
         cfg = new Configuratie();
         cfg.setProperty("maxResults");
