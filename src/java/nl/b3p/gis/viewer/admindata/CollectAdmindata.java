@@ -187,7 +187,7 @@ public class CollectAdmindata {
                         parentCqlFilter = CQL.toFilter(cql);
                     }
                     
-                    Integer maximum = getMaxNumberOfFeatures(appCode);
+                    Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
                     List<Feature> features = null;
                     features = DataStoreUtil.getFeatures(b, gb, geom, parentCqlFilter, propnames, maximum, collectGeom);
 
@@ -832,23 +832,8 @@ public class CollectAdmindata {
         }
 
         /* Applicatie instellingen ophalen */
-        Applicatie app = null;
-        if (appCode != null && appCode.length() > 0) {
-            app = KaartSelectieUtil.getApplicatie(appCode);
-        }
-
-        if (app == null) {
-            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
-            app = defaultApp;
-        }
-
         ConfigKeeper configKeeper = new ConfigKeeper();
-        Map map = configKeeper.getConfigMap(appCode);
-
-        /* Indien niet aanwezig dan defaults laden */
-        if ((map == null) || (map.size() < 1)) {
-            map = configKeeper.getDefaultInstellingen();
-        }
+        Map map = configKeeper.getConfigMap(appCode, true);
 
         String layoutAdminData = (String) map.get("layoutAdminData");
 
@@ -1115,19 +1100,6 @@ public class CollectAdmindata {
         }
     }
     
-    private Integer getMaxNumberOfFeatures(String appCode) {
-
-        Integer maximum = null;
-        ConfigKeeper keeper = new ConfigKeeper();
-        Configuratie cfg = keeper.getConfiguratie(ConfigKeeper.MAX_RESULTS, appCode);
-
-        if (cfg != null && cfg.getType().contains("Integer")) {
-            maximum = new Integer(cfg.getPropval());
-        }
-
-        return maximum;
-    }
-
     public static void main(String [] args) throws CQLException {
         String cql = "aaa = null";
         Filter parentCqlFilter = CQL.toFilter(cql);

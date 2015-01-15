@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpSession;
+import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.zoeker.services.A11YResult;
@@ -50,7 +51,6 @@ import org.opengis.referencing.operation.MathTransform;
 public class GetLocationData {
 
     private static final Log log = LogFactory.getLog(GetLocationData.class);
-    private static int maxFeatures = 10000;
 
     public GetLocationData() {
     }
@@ -215,7 +215,7 @@ public class GetLocationData {
         return message;
     }
 
-    public Map getAnalyseData(String wkt, String activeThemaIds, String extraCriterium) throws Exception {
+    public Map getAnalyseData(String wkt, String activeThemaIds, String extraCriterium, String appCode) throws Exception {
         if (wkt == null || wkt.length() == 0 || activeThemaIds == null || activeThemaIds.length() == 0) {
             return null;
         }
@@ -252,7 +252,7 @@ public class GetLocationData {
                     continue;
                 }
 
-                Map themaAnalyseData = calcThemaAnalyseData(b, t, extraCriterium, geom);
+                Map themaAnalyseData = calcThemaAnalyseData(b, t, extraCriterium, geom, appCode);
 
                 if (themaAnalyseData != null) {
                     themaAnalyseData = formatResults(themaAnalyseData);
@@ -378,7 +378,7 @@ public class GetLocationData {
      *
      * waarde
      */
-    private Map calcThemaAnalyseData(Bron b, Themas t, String extraCriterium, Geometry analyseGeometry) throws Exception {
+    private Map calcThemaAnalyseData(Bron b, Themas t, String extraCriterium, Geometry analyseGeometry, String appCode) throws Exception {
         Gegevensbron gb = t.getGegevensbron();
 
         //maak het eventuele extra filter.
@@ -387,16 +387,18 @@ public class GetLocationData {
             List thema_items = SpatialUtil.getThemaData(gb, true);
             extraFilter = calculateExtraFilter(thema_items, extraCriterium);
         }
-        return calcThemaAnalyseData(b, t, extraFilter, analyseGeometry);
+        return calcThemaAnalyseData(b, t, extraFilter, analyseGeometry, appCode);
     }
 
-    private Map calcThemaAnalyseData(Bron b, Themas t, Filter extraFilter, Geometry analyseGeometry) throws Exception {
+    //TODO CvL
+    private Map calcThemaAnalyseData(Bron b, Themas t, Filter extraFilter, Geometry analyseGeometry, String appCode) throws Exception {
         DataStore ds = b.toDatastore();
         try {
             Gegevensbron gb = t.getGegevensbron();
 
             //Haal alle features op die binnen de analyseGeometry vallen:
-            List<Feature> features = DataStoreUtil.getFeatures(b, gb, analyseGeometry, extraFilter, null, maxFeatures, true);
+            Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
+            List<Feature> features = DataStoreUtil.getFeatures(b, gb, analyseGeometry, extraFilter, null, maximum, true);
 
             if (features == null || features.isEmpty()) {
                 return null;

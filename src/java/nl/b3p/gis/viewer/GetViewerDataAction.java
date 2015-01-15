@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServletResponse;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
+import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.admindata.CollectAdmindata;
 import nl.b3p.gis.viewer.admindata.RecordChildBean;
 import nl.b3p.gis.viewer.db.CMSPagina;
@@ -169,6 +170,8 @@ public class GetViewerDataAction extends BaseGisAction {
             return mapping.findForward("aanvullendeinfo");
         }
 
+        String appCode = (String) request.getParameter("appCode"); //TODO CvL
+        
         String gegevensbronId = (String) request.getParameter("gegevensbronid");
 
         if (gegevensbronId != null) {
@@ -184,7 +187,7 @@ public class GetViewerDataAction extends BaseGisAction {
         Bron b = gb.getBron(request);
 
         if (b != null) {
-            request.setAttribute("regels", getThemaObjectsWithId(gb, thema_items, request));
+            request.setAttribute("regels", getThemaObjectsWithId(gb, thema_items, request, appCode));
         }
         
         setCMSTheme(request);
@@ -285,8 +288,7 @@ public class GetViewerDataAction extends BaseGisAction {
      *
      * @deprecated
      */
-    private void collectThemaRegels(ActionMapping mapping, HttpServletRequest request,
-            List themas, List regels, List ti, boolean locatie) {
+    private void collectThemaRegels(ActionMapping mapping, HttpServletRequest request, List themas, List regels, List ti, boolean locatie, String appCode) {
 
         for (int i = 0; i < themas.size(); i++) {
             Themas t = (Themas) themas.get(i);
@@ -314,7 +316,7 @@ public class GetViewerDataAction extends BaseGisAction {
                         if (themadatanummer == regels.size()) {
                             regels.add(new ArrayList());
                         }
-                        l = getThemaObjectsWithGeom(t, thema_items, request);
+                        l = getThemaObjectsWithGeom(t, thema_items, request, appCode);
                     }
                     if (l != null && l.size() > 0) {
                         ((ArrayList) regels.get(themadatanummer)).addAll(l);
@@ -355,7 +357,7 @@ public class GetViewerDataAction extends BaseGisAction {
      * @throws Exception
      * @deprecated
      */
-    private List<AdminDataRowBean> getThemaObjectsWithGeom(Themas t, List<ThemaData> thema_items, HttpServletRequest request) throws Exception {
+    private List<AdminDataRowBean> getThemaObjectsWithGeom(Themas t, List<ThemaData> thema_items, HttpServletRequest request, String appCode) throws Exception {
         if (t == null) {
             return null;
         }
@@ -372,7 +374,8 @@ public class GetViewerDataAction extends BaseGisAction {
         Bron b = gb.getBron(request);
 
         List<String> propnames = DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items);
-        List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, extraFilter, propnames, null, true);
+        Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
+        List<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, extraFilter, propnames, maximum, true);
         List<AdminDataRowBean> regels = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
@@ -390,7 +393,7 @@ public class GetViewerDataAction extends BaseGisAction {
      * @throws Exception
      * @deprecated
      */
-    protected List getThemaObjectsWithId(Gegevensbron gb, List thema_items, HttpServletRequest request) throws Exception {
+    protected List getThemaObjectsWithId(Gegevensbron gb, List thema_items, HttpServletRequest request, String appCode) throws Exception {
         if (gb == null) {
             return null;
         }
@@ -441,7 +444,8 @@ public class GetViewerDataAction extends BaseGisAction {
         List<ReferencedEnvelope> kaartEnvelopes = new ArrayList<ReferencedEnvelope>();
         Bron b = gb.getBron(request);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(thema_items);
-        List<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, true);
+        Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
+        List<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, maximum, true);
         for (int i = 0; i < features.size(); i++) {
             Feature f = (Feature) features.get(i);
             if (addKaart) {

@@ -1,28 +1,19 @@
 package nl.b3p.gis.viewer;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.security.InvalidKeyException;
-import java.security.Key;
 import java.security.KeyFactory;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.TimeZone;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -37,7 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.validator.DynaValidatorForm;
-import sun.security.rsa.RSAPrivateCrtKeyImpl;
 
 /**
  * @author Boy
@@ -67,12 +57,8 @@ public class CyclomediaAction extends ViewerCrudAction {
         if (appCode != null && appCode.length() > 0) {
             app = KaartSelectieUtil.getApplicatie(appCode);
         }
-
         if (app == null) {
-            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
-
-            if (defaultApp != null)
-                app = defaultApp;
+            app = KaartSelectieUtil.getDefaultApplicatie();
         }
         
         ConfigKeeper keeper = new ConfigKeeper();
@@ -89,7 +75,6 @@ public class CyclomediaAction extends ViewerCrudAction {
             }
             
             String accountId = cycloAccount.getAccountId();
-            String wachtwoord = cycloAccount.getWachtwoord();
             
             // api aangepast, seconden toegevoegd en GMT tijd ivm zomertijd
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");  

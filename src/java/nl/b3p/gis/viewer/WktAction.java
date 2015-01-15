@@ -26,31 +26,6 @@ public class WktAction extends ViewerCrudAction{
     
     @Override
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        /* Applicatie instellingen ophalen */
-        Applicatie app = null;
-        HttpSession session = request.getSession(true);
-        String appCode = (String) session.getAttribute("appCode");
-        if (appCode != null && appCode.length() > 0) {
-            app = KaartSelectieUtil.getApplicatie(appCode);
-        }
-
-        if (app == null) {
-            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
-
-            if (defaultApp != null)
-                app = defaultApp;
-        }
-
-        ConfigKeeper configKeeper = new ConfigKeeper();
-        Map instellingen = configKeeper.getConfigMap(app.getCode());
-
-        /* Indien niet aanwezig dan defaults laden */
-        if ((instellingen == null) || (instellingen.size() < 1)) {
-            instellingen = configKeeper.getDefaultInstellingen();
-        }
-        
-        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
-        
         return mapping.findForward(SUCCESS);
     }
 }

@@ -189,11 +189,7 @@ public class IndexAction extends BaseGisAction {
 
                 /* Kijken of er een default Applicatie is ? */
                 if (app == null) {
-                    Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
-
-                    if (defaultApp != null) {
-                        app = defaultApp;
-                    }
+                    app = KaartSelectieUtil.getDefaultApplicatie();
                 }
 
                 if (app != null) {
@@ -317,16 +313,15 @@ public class IndexAction extends BaseGisAction {
         logger.debug("Logged out from session: " + sessionId);
 
         /* Indien er uitlog cms pagina is ingesteld dan hierheen */
+        String logoutUrl = null;
         String appCode = request.getParameter("appCode");
-        if (appCode != null) {
-            ConfigKeeper configKeeper = new ConfigKeeper();
-            Map map = configKeeper.getConfigMap(appCode);
-
-            String logoutUrl = (String) map.get("logoutUrl");
-
-            if (logoutUrl != null && !logoutUrl.isEmpty()) {
-                return new RedirectingActionForward(logoutUrl);
-            }
+        ConfigKeeper configKeeper = new ConfigKeeper();
+        Map map = configKeeper.getConfigMap(appCode, true);
+        if (map!=null) {
+            logoutUrl = (String) map.get("logoutUrl");
+        }
+        if (logoutUrl != null && !logoutUrl.isEmpty()) {
+            return new RedirectingActionForward(logoutUrl);
         }
 
         /* Uitloggen en gaan naar eerdere cms pagina */

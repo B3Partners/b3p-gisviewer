@@ -179,7 +179,7 @@ public class KaartSelectieUtil {
             Integer layerId = new Integer(useStyle[0]);
             String styleName = useStyle[1];
 
-            if (layerId != null && layerId > 0 && styleName != null) {
+            if (layerId > 0 && styleName != null) {
                 UserLayer ul = (UserLayer) sess.get(UserLayer.class, layerId);
 
                 if (styleName.equals("default")) {
@@ -200,10 +200,10 @@ public class KaartSelectieUtil {
             String sldPart = useLayerSldParts[n];
             Integer layerId = new Integer(userLayerIds[n]);
 
-            if (sldPart != null && layerId != null && layerId > 0) {
+            if (sldPart != null &&  layerId > 0) {
                 UserLayer ul = (UserLayer) sess.get(UserLayer.class, layerId);
 
-                if (sldPart == null || sldPart.equals("")) {
+                if (sldPart.equals("")) {
                     ul.setSld_part(null);
                 } else {
                     ul.setSld_part(sldPart);

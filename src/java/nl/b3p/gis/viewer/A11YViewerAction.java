@@ -197,11 +197,11 @@ public class A11YViewerAction extends BaseGisAction {
 
         /* Instellingen ophalen en appCode weer op request plaatsen */
         Applicatie app = null;
-        if (appCode != null && !appCode.equals("")) {
+        if (appCode != null && appCode.length() > 0) {
             app = KaartSelectieUtil.getApplicatie(appCode);
-        } else {
+        }
+        if (app == null) {
             app = KaartSelectieUtil.getDefaultApplicatie();
-
         }
 
         if (app != null) {
@@ -212,12 +212,7 @@ public class A11YViewerAction extends BaseGisAction {
         }
 
         ConfigKeeper configKeeper = new ConfigKeeper();
-        Map map = configKeeper.getConfigMap(appCode);
-
-        /* Indien niet aanwezig dan defaults laden */
-        if ((map == null) || (map.size() < 1)) {
-            map = configKeeper.getDefaultInstellingen();
-        }
+        Map map = configKeeper.getConfigMap(appCode, true);
 
         /* Zoekers tonen voor deze Applicatie */
         String zoekConfigIds = (String) map.get("zoekConfigIds");

@@ -245,10 +245,8 @@ public class ViewerAction extends BaseGisAction {
         if (appCode != null && appCode.length() > 0) {
             app = KaartSelectieUtil.getApplicatie(appCode);
         }
-
         if (app == null) {
-            Applicatie defaultApp = KaartSelectieUtil.getDefaultApplicatie();
-            app = defaultApp;
+            app = KaartSelectieUtil.getDefaultApplicatie();
         }
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -263,7 +261,7 @@ public class ViewerAction extends BaseGisAction {
             sess.save(app);
             sess.flush();
 
-            ConfigKeeper.writeDefaultApplicatie(app.getCode());
+            ConfigKeeper.createStandardApplicationConfiguration(app.getCode());
         }
 
         if (app != null && !app.getNaam().equals("")) {
@@ -324,12 +322,7 @@ public class ViewerAction extends BaseGisAction {
         }
 
         ConfigKeeper configKeeper = new ConfigKeeper();
-        Map map = configKeeper.getConfigMap(appCode);
-
-        /* Indien niet aanwezig dan defaults laden */
-        if ((map == null) || (map.size() < 1)) {
-            map = configKeeper.getDefaultInstellingen();
-        }
+        Map map = configKeeper.getConfigMap(appCode, true);
 
         /* Kijken of er een dropdown gemaakt moet worden voor user wms lijst 
          * in kaartselectiescherm */

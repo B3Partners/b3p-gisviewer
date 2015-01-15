@@ -34,6 +34,7 @@ import javax.xml.transform.stream.StreamSource;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
+import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import static nl.b3p.gis.viewer.print.PrintServlet.fontPath;
@@ -75,6 +76,7 @@ public class ReportServlet extends HttpServlet {
         try {
             checkRequestParams(request);
 
+            String appCode = (String) request.getParameter("appCode"); //TODO CvL
             String gegevensbronId = request.getParameter("gbId");
             String recordId = request.getParameter("recordId");
             String reportType = request.getParameter("reportType");
@@ -107,7 +109,7 @@ public class ReportServlet extends HttpServlet {
                 }
 
                 ReportInfo info = new ReportInfo();
-                ReportInfo.Bron startBron = createReportBron(gb, recordId, false, settings, info);
+                ReportInfo.Bron startBron = createReportBron(gb, recordId, false, settings, info, appCode);
 
                 if (reportType == null || reportType.isEmpty()) {
                     info.setTitel("Rapport");
@@ -176,9 +178,7 @@ public class ReportServlet extends HttpServlet {
         return imageUrl;
     }
 
-    private ReportInfo.Bron createReportBron(Gegevensbron gb,
-            String recordId, boolean isChild,
-            CombineImageSettings settings, ReportInfo info) throws Exception {
+    private ReportInfo.Bron createReportBron(Gegevensbron gb, String recordId, boolean isChild, CombineImageSettings settings, ReportInfo info, String appCode) throws Exception {
         
         if (gb==null) {
             throw new Exception("Geen gegevensbron gevonden");
@@ -199,12 +199,12 @@ public class ReportServlet extends HttpServlet {
         // eerste keer wkt ophalen voor tonen plaatje
         String wkt = null;
         if (table_type.equals(ReportInfo.Bron.LAYOUT.FLAT_TABLE)) {
-            wkt = getWktForImageUrl(gb.getBron(), gb, recordId);
+            wkt = getWktForImageUrl(gb.getBron(), gb, recordId, appCode);
         }
         // Ophalen waardes via met alle kolomnamen plus pk
         List<String> columnNames = new ArrayList<String>();
         columnNames.addAll(dataColumns.keySet());
-        List<Map> data = getData(gb.getBron(), gb, recordId, columnNames, isChild); 
+        List<Map> data = getData(gb.getBron(), gb, recordId, columnNames, isChild, appCode); 
         
         // Bepaal alle kolomnamen in basisregel
         List<String> basisregelColumnNames = new ArrayList<String>();
@@ -248,7 +248,7 @@ public class ReportServlet extends HttpServlet {
 
             for (Gegevensbron child : childList) {
                 Gegevensbron gbChild = (Gegevensbron) child;
-                ReportInfo.Bron childBron = createReportBron(gbChild, pkValue, true, null, null);               
+                ReportInfo.Bron childBron = createReportBron(gbChild, pkValue, true, null, null, appCode);               
                 if (childBron == null || childBron.getRecords() == null
                         || childBron.getRecords().size() < 1) {
                     continue;
@@ -304,8 +304,7 @@ public class ReportServlet extends HttpServlet {
         return dataColumns;
     }
 
-    public List<Map> getData(Bron b, Gegevensbron gb, String recordId,
-            List<String> propertyNames, boolean isChild) throws IOException,
+    public List<Map> getData(Bron b, Gegevensbron gb, String recordId, List<String> propertyNames, boolean isChild, String appCode) throws IOException,
             Exception {
         
         //creeer filter voor de juiste records obv kolomnaam en id
@@ -319,7 +318,8 @@ public class ReportServlet extends HttpServlet {
                 DataStoreUtil.convertFullnameToQName(column).getLocalPart(), 
                 new String[] {recordId});
 
-        List<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propertyNames, null, false);
+        Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
+        List<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propertyNames, maximum, false);
         List result = new ArrayList();
 
         for (int i = 0; i < features.size(); i++) {
@@ -342,7 +342,7 @@ public class ReportServlet extends HttpServlet {
         return result;
     }
     
-    private String getWktForImageUrl(Bron b, Gegevensbron gb, String recordId) throws Exception {
+    private String getWktForImageUrl(Bron b, Gegevensbron gb, String recordId, String appCode) throws Exception {
 
         String wkt = null;
         String column = gb.getAdmin_pk();
@@ -354,7 +354,8 @@ public class ReportServlet extends HttpServlet {
         List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
 
-        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, true);
+        Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
+        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, maximum, true);
         
         for (int i = 0; i < features.size(); i++) {
             Feature f = features.get(i);

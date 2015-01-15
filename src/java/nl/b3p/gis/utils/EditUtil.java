@@ -92,8 +92,8 @@ public class EditUtil {
         return buffer;
     }
 
-    public String getHighlightWktForThema(String themaIds, String wktPoint,
-            String schaal, String tol, String currentWkt) {
+    //TODO CvL
+    public String getHighlightWktForThema(String themaIds, String wktPoint, String schaal, String tol, String currentWkt, String appCode) {
 
         String wkt = null;
 
@@ -128,7 +128,8 @@ public class EditUtil {
                                 }
 
                                 Gegevensbron gb = thema.getGegevensbron();
-                                ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), null, true);
+                                Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
+                                ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, geom, null, DataStoreUtil.basisRegelThemaData2PropertyNames(thema_items), maximum, true);
 
                                 if ((features != null) && (features.size() > 0)) {
                                     Feature f = features.get(0);
@@ -188,8 +189,7 @@ public class EditUtil {
         return wkt;
     }
 
-    public String getIdAndWktForRedliningObject(String wkt, Integer redLineGegevensbronId,
-            String schaal, String tol) throws Exception {
+    public String getIdAndWktForRedliningObject(String wkt, Integer redLineGegevensbronId, String schaal, String tol, String appCode) throws Exception {
 
         /* Als er geen redlining gegevensbron bekend is dan HP */
         if (redLineGegevensbronId == null || redLineGegevensbronId < 0) {
@@ -207,7 +207,7 @@ public class EditUtil {
             geom = geom.buffer(distance);
         }
 
-        ArrayList<Feature> features = doQueryRedliningObject(geom, redLineGegevensbronId);
+        ArrayList<Feature> features = doQueryRedliningObject(geom, redLineGegevensbronId, appCode);
 
         if ((features != null) && (features.size() > 0)) {
             Feature f = features.get(0);
@@ -255,7 +255,8 @@ public class EditUtil {
         return json;
     }
 
-    protected ArrayList<Feature> doQueryRedliningObject(Geometry geom, Integer gbId) throws Exception {
+    //TODO CvL
+    protected ArrayList<Feature> doQueryRedliningObject(Geometry geom, Integer gbId, String appCode) throws Exception {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         Transaction tx = null;
@@ -282,7 +283,8 @@ public class EditUtil {
 
             /* TODO: groepnaam en projectfilter meegegeven */
 
-            features = DataStoreUtil.getFeatures(b, gb, geom, null, propnames, null, true);
+            Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
+            features = DataStoreUtil.getFeatures(b, gb, geom, null, propnames, maximum, true);
 
             tx.commit();
 

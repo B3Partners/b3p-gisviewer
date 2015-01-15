@@ -34,6 +34,7 @@ import javax.xml.transform.stream.StreamSource;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.geotools.FilterBuilder;
+import nl.b3p.gis.utils.ConfigKeeper;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.services.ObjectdataPdfInfo.Record;
@@ -82,6 +83,7 @@ public class Data2PDF extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        String appCode = (String) request.getParameter("appCode"); //TODO CvL
         String gegevensbronId = request.getParameter("gbId");
         String objectIds = request.getParameter("objectIds");
         String orientation = request.getParameter("orientation");
@@ -142,7 +144,7 @@ public class Data2PDF extends HttpServlet {
             List data = null;
             String[] propertyNames = getThemaPropertyNames(gb);
             try {
-                data = getData(b, gb, ids, propertyNames);
+                data = getData(b, gb, ids, propertyNames, appCode);
             } catch (Exception ex) {
                 writeErrorMessage(response, ex.getMessage());
                 log.error("Fout bij laden pdf data.", ex);
@@ -348,13 +350,14 @@ public class Data2PDF extends HttpServlet {
         return s;
     }
 
-    public List getData(Bron b, Gegevensbron gb, String[] pks, String[] propertyNames) throws IOException, Exception {
+    public List getData(Bron b, Gegevensbron gb, String[] pks, String[] propertyNames, String appCode) throws IOException, Exception {
 
         Filter filter = FilterBuilder.createOrEqualsFilter(
                 DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart(), pks);
         List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
-        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, null, true);
+        Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
+        ArrayList<Feature> features = DataStoreUtil.getFeatures(b, gb, null, filter, propnames, maximum, true);
         ArrayList result = new ArrayList();
         for (int i = 0; i < features.size(); i++) {
             Feature f = features.get(i);

@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import nl.b3p.gis.viewer.db.Applicatie;
 import nl.b3p.gis.viewer.db.Configuratie;
 import nl.b3p.gis.viewer.db.CyclomediaAccount;
 import nl.b3p.gis.viewer.services.HibernateUtil;
@@ -23,7 +24,11 @@ public class ConfigKeeper {
     public ConfigKeeper() {
     }
 
-    public Collection<Configuratie> getConfig(String setting) {
+    private Collection<Configuratie> getConfig(String setting) {
+        
+        if (setting == null || setting.length() == 0) {
+            return null;
+        }
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         List results = sess.createQuery("from Configuratie where setting = :setting ORDER BY id")
@@ -60,12 +65,31 @@ public class ConfigKeeper {
         return configuratie;
     }
 
-    public Map<String, Object> getConfigMap(String setting)
+    public Map<String, Object> getConfigMap(String setting, boolean fetchDefault)
             throws ClassNotFoundException, NoSuchMethodException,
             InstantiationException, IllegalAccessException,
             IllegalArgumentException, InvocationTargetException {
         Map dbconfig = new HashMap();
         Collection<Configuratie> configs = getConfig(setting);
+        
+        //check if default app needs to fetched or created
+        if ((configs==null || configs.isEmpty()) && fetchDefault) {
+            Applicatie app = KaartSelectieUtil.getDefaultApplicatie();
+            if (app!=null) {
+                configs = getConfig(app.getCode());
+            }
+            if (configs==null || configs.isEmpty()) {
+                configs = getConfig("default");
+                if (configs==null || configs.isEmpty()) {
+                    createStandardApplicationConfiguration("default");
+                    configs = getConfig("default");
+                }
+            }
+        }
+        if (configs==null || configs.isEmpty()) {
+            return null;
+        }
+        
         for (Configuratie config : configs) {
 
             String property = config.getProperty();
@@ -85,28 +109,8 @@ public class ConfigKeeper {
         return dbconfig;
     }
 
-    public Map getDefaultInstellingen() {
-        String appCode = "default";
 
-        Map map = null;
-        try {
-            map = getConfigMap(appCode);
-        } catch (Exception ex) {
-        }
-
-        if (map == null || map.size() < 1) {
-            writeDefaultApplicatie(appCode);
-        }
-
-        try {
-            map = getConfigMap(appCode);
-        } catch (Exception ex) {
-        }
-
-        return map;
-    }
-
-    public static void writeDefaultApplicatie(String appCode) {
+    public static void createStandardApplicationConfiguration(String appCode) {
         Configuratie cfg = null;
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -567,4 +571,34 @@ public class ConfigKeeper {
 
         return account;
     }
+    
+    public static Integer getMaxNumberOfFeatures(String appCode) {
+
+        Integer maximum = null;
+        ConfigKeeper keeper = new ConfigKeeper();
+        Configuratie cfg = keeper.getConfiguratie(ConfigKeeper.MAX_RESULTS, appCode);
+        
+        if (cfg==null) {
+            Applicatie app = KaartSelectieUtil.getDefaultApplicatie();
+            if (app!=null) {
+                appCode = app.getCode();
+                cfg = keeper.getConfiguratie(ConfigKeeper.MAX_RESULTS, appCode);
+                if (cfg==null) {
+                    cfg = keeper.getConfiguratie(ConfigKeeper.MAX_RESULTS, "default");
+                    if (cfg==null) {
+                        createStandardApplicationConfiguration("default");
+                        cfg = keeper.getConfiguratie(ConfigKeeper.MAX_RESULTS, "default");
+                    }
+                }
+            }
+        }
+
+        if (cfg != null && cfg.getType().contains("Integer")) {
+            maximum = new Integer(cfg.getPropval());
+        }
+
+        return maximum;
+    }
+
+
 }
