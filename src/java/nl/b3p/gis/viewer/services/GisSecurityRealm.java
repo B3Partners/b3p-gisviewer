@@ -158,10 +158,12 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
          geldig is ?
          */
 
-        /* Indien via code ingelogd cachen met code */
+        //Indien location "_VIEWER_CONFIG=true" bevat dan onder aparte key opslaan
+        //omdat dan alle kaarten worden opgevraagd tbv configuratie. Welke kaarten
+        //feitelijk worden opgehaald wordt bepaald door rol bij username/pw.
+        //Indien via code ingelogd cachen met code
         String key = "";
-
-        if (username == null && code != null) {
+        if(username == null && code != null) {
             key = code;
         } else if (username != null && username.equals("anoniem")) {
             key = code;
@@ -171,8 +173,12 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
             key = username;
         }
 
+        boolean isConfig = 
+                location==null?false:location.contains("_VIEWER_CONFIG=true");
         if (key == null || key.isEmpty()) {
             return null;
+        } else if (isConfig) {
+            key += "_VIEWER_CONFIG";
         }
 
         String ip = null;
