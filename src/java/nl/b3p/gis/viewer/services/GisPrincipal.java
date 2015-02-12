@@ -186,10 +186,10 @@ public class GisPrincipal implements Principal {
     }
 
     public boolean hasLegendGraphic(Layer l) {
-        return getLegendGraphicUrl(l) != null;
+        return getLegendGraphicUrl(l, null) != null;
     }
 
-    public String getLegendGraphicUrl(Layer l) {
+    public String getLegendGraphicUrl(Layer l, String styleName) {
         if (l == null) {
             return null;
         }
@@ -208,7 +208,11 @@ public class GisPrincipal implements Principal {
                     StyleDomainResource sdr = (StyleDomainResource) it2.next();
                     if ("LegendURL".equalsIgnoreCase(sdr.getDomain())) {
                         legendUrl = sdr.getUrl();
-                        if (style.getName().equalsIgnoreCase("default")) {
+                        if (styleName == null) {
+                            if (style.getName().equalsIgnoreCase("default")) {
+                                return legendUrl;
+                            }
+                        } else if (style.getName().equalsIgnoreCase(styleName)) {
                             return legendUrl;
                         }
                     }

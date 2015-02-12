@@ -1100,7 +1100,7 @@ public class KaartSelectieAction extends BaseGisAction {
                     jsonCluster.put("wmsquerylayers", th.getWms_querylayers_real());
                 }
                 if (th.getWms_legendlayer_real() != null) {
-                    jsonCluster.put("legendurl", user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer_real())));
+                    jsonCluster.put("legendurl", user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer_real()), th.getStyle()));
                 }
                 layer = user.getLayer(th.getWms_layers_real());
             } else {
@@ -1110,7 +1110,7 @@ public class KaartSelectieAction extends BaseGisAction {
                     jsonCluster.put("wmsquerylayers", th.getWms_querylayers());
                 }
                 if (th.getWms_legendlayer() != null) {
-                    jsonCluster.put("legendurl", user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer())));
+                    jsonCluster.put("legendurl", user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer()), th.getStyle()));
                 }
                 layer = user.getLayer(th.getWms_layers());
             }
