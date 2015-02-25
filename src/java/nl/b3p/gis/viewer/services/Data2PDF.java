@@ -143,6 +143,7 @@ public class Data2PDF extends HttpServlet {
 
             List data = null;
             String[] propertyNames = getThemaPropertyNames(gb);
+            Map columnLabels = getThemaLabelNames(gb);
             try {
                 data = getData(b, gb, ids, propertyNames, appCode);
             } catch (Exception ex) {
@@ -213,7 +214,9 @@ public class Data2PDF extends HttpServlet {
                 /* Add items */
                 for (int j = 0; j < items.length - 1; j++) {
                     String string = items[j];
-                    record.addItem(propertyNames[j], string);
+                    String propertyName = propertyNames[j];
+                    String label = (String)columnLabels.get(propertyName);
+                    record.addItem(label, string);
                 }
 
                 records.put(i, record);
@@ -348,6 +351,34 @@ public class Data2PDF extends HttpServlet {
             s[i] = (String) columns.get(i);
         }
         return s;
+    }
+    
+    public Map getThemaLabelNames(Gegevensbron gb) {
+        Set themadata = gb.getThemaData();
+
+        Iterator it = themadata.iterator();
+        ArrayList columns = new ArrayList();
+        Map labels = new HashMap();
+        while (it.hasNext()) {
+            ThemaData td = (ThemaData) it.next();
+            if (td.getKolomnaam() != null) {
+                if (!columns.contains(td.getKolomnaam())) {
+
+                    if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
+                            && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
+                        columns.add(td.getKolomnaam());
+                        
+                        if(td.getLabel() != null){
+                            labels.put(td.getKolomnaam(), td.getLabel());
+                        } else {
+                            labels.put(td.getKolomnaam(), td.getKolomnaam());
+                        }
+                    }
+                }
+            }
+        }
+        
+        return labels;
     }
 
     public List getData(Bron b, Gegevensbron gb, String[] pks, String[] propertyNames, String appCode) throws IOException, Exception {
