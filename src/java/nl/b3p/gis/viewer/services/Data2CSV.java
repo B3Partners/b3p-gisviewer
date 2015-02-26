@@ -6,8 +6,10 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -78,6 +80,7 @@ public class Data2CSV extends HttpServlet {
 
             List data = null;
             String[] propertyNames = getThemaPropertyNames(gb);
+            String[] columnLabels = getThemaLabelNames(gb);
             try {
                 data = getData(b, gb, ids, propertyNames, appCode);
             } catch (Exception ex) {
@@ -90,7 +93,7 @@ public class Data2CSV extends HttpServlet {
             response.setHeader(FileUploadBase.CONTENT_DISPOSITION, "attachment; filename=\"" + gb.getNaam() + ".csv\";");
             out = response.getOutputStream();
             cos = new CsvOutputStream(new OutputStreamWriter(out), sep, false);
-            cos.writeRecord(propertyNames);
+            cos.writeRecord(columnLabels);
             for (int i = 0; i < data.size(); i++) {
                 String[] row = (String[]) data.get(i);
                 cos.writeRecord(row);
@@ -128,6 +131,38 @@ public class Data2CSV extends HttpServlet {
         String[] s = new String[columns.size()];
         for (int i = 0; i < columns.size(); i++) {
             s[i] = (String) columns.get(i);
+        }
+        return s;
+    }
+    
+    public String[] getThemaLabelNames(Gegevensbron gb) {
+        Set themadata = gb.getThemaData();
+
+        Iterator it = themadata.iterator();
+        ArrayList columns = new ArrayList();
+        ArrayList labels = new ArrayList();
+        while (it.hasNext()) {
+            ThemaData td = (ThemaData) it.next();
+            if (td.getKolomnaam() != null) {
+                if (!columns.contains(td.getKolomnaam())) {
+
+                    if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
+                            && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
+                        columns.add(td.getKolomnaam());
+                        
+                        if(td.getLabel() != null){
+                            labels.add(td.getLabel());
+                        } else {
+                            labels.add(td.getKolomnaam());
+                        }
+                    }
+                }
+            }
+        }
+        
+        String[] s = new String[labels.size()];
+        for (int i = 0; i < labels.size(); i++) {
+            s[i] = (String) labels.get(i);
         }
         return s;
     }
