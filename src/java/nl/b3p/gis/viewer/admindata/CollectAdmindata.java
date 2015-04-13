@@ -8,8 +8,10 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -436,6 +438,16 @@ public class CollectAdmindata {
                         resultList.add(lData);
                     }
                 }
+            } else if (lb.getType().equals(RecordValueBean.TYPE_DATUM)) {
+                resultValue = createDatum(attributeValue);
+
+                if (attributeValueList != null && attributeValueList.size() > 1) {
+                    for (int i = 0; i < attributeValueList.size(); i++) {
+                        Object localValue = attributeValueList.get(i);
+                        String lData = createDatum(localValue);
+                        resultList.add(lData);
+                    }
+                }
             } else if (lb.getType().equals(RecordValueBean.TYPE_URL)) {
                 resultValue = createUrl(kolomnaam, attributeValue, adminPk, pkValue,
                         /* TODO: BOY: Welk id moet hier geappend worden ? */ Themas.THEMAID, ggbId, commando);
@@ -553,6 +565,20 @@ public class CollectAdmindata {
             return null;
         }
         return attributeValue.toString();
+    }
+    
+    private String createDatum(Object attributeValue) {
+        if (attributeValue == null) {
+            return null;
+        }
+        if(attributeValue instanceof Date){
+            Date datum = (Date)attributeValue;
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-YYYY");
+            String timestamp = dateFormat.format(datum);
+            return timestamp;
+        }else{
+            return attributeValue.toString();
+        }
     }
 
     /**

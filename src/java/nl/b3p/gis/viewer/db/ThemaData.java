@@ -226,6 +226,7 @@ public class ThemaData  implements Comparable {
         json.put("columnname", kolomnaam);
         json.put("label",label);
         json.put("units",eenheid);
+        json.put("datatype",dataType.getNaam());
         if(defaultValues != null){
             JSONArray defaults = new JSONArray(Arrays.asList(defaultValues.split(",")));
             json.put("defaultValues",defaults);

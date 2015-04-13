@@ -5,8 +5,10 @@ import com.vividsolutions.jts.geom.Geometry;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -503,7 +505,7 @@ public class GetViewerDataAction extends BaseGisAction {
              * Als deze kolomnaam ingevuld staat hoeft deze alleen opgehaald te worden
              * en aan de arraylist regel toegevoegd te worden.
              */
-            if (td.getDataType().getId() == DataTypen.DATA && kolomnaam != null) {
+            if ((td.getDataType().getId() == DataTypen.DATA || td.getDataType().getId() == DataTypen.DATUM ) && kolomnaam != null) {
                 if (f.getProperty(kolomnaam).getValue() == null) {
                     regel.addValue(null);
                 } else {

@@ -26,7 +26,9 @@ import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.io.WKTReader;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -332,7 +334,20 @@ public class EditFeature {
                     ThemaData themaData = it1.next();
                     Object attr = sf.getAttribute(themaData.getKolomnaam());
                     JSONObject obj = themaData.toJSON();
-                    obj.put("value", attr);
+
+                    String datatype = obj.get("datatype").toString();
+                    if(datatype.equalsIgnoreCase("datum")){
+                        if(attr instanceof Date){
+                            Date datum = (Date)attr;
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-YYYY");
+                            String timestamp = dateFormat.format(datum);
+                            obj.put("value", timestamp);
+                        }else{
+                            obj.put("value", attr);
+                        }
+                    }else{
+                        obj.put("value", attr);
+                    }
                     if (attr != null) {
                         obj.put("type", attr.getClass().getSimpleName());
                     } else {
@@ -432,6 +447,7 @@ public class EditFeature {
             tx = sess.beginTransaction();
 
             Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gbId);
+            Set<ThemaData> themadata = gb.getThemaData();
 
             Bron b = gb.getBron();
             ds = b.toDatastore();
@@ -455,6 +471,22 @@ public class EditFeature {
                     Object value = attributes.get(column);
                     AttributeDescriptor ad = (AttributeDescriptor) fs.getSchema().getDescriptor(column);
 
+                    for (Iterator<ThemaData> it = themadata.iterator(); it.hasNext();) {
+                        ThemaData themaData = it.next();
+                        String naamKolom = themaData.getKolomnaam();
+                        if(naamKolom != null && naamKolom.equalsIgnoreCase(column)){
+                            if(themaData.getDataType().getNaam().equalsIgnoreCase("datum")){
+                                try{
+                                    String[] datum = value.toString().split("-");
+                                    String timestamp = datum[2]+"-"+datum[1]+"-"+datum[0];
+
+                                    value = timestamp + " 00:00:00";
+                                } catch(Exception e){
+                                }
+                            }
+                        }
+                    }
+                    
                     if (ad != null) {
                         columns.add(ad);
                         values.add(value);
