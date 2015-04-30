@@ -51,6 +51,7 @@ import org.apache.fop.apps.FopFactory;
 import org.apache.fop.apps.MimeConstants;
 import org.geotools.feature.simple.SimpleFeatureImpl;
 import org.hibernate.Transaction;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.opengis.feature.Feature;
 import org.opengis.feature.Property;
@@ -101,13 +102,6 @@ public class Data2PDF extends HttpServlet {
             log.error("Xsl template niet geconfigureerd.");
 
             return;
-        }
-
-        CombineImageSettings settings = null;
-        try {
-            settings = getCombineImageSettings(request);
-        } catch (Exception ex) {
-            log.error("Fout tijdens ophalen combine settings: ", ex);
         }
 
         Transaction tx = HibernateUtil.getSessionFactory().getCurrentSession().beginTransaction();
@@ -161,13 +155,29 @@ public class Data2PDF extends HttpServlet {
 
             Map<Integer, Record> records = new HashMap();
 
-            /* TODO: Objectdata kolommen obv volgordenr toevoegen ? */
-            settings.setWidth(500);
-            settings.setHeight(375);
 
             BASE64Encoder enc = new BASE64Encoder();
+
+            String jsonSettingsParam = FormUtils.nullIfEmpty(request.getParameter("jsonSettings"));
+            String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
+            JSONObject jsonSettings = new JSONObject(jsonSettingsParam);
+            String mimeType = FormUtils.nullIfEmpty(request.getParameter(OGCRequest.WMS_PARAM_FORMAT));
+            if (mimeType != null && !mimeType.equals("")) {
+
+            }
             int i = 0;
             for (Object obj : data) {
+                CombineImageSettings settings = null;
+                try {
+                    settings = getCombineImageSettings(jsonSettings, legendUrls);
+                } catch (Exception ex) {
+                    log.error("Fout tijdens ophalen combine settings: ", ex);
+                }
+                /* TODO: Objectdata kolommen obv volgordenr toevoegen ? */
+                settings.setWidth(500);
+                settings.setHeight(375);
+                settings.setMimeType(mimeType);
+
                 String[] items = (String[]) obj;
 
                 Record record = new ObjectdataPdfInfo.Record();
@@ -238,6 +248,8 @@ public class Data2PDF extends HttpServlet {
                 log.error("Fout tijdens maken pdf: ", ex);
             }
 
+        } catch (JSONException ex) {
+            log.error("Error creating CombineImageSettings: ",ex);
         } finally {
             HibernateUtil.getSessionFactory().getCurrentSession().close();
         }
@@ -457,11 +469,8 @@ public class Data2PDF extends HttpServlet {
         }
     }
 
-    private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
-        String jsonSettingsParam = FormUtils.nullIfEmpty(request.getParameter("jsonSettings"));
-        String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
+    private CombineImageSettings getCombineImageSettings(JSONObject jsonSettings, String legendUrls) throws Exception {
 
-        JSONObject jsonSettings = new JSONObject(jsonSettingsParam);
         CombineImageSettings settings = CombineImageSettings.fromJson(jsonSettings);
 
         Map legendMap = new HashMap();
@@ -476,12 +485,6 @@ public class Data2PDF extends HttpServlet {
 
             settings.setLegendMap(legendMap);
         }
-
-        String mimeType = FormUtils.nullIfEmpty(request.getParameter(OGCRequest.WMS_PARAM_FORMAT));
-        if (mimeType != null && !mimeType.equals("")) {
-            settings.setMimeType(mimeType);
-        }
-
         return settings;
     }
 
