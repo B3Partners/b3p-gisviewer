@@ -406,7 +406,14 @@ public class Data2PDF extends HttpServlet {
 
             SimpleFeatureImpl feature = (SimpleFeatureImpl) f;
             Geometry geom = (Geometry) feature.getDefaultGeometry();
-            String wkt = geom.toText();
+            String wkt = null;
+            
+            // Ook records zonder geom kunnen zo in de pdf komen
+            if(geom != null && !geom.isEmpty()){
+                wkt = geom.toText();
+            } else {
+                wkt = "POINT (0 0)";
+            }
 
             row[row.length - 1] = wkt;
 
