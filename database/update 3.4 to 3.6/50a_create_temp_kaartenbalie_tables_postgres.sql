@@ -2,7 +2,7 @@
 -- met postgres kun je normaal geen connectie maken naar andere databases.
 -- in Windows staat dit script in postgres installatiefolder /share/contrib/
 
--- vervang 'dbname=kaartenbalie34 password=***REMOVED***' door juiste connectie string !
+-- vervang 'dbname=kaartenbalie34 password=XxXxXxxxxxxxxxxXxXxX' door juiste connectie string !
 
 -- users
 CREATE TABLE users
@@ -17,7 +17,7 @@ INSERT INTO users (
 	main_organization,
 	personalurl
 )
-( SELECT * FROM dblink('dbname=kaartenbalie34 password=***REMOVED***','SELECT id, main_organization, personalurl FROM USERS u') 
+( SELECT * FROM dblink('dbname=kaartenbalie34 password=XxXxXxxxxxxxxxxXxXxX','SELECT id, main_organization, personalurl FROM USERS u') 
 AS t1(id integer, main_organization integer, personalurl varchar(255)) );
 
 -- users_roles
@@ -31,7 +31,7 @@ INSERT INTO users_roles (
 	users,
 	role
 )
-( SELECT * FROM dblink('dbname=kaartenbalie34 password=***REMOVED***','SELECT users, role FROM users_roles ur') 
+( SELECT * FROM dblink('dbname=kaartenbalie34 password=XxXxXxxxxxxxxxxXxXxX','SELECT users, role FROM users_roles ur') 
 AS t1(users integer, role integer) );
 
 -- roles
@@ -45,7 +45,7 @@ INSERT INTO roles (
 	id,
 	role
 )
-( SELECT * FROM dblink('dbname=kaartenbalie34 password=***REMOVED***','SELECT id, role FROM roles r') 
+( SELECT * FROM dblink('dbname=kaartenbalie34 password=XxXxXxxxxxxxxxxXxXxX','SELECT id, role FROM roles r') 
 AS t1(id integer, role varchar(255)) );
 
 -- organization_layers
@@ -59,7 +59,7 @@ INSERT INTO organization_layers (
 	organization,
 	layer
 )
-( SELECT * FROM dblink('dbname=kaartenbalie34 password=***REMOVED***','SELECT organization, layer FROM organization_layers ol') 
+( SELECT * FROM dblink('dbname=kaartenbalie34 password=XxXxXxxxxxxxxxxXxXxX','SELECT organization, layer FROM organization_layers ol') 
 AS t1(organization integer, layer integer) );
 
 -- layer
@@ -73,7 +73,7 @@ INSERT INTO layer (
 	id,
 	name
 )
-( SELECT * FROM dblink('dbname=kaartenbalie34 password=***REMOVED***','SELECT id, name FROM layer l') 
+( SELECT * FROM dblink('dbname=kaartenbalie34 password=XxXxXxxxxxxxxxxXxXxX','SELECT id, name FROM layer l') 
 AS t1(id integer, name varchar(200)) );
 
 -- service_provider
@@ -87,7 +87,7 @@ INSERT INTO service_provider (
 	id,
 	abbr
 )
-( SELECT * FROM dblink('dbname=kaartenbalie34 password=***REMOVED***','SELECT id, abbr FROM service_provider sp') 
+( SELECT * FROM dblink('dbname=kaartenbalie34 password=XxXxXxxxxxxxxxxXxXxX','SELECT id, abbr FROM service_provider sp') 
 AS t1(id integer, abbr varchar(200)) );
 
 -- users_orgs
@@ -101,5 +101,5 @@ INSERT INTO users_orgs (
 	organization,
 	users
 )
-( SELECT * FROM dblink('dbname=kaartenbalie34 password=***REMOVED***','SELECT organization, users FROM users_orgs uo') 
+( SELECT * FROM dblink('dbname=kaartenbalie34 password=XxXxXxxxxxxxxxxXxXxX','SELECT organization, users FROM users_orgs uo') 
 AS t1(organization integer, users integer) );
