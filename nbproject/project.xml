@@ -39,6 +39,14 @@
                 <id>jar</id>
             </reference>
             <reference>
+                <foreign-project>b3p-openbare-ruimte</foreign-project>
+                <artifact-type>jar</artifact-type>
+                <script>build.xml</script>
+                <target>jar</target>
+                <clean-target>clean</clean-target>
+                <id>jar</id>
+            </reference>
+            <reference>
                 <foreign-project>b3p-zoeker</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
@@ -48,14 +56,6 @@
             </reference>
             <reference>
                 <foreign-project>commons-mail-b3p</foreign-project>
-                <artifact-type>jar</artifact-type>
-                <script>build.xml</script>
-                <target>jar</target>
-                <clean-target>clean</clean-target>
-                <id>jar</id>
-            </reference>
-            <reference>
-                <foreign-project>openbare-ruimte</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
                 <target>jar</target>
