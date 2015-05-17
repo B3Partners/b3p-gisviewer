@@ -1,1 +1,0 @@
-ALTER TABLE tekstblok ADD (kleur varchar2(255 char));

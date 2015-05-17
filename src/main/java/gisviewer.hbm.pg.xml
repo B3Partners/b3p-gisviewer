@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+    "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+    "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<!--
+B3P Gisviewer is an extension to Flamingo MapComponents making      
+it a complete webbased GIS viewer and configuration tool that    
+works in cooperation with B3P Kaartenbalie.  
+                    
+Copyright 2006, 2007, 2008 B3Partners BV
+
+This file is part of B3P Gisviewer.
+
+B3P Gisviewer is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+B3P Gisviewer is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with B3P Gisviewer.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+<hibernate-mapping>
+    <class name="nl.b3p.gis.viewer.db.Clusters">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="naam"/>
+        <property name="omschrijving"/>
+        <property name="belangnr" not-null="true"/>
+        <property name="metadatalink"/>
+        <property name="default_cluster" not-null="true"/>
+        <property name="hide_legend" not-null="true"/>
+        <property name="hide_tree" not-null="true"/>
+        <property name="background_cluster" not-null="true"/>
+        <property name="extra_level" not-null="true"/>
+        <property name="callable" not-null="true"/>
+        <property name="default_visible" not-null="true"/>
+        <property name="exclusive_childs" not-null="true" type="boolean"/>
+        <many-to-one column="parent" name="parent"/>
+        <set cascade="all-delete-orphan" inverse="true" name="children">
+            <key column="parent"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.Clusters"/>
+        </set>
+        <set cascade="all-delete-orphan" name="themas">
+            <key column="clusters"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.Themas"/>
+        </set>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.DataTypen">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="naam"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.ThemaData">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="label"/>
+        <property name="eenheid"/>
+        <property name="omschrijving"/>
+        <property name="basisregel" not-null="true"/>
+        <property name="editable"/>
+        <property name="defaultValues"/>
+        <property name="voorbeelden"/>
+        <property name="kolombreedte" not-null="true"/>
+        <many-to-one name="waardeType"/>
+        <many-to-one name="dataType"/>
+        <property name="commando"/>
+        <property name="kolomnaam"/>
+        <property name="dataorder"/>
+        <many-to-one name="gegevensbron"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.Themas">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="code"/>
+        <property name="naam"/>
+        <property name="metadata_link"/>
+        <property name="belangnr" not-null="true"/>
+        <many-to-one column="clusters" name="cluster" not-null="true"/>
+        <property name="opmerkingen" type="text"/>
+        <property name="analyse_thema" not-null="true"/>
+        <property name="locatie_thema" not-null="true"/>
+        <property name="visible" not-null="true"/>
+        <property name="wms_url"/>
+        <property name="wms_layers"/>
+        <property name="wms_layers_real"/>
+        <property name="wms_legendlayer"/>
+        <property name="wms_legendlayer_real"/>
+        <property name="wms_querylayers"/>
+        <property name="wms_querylayers_real"/>
+        <property name="update_frequentie_in_dagen"/>
+        <property name="view_geomtype"/>
+        <property name="organizationcodekey"/>
+        <property name="maptipstring"/>
+        <property name="sldattribuut"/>
+        <property name="layoutadmindata"/>
+        <property name="style"/>
+        <many-to-one name="gegevensbron"/>
+        <property name="info_tekst" type="text"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.WaardeTypen">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="naam"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.Configuratie">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="property"/>
+        <property name="propval" type="text"/>
+        <property name="setting"/>
+        <property column="soort" name="type"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.Gegevensbron">
+        <id name="id" type="int">
+            <generator class="identity"/>
+        </id>
+        <property name="naam"/>
+        <many-to-one name="bron"/>
+        <property name="admin_tabel"/>
+        <property name="admin_pk"/>
+        <property name="admin_query" type="text"/>
+        <many-to-one column="parent" name="parent"/>
+        <set cascade="all-delete-orphan" inverse="true" name="children">
+            <key column="parent"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.Gegevensbron"/>
+        </set>
+        <property name="admin_fk"/>
+        <property name="admin_tabel_opmerkingen"/>
+        <property name="volgordenr"/>
+        <property name="editable"/>
+        <property name="geometryeditable"/>
+        <set cascade="all-delete-orphan" name="themaData" order-by="dataorder, basisregel desc, label">
+            <key column="gegevensbron"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.ThemaData"/>
+        </set>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.Tekstblok" table="tekstblok">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="titel" not-null="true" type="string"/>
+        <property name="tekst" type="text"/>
+        <property name="url" type="string"/>
+        <property column="toonurl" name="toonUrl" type="boolean"/>        <property column="volgordenr" name="volgordeNr" type="integer"/>
+        <property name="kleur" type="string"/>
+        <property name="auteur" type="string"/>
+        <property name="cdate" not-null="true" type="timestamp"/>
+        <property column="inlogicon" name="inlogIcon" type="boolean"/>
+        <property name="hoogte" type="integer"/>
+        <property column="cms_pagina" name="cmsPagina" type="integer" />
+    </class>
+
+    <class name="nl.b3p.gis.viewer.db.UserKaartgroep">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="code" not-null="true" type="string"/>
+        <property name="clusterid" not-null="true" type="integer"/>
+        <property name="default_on" type="boolean"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.UserKaartlaag">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="code" not-null="true" type="string"/>
+        <property name="themaid" not-null="true" type="integer"/>
+        <property name="default_on" type="boolean"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.UserService">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="code" not-null="true" type="string"/>
+        <property name="url" not-null="true" type="string"/>
+        <property name="groupname" not-null="true" type="string"/>
+        <property name="sld_url" type="string"/>
+        <set cascade="save-update, delete, delete-orphan" inverse="true" name="user_layers" order-by="id, title">
+            <key column="serviceid"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.UserLayer"/>
+        </set>
+        <property name="name" type="string"/>
+        <property name="use_in_list" type="boolean"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.UserLayer">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <many-to-one name="serviceid"/>
+        <property name="title" type="string"/>
+        <property name="name" type="string"/>
+        <property name="queryable" type="boolean"/>
+        <property name="scalehint_min" type="string"/>
+        <property name="scalehint_max" type="string"/>
+        <property name="use_style" type="string"/>
+        <property name="sld_part" type="text"/>
+        <property name="show" type="boolean"/>
+        <property name="default_on" type="boolean"/>
+        <many-to-one class="nl.b3p.gis.viewer.db.UserLayer" name="parent"/>
+        <set cascade="save-update, delete, delete-orphan" inverse="true" name="user_layer_styles" order-by="id, name">
+            <key column="layerid"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.UserLayerStyle"/>
+        </set>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.UserLayerStyle">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <many-to-one name="layerid"/>
+        <property name="name" type="string"/>
+    </class>
+    <class name="nl.b3p.gis.viewer.db.Applicatie">
+        <id name="id" type="int">
+            <generator class="identity"/>
+        </id>
+        <property name="naam"/>
+        <property name="code"/>
+        <property name="gebruikersCode"/>
+        <many-to-one column="parent" name="parent"/>
+        <set cascade="all-delete-orphan" inverse="true" name="children">
+            <key column="parent"/>
+            <one-to-many class="nl.b3p.gis.viewer.db.Applicatie"/>
+        </set>
+        <property name="datum_gebruikt" not-null="true" type="timestamp"/>
+        <property name="read_only" not-null="true" type="boolean"/>
+        <property name="user_copy" not-null="true" type="boolean"/>
+        <property name="versie" not-null="true" type="int"/>
+        <property name="default_app" not-null="true" type="boolean"/>
+        <property name="email"/>
+    </class>
+    
+    <class name="nl.b3p.gis.viewer.db.CyclomediaAccount">
+        <id name="id" type="int">
+            <generator class="identity"/>
+        </id>
+        <property name="apiKey" column="api_key" />
+        <property name="accountId" column="account_id" />
+        <property name="wachtwoord" />
+        <property name="privateBase64Key" type="text" column="private_base64_key"/>
+        <property name="appCode" column="app_code"/>
+    </class>
+    
+    <class name="nl.b3p.gis.viewer.db.ZoekconfiguratieThemas">
+        <id name="id">
+            <generator class="identity"/>
+        </id>        
+        <many-to-one name="zoekconfiguratie"/>
+        <many-to-one name="thema"/>
+    </class>
+    
+    <class name="nl.b3p.gis.viewer.db.CMSPagina" table="cms_pagina">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="titel" not-null="true" type="string"/>
+        <property name="tekst" type="text"/>
+        <property name="thema" type="string"/>
+        <property name="showPlainAndMapButton" column="show_plain_map_btn" not-null="true" type="boolean"/>
+        <property name="cdate" not-null="true" type="timestamp"/>
+        <property column="cms_menu" name="cmsMenu" type="integer" />
+        <property column="login_required" name="loginRequired" type="boolean"/>
+    </class>
+    
+    <class name="nl.b3p.gis.viewer.db.CMSMenu" table="cms_menu">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="titel" length="255" not-null="true"/>
+        <property name="cdate" not-null="true" type="timestamp"/>
+        <set name="cmsMenuItems" table="cms_menu_menuitem">
+            <key column="cms_menu_id"/>
+            <many-to-many class="nl.b3p.gis.viewer.db.CMSMenuItem" column="cms_menuitem_id"/>
+        </set>
+    </class>
+    
+    <class name="nl.b3p.gis.viewer.db.CMSMenuItem" table="cms_menuitem">
+        <id name="id">
+            <generator class="identity"/>
+        </id>
+        <property name="titel" length="255" not-null="true"/>
+        <property name="url" length="255" not-null="true"/>
+        <property name="icon" length="255"/>
+        <property name="volgordenr" type="integer"/>
+        <property name="cdate" not-null="true" type="timestamp"/>
+        <set name="cmsMenus" table="cms_menu_menuitem" inverse="true">
+            <key column="cms_menuitem_id"/>
+            <many-to-many class="nl.b3p.gis.viewer.db.CMSMenu" column="cms_menu_id"/>
+        </set>
+    </class>
+    
+</hibernate-mapping>

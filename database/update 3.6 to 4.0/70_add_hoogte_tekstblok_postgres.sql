@@ -1,1 +1,0 @@
-ALTER TABLE tekstblok ADD COLUMN hoogte integer;
