@@ -27,14 +27,13 @@
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
-            <version>3.6.8.Final</version>
+            <version>3.6.3.Final</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>bouncycastle</groupId>
-            <artifactId>bcprov-jdk15</artifactId>
-            <version>140</version>
-            <type>jar</type>
+            <artifactId>bcprov-jdk14</artifactId>
+            <version>138</version>
         </dependency>
         <dependency>
             <groupId>nl.b3p</groupId>
@@ -72,11 +71,10 @@
             <version>4.2</version>
             <type>jar</type>
         </dependency>
-       <dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.2.3</version>
-            <type>jar</type>
+            <version>2.0.6</version>
         </dependency>
         <dependency>
             <groupId>nl.b3p</groupId>
@@ -99,19 +97,29 @@
        <dependency>
             <groupId>commons-dbutils</groupId>
             <artifactId>commons-dbutils</artifactId>
-            <version>1.6</version>
+            <version>1.5</version>
         </dependency>
+        
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+                <version>2.4</version>
+                <scope>provided</scope>
+            </dependency>
     </dependencies>
     <properties>
         <project.build.sourceEncoding>windows-1252</project.build.sourceEncoding>
-        <maven.compiler.source>1.6</maven.compiler.source>
-        <maven.compiler.target>1.6</maven.compiler.target>
-    </properties>    
+     </properties>    
     <repositories>
         <repository>
             <id>osgeo</id>
             <name>Open Source Geospatial Foundation Repository</name>
             <url>http://download.osgeo.org/webdav/geotools/</url>
+        </repository>
+       <repository>
+            <id>repository.jboss.org-public</id>
+            <name>JBoss.org Maven repository</name>
+            <url>https://repository.jboss.org/nexus/content/groups/public/</url>
         </repository>
     </repositories>
 </project>
