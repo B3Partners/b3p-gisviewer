@@ -28,7 +28,6 @@
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
             <version>3.6.3.Final</version>
-            <type>jar</type>
         </dependency>
 
         <dependency>
