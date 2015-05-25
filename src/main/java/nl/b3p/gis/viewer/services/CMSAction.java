@@ -47,7 +47,6 @@ public class CMSAction extends BaseGisAction {
 
         /* Indien voor cms pagina ingelogd moet worden dan redirecten */
         CMSPagina cmsPage = getCMSPage(cmsPageId);
-        Boolean loginRequired = null;
         if(cmsPage == null){
             
             return new RedirectingActionForward("/http_404.do");
@@ -87,17 +86,27 @@ public class CMSAction extends BaseGisAction {
     private Integer getCMSPageId(HttpServletRequest request) {
         Integer cmsPageId = null;
         
-        String param = request.getParameter(CMS_PAGE_ID);
-
-        if (param != null && !param.equals("")) {
-            cmsPageId = new Integer(param);
+        /* TODO
+         * Deze methode checht eerst of er een id in de url zit, zo ja wordt deze
+         * gebruikt. Zo nee, dan wordt gekeken of cmsPageId in de url zit.
+         * Waarom heeft id voorrang op cmsPageId?
+         * Waarom kan niet in beide gevallen cmsPageId gebruikt worden?
+         * Dan moet dit ook in urlrewrite.xml worden aangepast.
+         */
+        String param = null;
+        try {
+            param = request.getParameter("id");
+            if (param != null && !param.isEmpty()) {
+                cmsPageId = Integer.parseInt(param);
+            } else {
+                param = request.getParameter(CMS_PAGE_ID);
+                if (param != null && !param.isEmpty()) {
+                    cmsPageId = new Integer(param);
+                }
+            }
+        } catch (NumberFormatException nfe) {
+            logger.info("Trying to get invalid CMS page with id: " + param);
         }
-
-        if (request.getParameter("id") != null) {
-            //java.lang.NumberFormatException: For input string: "1;jsessionid=0333FE9E7400BD3AA20839364E60F93B"
-            cmsPageId = Integer.parseInt(request.getParameter("id"));
-        }
-        
         return cmsPageId;
     }
 
