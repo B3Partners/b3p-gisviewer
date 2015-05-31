@@ -355,7 +355,7 @@ public class CollectAdmindata {
         String adminPk = null;
 
         if (gb.getAdmin_pk() != null) {
-            QName qName = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk());
+            QName qName = DataStoreUtil.convertColumnNameToQName(gb.getAdmin_pk());
 
             if (qName != null) {
                 adminPk = qName.getLocalPart();
@@ -387,7 +387,7 @@ public class CollectAdmindata {
 
             String kolomnaam = lb.getKolomNaam();
             if (kolomnaam != null && kolomnaam.length() > 0) {
-                kolomnaam = DataStoreUtil.convertFullnameToQName(lb.getKolomNaam()).getLocalPart();
+                kolomnaam = DataStoreUtil.convertColumnNameToQName(lb.getKolomNaam()).getLocalPart();
             }
 
             List attributeValueList = null;

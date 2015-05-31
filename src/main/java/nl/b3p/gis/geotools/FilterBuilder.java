@@ -9,10 +9,10 @@ import java.util.ArrayList;
 import javax.xml.transform.TransformerException;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
-import org.geotools.filter.FilterFactory;
 import org.geotools.filter.FilterTransformer;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.filter.Filter;
+import org.opengis.filter.FilterFactory;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.Expression;
 import org.opengis.filter.expression.PropertyName;
@@ -71,10 +71,9 @@ public class FilterBuilder {
         Filter filter = null;
 
 //        filter = ff.bbox(ff.property("geometrie"), 195580,466937, 196403, 467760, "EPSG:28992");
-
-        filter = ff.intersects(ff.property("geometrie"), Expression.NIL);
+//        filter = ff.intersects("geometrie", Expression.NIL);
 //      filter = ff.bbox(ff.property("geometrie"), (BoundingBox) ff.literal(JTS.toGeometry((com.vividsolutions.jts.geom.Envelope) bbox)));
-        filter = ff.bbox(ff.property("geometrie"), bbox);
+//        filter = ff.bbox(ff.property("geometrie"), bbox);
         FilterTransformer ft = new FilterTransformer();
         try {
             String s = ft.transform(filter);

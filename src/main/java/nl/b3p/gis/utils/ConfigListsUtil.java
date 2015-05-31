@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
+import javax.xml.namespace.QName;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.zoeker.configuratie.Bron;
@@ -23,7 +24,6 @@ import org.geotools.data.DataStore;
 import org.hibernate.Transaction;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.Name;
 
 /**
  *
@@ -150,18 +150,12 @@ public class ConfigListsUtil {
         ArrayList returnValue = null;
         DataStore ds= b.toDatastore();
         try{
-            Name[] features = DataStoreUtil.getTypeNames(ds);
+            QName[] features = DataStoreUtil.getTypeNames(ds);
             if (features != null) {
                 returnValue = new ArrayList();
                 for (int i = 0; i < features.length; i++) {
                     String[] s = new String[2];
-                    String nsu = features[i].getNamespaceURI();
-                    if (nsu != null && nsu.length()!=0) {
-                        s[0] = "{" + features[i].getNamespaceURI() + "}";
-                    } else {
-                        s[0] = "";
-                    }
-                        s[0] += features[i].getLocalPart();
+                    s[0] = DataStoreUtil.convertQNameToFullname(features[i]);
                     s[1] = features[i].getLocalPart();
                     returnValue.add(s);
                 }
@@ -181,25 +175,23 @@ public class ConfigListsUtil {
         }
         List returnValue = new ArrayList();
         DataStore ds=b.toDatastore();
-        returnValue=DataStoreUtil.getAttributeNames(ds, type);
-        returnValue = new ArrayList();
         try{
-            SimpleFeatureType sft=DataStoreUtil.getSchema(ds, type);
+            QName nft = DataStoreUtil.convertFeatureTypeToQName(type, ds);
+            SimpleFeatureType sft=DataStoreUtil.getSchema(ds, nft);
             List<AttributeDescriptor> attributes=sft.getAttributeDescriptors();
             Iterator<AttributeDescriptor> it= attributes.iterator();
             while(it.hasNext()){
                 AttributeDescriptor attribute=it.next();
                 String[] s = new String[2];
-                if (attribute.getName().getNamespaceURI()!=null) {
-                    s[0]  = "{" + attribute.getName().getNamespaceURI() + "}";
-                } else {
-                    s[0] = "";
-                }
-                s[0] += attribute.getLocalName();
+                s[0] = DataStoreUtil
+                        .convertQNameToFullname(DataStoreUtil
+                                .n2Qn(attribute.getName()));
                 s[1] = attribute.getLocalName();
                 returnValue.add(s);
             }
-        }finally{
+        } catch (Exception e) {
+            log.error("fout bij ophalen attributen: " + e.getLocalizedMessage());
+        } finally {
             ds.dispose();
         }
         return returnValue;

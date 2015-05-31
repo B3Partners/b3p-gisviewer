@@ -396,7 +396,7 @@ public class Data2PDF extends HttpServlet {
     public List getData(Bron b, Gegevensbron gb, String[] pks, String[] propertyNames, String appCode) throws IOException, Exception {
 
         Filter filter = FilterBuilder.createOrEqualsFilter(
-                DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart(), pks);
+                DataStoreUtil.convertColumnNameToQName(gb.getAdmin_pk()).getLocalPart(), pks);
         List<ThemaData> items = SpatialUtil.getThemaData(gb, false);
         List<String> propnames = DataStoreUtil.themaData2PropertyNames(items);
         Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);

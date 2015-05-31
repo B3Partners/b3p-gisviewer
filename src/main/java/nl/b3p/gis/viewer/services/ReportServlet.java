@@ -315,7 +315,7 @@ public class ReportServlet extends HttpServlet {
             column = gb.getAdmin_fk();
         }
         Filter filter = FilterBuilder.createOrEqualsFilter(
-                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), 
+                DataStoreUtil.convertColumnNameToQName(column).getLocalPart(), 
                 new String[] {recordId});
 
         Integer maximum = ConfigKeeper.getMaxNumberOfFeatures(appCode);
@@ -348,7 +348,7 @@ public class ReportServlet extends HttpServlet {
         String column = gb.getAdmin_pk();
 
         Filter filter = FilterBuilder.createOrEqualsFilter(
-                DataStoreUtil.convertFullnameToQName(column).getLocalPart(), 
+                DataStoreUtil.convertColumnNameToQName(column).getLocalPart(), 
                 new String[] {recordId});
 
         List<ThemaData> items = SpatialUtil.getThemaData(gb, false);

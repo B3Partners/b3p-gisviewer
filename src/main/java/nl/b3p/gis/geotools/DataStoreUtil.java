@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.xml.namespace.QName;
-import nl.b3p.gis.viewer.GetViewerDataAction;
 import nl.b3p.gis.viewer.db.DataTypen;
 import nl.b3p.gis.viewer.db.Gegevensbron;
 import nl.b3p.gis.viewer.db.ThemaData;
@@ -146,19 +145,15 @@ public class DataStoreUtil {
             return features;
         }
 
-        QName ftName = convertFullnameToQName(gb.getAdmin_tabel());
         try {
             DataStore ds = gb.getBron().toDatastore();
+            QName ftName = convertFeatureTypeToQName(gb.getAdmin_tabel(), ds);
 
             FeatureSource fs = null;
             FeatureIterator fi = null;
 
-            if (ds instanceof WFS_1_1_0_DataStore) {
-                fs = ds.getFeatureSource(new NameImpl(ftName.getNamespaceURI(), ftName.getLocalPart()));
-            } else {
-                fs = ds.getFeatureSource(ftName.getLocalPart());
-            }
-
+            fs = getFeatureSource(ds, ftName);
+ 
             SimpleFeatureType featureType = (SimpleFeatureType) fs.getSchema();
             if (featureType != null) {
                 Filter filter = getBboxFilter(featureType, geom);
@@ -222,6 +217,27 @@ public class DataStoreUtil {
         return features;
     }
 
+    public static String reconstructPrefixedName(QName qname, DataStore ds) throws IOException {
+        if (qname.getNamespaceURI()==null || qname.getNamespaceURI().isEmpty()) {
+            // geen namespace, dan ook niet zinvol om prefix op te zoeken.
+            return qname.getLocalPart();
+        }
+        List<Name> names = ds.getNames(); 
+        if (names != null && !names.isEmpty()) {
+            //find prefix via ds.getTypeNames();
+            String[] prefixedNames = ds.getTypeNames();
+            for (int i = 0; i < names.size(); i++) {
+                if (qname.getLocalPart()
+                        .equals(names.get(i).getLocalPart())
+                        && qname.getNamespaceURI()
+                        .equals(names.get(i).getNamespaceURI())) {
+                    return prefixedNames[i];
+                }
+            }
+        }
+        return null;
+    }
+    
     public static FeatureCollection getFeatureCollection(DataStore ds, Gegevensbron gb, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
         ArrayList<Filter> filters = new ArrayList();
         if (f != null) {
@@ -267,24 +283,15 @@ public class DataStoreUtil {
         }
 
         FeatureSource fs = null;
-        QName ftName = convertFullnameToQName(gb.getAdmin_tabel());
-        if (ds instanceof WFS_1_1_0_DataStore) {
-            fs = ds.getFeatureSource(new NameImpl(ftName.getNamespaceURI(), ftName.getLocalPart()));
-            // hierkomt een FeatureSource uit met als typename een prefixed name
-            // bv: app:bestemmingsplangebied
-        } else {
-            fs = ds.getFeatureSource(ftName.getLocalPart());
-        }
-
+        QName ftName = convertFeatureTypeToQName(gb.getAdmin_tabel(), ds);
+        fs = getFeatureSource(ds, ftName);
+ 
         DefaultQuery query = null;
-        if (ds instanceof WFS_1_1_0_DataStore) {
-            // deze query moet passen bij feature source dus moet prefixed name zijn
-            String prefixedName = ftName.getPrefix() + ":" + ftName.getLocalPart();
-            query = new DefaultQuery(prefixedName, filter);
-            query.setNamespace(new URI(ftName.getNamespaceURI())); // wordt niet gebruikt
-        } else {
-            query = new DefaultQuery(ftName.getLocalPart(), filter);
-        }
+        // query.setNamespace(new URI(ftName.getNamespaceURI())); 
+        // waarom wordt dit niet gebruikt? slecht van geotools!
+        // daarom deze query aanpassen, moet prefixed name zijn
+        String prefixedName = reconstructPrefixedName(ftName, ds);
+        query = new DefaultQuery(prefixedName, filter);
 
         int max;
         if (maximum != null) {
@@ -300,7 +307,7 @@ public class DataStoreUtil {
             String adminPk = null;
             String tmpAdminPk = gb.getAdmin_pk();
             if (tmpAdminPk != null) {
-                adminPk = DataStoreUtil.convertFullnameToQName(tmpAdminPk).getLocalPart();
+                adminPk = DataStoreUtil.convertColumnNameToQName(tmpAdminPk).getLocalPart();
             }
 
             if (adminPk != null && adminPk.length() > 0 && !propNames.contains(adminPk)) {
@@ -310,7 +317,7 @@ public class DataStoreUtil {
             String adminFk = null;
             String tmpAdminFk = gb.getAdmin_fk();
             if (tmpAdminFk != null) {
-                adminFk = DataStoreUtil.convertFullnameToQName(tmpAdminFk).getLocalPart();
+                adminFk = DataStoreUtil.convertColumnNameToQName(tmpAdminFk).getLocalPart();
             }
 
             if (adminFk != null && adminFk.length() > 0 && !propNames.contains(adminFk)) {
@@ -338,7 +345,7 @@ public class DataStoreUtil {
                         //haal alle properties er uit.en stuur deze mee in de query
                         int beginIndex = commando.indexOf("[") + 1;
                         int endIndex = commando.indexOf("]");
-                        QName propName = convertFullnameToQName(commando.substring(beginIndex, endIndex));
+                        QName propName = convertColumnNameToQName(commando.substring(beginIndex, endIndex));
                         //geen dubbele meegeven.
                         if (propName != null && !propNames.contains(propName.getLocalPart())) {
                             propNames.add(propName.getLocalPart());
@@ -383,7 +390,8 @@ public class DataStoreUtil {
             log.error("Thema heeft geen geometry");
             throw new Exception("Thema heeft geen geometry");
         }
-        CoordinateReferenceSystem crs = getSchema(ds, t).getGeometryDescriptor().getCoordinateReferenceSystem();
+        CoordinateReferenceSystem crs = getSchema(ds, t)
+                .getGeometryDescriptor().getCoordinateReferenceSystem();
         return createIntersectFilter(geomAttributeName, crs, ds, geom);
     }
 
@@ -458,31 +466,46 @@ public class DataStoreUtil {
      */
     public static SimpleFeatureType getSchema(DataStore ds, Themas t) throws Exception {
 
-        /* TODO
-         * spatial tabel indien null check ?
-         */
-        return getSchema(ds, t.getGegevensbron().getAdmin_tabel());
+        return getSchema(ds, new QName(t.getGegevensbron().getAdmin_tabel()));
     }
 
     /**
      * Haalt het schema op van de featureType met de naam: 'featureName' Als het
      * log op DebugEnabled staat dan wordt er in het log ook een lijst met
      * mogelijke schemas getoond.
+     * LET OP 1: voor WFS_1_0_0_Datastore is getSchema(Name) niet geimplementeerd: 
+     * altijd null, gebruik getSchema(String).
+     * LET OP 2: voor WFS_1_0_0_Datastore is getSchema(String) inclusief test met
+     * en zonder prefix, bij GetFeatureSource(String).getSchema(String) zit deze
+     * test op prefix niet.
+     * LET OP 3: voor WFS_1_1_0_Datasore getSchema(Name) en getFeatureSource(Name)
+     * wordt de prefix opgezocht in de datastore en voor de localname geplaatst
+     * en daarna wordt gezocht zoals bij de String versie.
+     * LET OP 4: mapserver en wfs 1.1 is tricky, in de GetCapability wordt geen
+     * prefix en namespace mee gegeven en ieder featuretype krijgt de wfs namespace.
+     * Bij DescribeFeatureType geeft mapserver een eigen prefix en namespace mee
+     * ms en http://mapserver.gis.umn.edu/mapserver. Als Geotools de juiste mapserver
+     * strategy meekrijgt (zie WFSDataStoreFactory.WFS_STRATEGY) dan is er een
+     * workaround: bij opvragen van schema zorgen dat de http://www.opengis.net/wfs
+     * niet meegegeven wordt.
      */
-    public static SimpleFeatureType getSchema(DataStore ds, String featureName) throws Exception {
-        QName ftName = convertFullnameToQName(featureName);
+    public static SimpleFeatureType getSchema(DataStore ds, QName ftName) {
         try {
-            if (ds instanceof WFS_1_1_0_DataStore) {
-                return ds.getSchema(new NameImpl(ftName.getNamespaceURI(), ftName.getLocalPart()));
-            } else {
-                SimpleFeatureType sft = ds.getFeatureSource(ftName.getLocalPart()).getSchema();
-            
+            if (ds instanceof WFS_1_1_0_DataStore 
+                    && ftName.getNamespaceURI()!=null 
+                    && !ftName.getNamespaceURI().isEmpty()
+                    //Hack: ism Mapserver strategy
+                    && !ftName.getNamespaceURI().equals("http://www.opengis.net/wfs")) {
+                Name nn = qN2N(ftName);
+                SimpleFeatureType sft = ds.getSchema(nn);
                 return sft;
-                
-                //return ds.getSchema(ftName.getLocalPart());
-            }            
+            } else {
+                String ns = ftName.getLocalPart();
+                SimpleFeatureType sft = ds.getSchema(ns);
+                return sft;
+             }            
         } catch (Exception e) {
-
+            
             // NPE indien schema niet opgehaald kan worden,
             // wij maken er een leeg schema van
             //FeatureTypeBuilder ftb = FeatureTypeBuilder.newInstance(ftName.getLocalPart());
@@ -497,6 +520,22 @@ public class DataStoreUtil {
         }
     }
 
+    public static FeatureSource getFeatureSource(DataStore ds, QName ftName) throws IOException {
+        if (ds instanceof WFS_1_1_0_DataStore
+                && ftName.getNamespaceURI() != null
+                && !ftName.getNamespaceURI().isEmpty()
+                //Hack: ism Mapserver strategy
+                && !ftName.getNamespaceURI().equals("http://www.opengis.net/wfs")) {
+            Name nn = qN2N(ftName);
+            FeatureSource fs = ds.getFeatureSource(nn);
+            return fs;
+        } else {
+            String ns = ftName.getLocalPart();
+            FeatureSource fs = ds.getFeatureSource(ns);
+            return fs;
+        }
+    }
+    
     public static boolean isFilterSupported(WFS_1_0_0_DataStore ds, Filter filter) throws IOException {
         return ds.getCapabilities().getFilterCapabilities().fullySupports(filter);
     }
@@ -533,16 +572,16 @@ public class DataStoreUtil {
         /* TODO
          * spatial tabel indien null check ?
          */
-        return getSchema(ds, gb.getAdmin_tabel());
+        return getSchema(ds, convertFeatureTypeToQName(gb.getAdmin_tabel(), ds));
     }
 
-    public static List<String> getAttributeNames(Bron b, Gegevensbron gb) throws Exception {
+    public static List<QName> getAttributeNames(Bron b, Gegevensbron gb) throws Exception {
         if (b == null) {
-            return new ArrayList<String>();
+            return new ArrayList<QName>();
         }
         DataStore ds = b.toDatastore();
         try {
-            return getAttributeNames(ds, gb.getAdmin_tabel());
+            return getAttributeNames(ds, convertFeatureTypeToQName(gb.getAdmin_tabel(), ds));
         } finally {
             ds.dispose();
         }
@@ -552,15 +591,14 @@ public class DataStoreUtil {
      * Geeft een lijst terug met String objecten waarin de mogelijke
      * attributeNames staan.
      */
-    public static List<String> getAttributeNames(DataStore ds, String featureName) throws Exception {
-        QName ftName = convertFullnameToQName(featureName);
-        ArrayList<String> attributen = new ArrayList();
+    public static List<QName> getAttributeNames(DataStore ds, QName ftName) throws Exception {
+        ArrayList<QName> attributen = new ArrayList();
         try {
-            SimpleFeatureType featureType = getSchema(ds, ftName.getLocalPart());
+            SimpleFeatureType featureType = getSchema(ds, ftName);
             List<AttributeDescriptor> descriptors = featureType.getAttributeDescriptors();
             //maak een lijst met mogelijke attributen en de binding class namen.
             for (int i = 0; i < descriptors.size(); i++) {
-                attributen.add(descriptors.get(i).getName().getLocalPart());
+                attributen.add(n2Qn(descriptors.get(i).getName()));
             }
         } catch (Exception e) {
             // error reported earlier
@@ -572,7 +610,7 @@ public class DataStoreUtil {
         ArrayList<String> propNamesList = new ArrayList();
         for (int i = 0; i < themaData.size(); i++) {
             if (themaData.get(i).getKolomnaam() != null) {
-                String prp = convertFullnameToQName(themaData.get(i).getKolomnaam()).getLocalPart();
+                String prp = convertColumnNameToQName(themaData.get(i).getKolomnaam()).getLocalPart();
                 if (!propNamesList.contains(prp)) {
                     propNamesList.add(prp);
                 }
@@ -585,7 +623,7 @@ public class DataStoreUtil {
         ArrayList<String> propNamesList = new ArrayList();
         for (int i = 0; i < themaData.size(); i++) {
             if (themaData.get(i).getKolomnaam() != null && themaData.get(i).isBasisregel()) {
-                String prp = convertFullnameToQName(themaData.get(i).getKolomnaam()).getLocalPart();
+                String prp = convertColumnNameToQName(themaData.get(i).getKolomnaam()).getLocalPart();
                 if (!propNamesList.contains(prp)) {
                     propNamesList.add(prp);
                 }
@@ -594,18 +632,22 @@ public class DataStoreUtil {
         return propNamesList;
     }
 
-    public static Name[] getTypeNames(DataStore ds) throws IOException {
-        String[] tna = ds.getTypeNames();
-        if (tna == null || tna.length == 0) {
-            return new Name[]{};
-        }
-        Name[] typeNames = new Name[tna.length];
-        for (int i = 0; i < tna.length; i++) {
-            QName qname = convertFullnameToQName(tna[i]);
-            if (qname == null) {
-                typeNames[i] = new NameImpl("");
-            } else {
-                typeNames[i] = new NameImpl(qname.getNamespaceURI(), qname.getLocalPart());
+    public static QName[] getTypeNames(DataStore ds) throws IOException {
+        List<Name> names = ds.getNames();
+        QName[] typeNames = null;
+        if (names == null || names.isEmpty()) {
+            //find via 
+            String[] localNames = ds.getTypeNames();
+            typeNames = new QName[localNames.length];
+            for (int i = 0; i < localNames.length; i++) {
+                QName qname = new QName(localNames[i]);
+                typeNames[i] = qname;
+            }
+        } else {
+            typeNames = new QName[names.size()];
+            for (int i = 0; i < names.size(); i++) {
+                QName qname = n2Qn(names.get(i));
+                typeNames[i] = qname;
             }
         }
         return typeNames;
@@ -620,7 +662,7 @@ public class DataStoreUtil {
      * @return int
      *
      */
-    static public Name getThemaGeomName(Themas t, GisPrincipal user) throws IOException, Exception {
+    static public QName getThemaGeomName(Themas t, GisPrincipal user) throws IOException, Exception {
         Gegevensbron gb = t.getGegevensbron();
         Bron b = null;
 
@@ -632,16 +674,16 @@ public class DataStoreUtil {
             return null;
         }
 
-        QName n = DataStoreUtil.convertFullnameToQName(gb.getAdmin_tabel());
+        DataStore ds = b.toDatastore();
+        QName n = DataStoreUtil.convertFeatureTypeToQName(gb.getAdmin_tabel(), ds);
         if (n == null || n.getLocalPart() == null) {
             return null;
         }
 
-        DataStore ds = b.toDatastore();
         try {
-            SimpleFeatureType sft = ds.getSchema(n.getLocalPart());
+            SimpleFeatureType sft = getSchema(ds, n);
             if (sft.getGeometryDescriptor() != null) {
-                return sft.getGeometryDescriptor().getName();
+                return n2Qn(sft.getGeometryDescriptor().getName());
             }
         } finally {
             ds.dispose();
@@ -649,22 +691,23 @@ public class DataStoreUtil {
         return null;
     }
 
-    static public Name getThemaGeomName(Gegevensbron gb, GisPrincipal user) throws IOException, Exception {
+    static public QName getThemaGeomName(Gegevensbron gb, GisPrincipal user) throws IOException, Exception {
         Bron b = gb.getBron();
         if (b == null) {
             return null;
         }
-        QName n = DataStoreUtil.convertFullnameToQName(gb.getAdmin_tabel());
+        
+        DataStore ds = b.toDatastore();
+        QName n = convertFeatureTypeToQName(gb.getAdmin_tabel(),ds);
 
         if (n == null || n.getLocalPart() == null) {
             return null;
         }
 
-        DataStore ds = b.toDatastore();
         try {
-            SimpleFeatureType sft = ds.getSchema(n.getLocalPart());
+            SimpleFeatureType sft = getSchema(ds, n);
             if (sft.getGeometryDescriptor() != null) {
-                return sft.getGeometryDescriptor().getName();
+                return n2Qn(sft.getGeometryDescriptor().getName());
             }
         } finally {
             ds.dispose();
@@ -684,14 +727,14 @@ public class DataStoreUtil {
             return null;
         }
 
-        QName n = DataStoreUtil.convertFullnameToQName(gb.getAdmin_tabel());
+        DataStore ds = b.toDatastore();
+        QName n = convertFeatureTypeToQName(gb.getAdmin_tabel(),ds);
         if (n == null || n.getLocalPart() == null) {
             return null;
         }
 
-        DataStore ds = b.toDatastore();
         try {
-            SimpleFeatureType sft = ds.getSchema(n.getLocalPart());
+            SimpleFeatureType sft = getSchema(ds, n);
             if (sft.getGeometryDescriptor() != null) {
                 return sft.getGeometryDescriptor().getType().toString();
             }
@@ -711,8 +754,76 @@ public class DataStoreUtil {
     public static DataStore createDataStoreFromParams(Map params) throws IOException, Exception {
         return Bron.createDataStoreFromParams(params);
     }
+    
+    public static Name qN2N(QName qn) {
+        if (qn==null) {
+            return new NameImpl("");
+        }
+        return new NameImpl(qn.getNamespaceURI(), qn.getLocalPart());
+    }
+    
+    public static QName n2Qn(Name n) {
+        if (n==null) {
+            return new QName("");
+        }
+        return new QName(n.getNamespaceURI(), n.getLocalPart());
+    }
+    
+    public static String convertQNameToFullname(QName qn) {
+        String returnValue = "";
+        String nsu = qn.getNamespaceURI();
+        if (nsu != null && nsu.length() != 0) {
+            returnValue = "{" + nsu + "}";
+        }
+        returnValue += qn.getLocalPart();
+        return returnValue;
+    }
 
-    public static QName convertFullnameToQName(String ln) {
+    public static QName convertFeatureTypeToQName(String ln, DataStore ds) throws IOException, Exception {
+        if (ln == null) {
+            return null;
+        }
+        String localName = ln;
+        String nsPrefix = "";
+        String nsUriString = "";
+        String[] temp = ln.split("}");
+        if (temp.length > 1) {
+            localName = temp[1];
+            int index1 = ln.indexOf("{");
+            int index2 = ln.indexOf("}");
+            nsUriString = ln.substring(index1 + 1, index2);
+            Schema schema = SchemaFactory.getInstance(nsUriString);
+            nsPrefix = (schema == null ? "ns" + nsUriString.hashCode() : schema.getPrefix());
+        }
+        QName convName = new QName(nsUriString, localName, nsPrefix);
+      
+        List<Name> names = ds.getNames();
+        if (names == null || names.isEmpty()) {
+           String[] localNames = ds.getTypeNames();
+            for (int i = 0; i < localNames.length; i++) {
+                 if (localNames[i].equals(convName.getLocalPart())) {
+                    return convName;
+//                    return new QName(localNames[i]);
+                }
+            }
+        } else {
+             for (Name name : names){
+                String nameUri = name.getNamespaceURI();
+                if (nameUri == null) {
+                    nameUri = "";
+                }
+                if (convName.getNamespaceURI().equals(nameUri)) {
+                    if (convName.getLocalPart().equals(name.getLocalPart())) {
+                        return n2Qn(name);
+                    }
+                }
+            }
+        }
+        throw new Exception("typename not found in datastore");
+//       return convName;
+    }
+ 
+    public static QName convertColumnNameToQName(String ln) {
         if (ln == null) {
             return null;
         }
@@ -738,7 +849,7 @@ public class DataStoreUtil {
                     nsUri = schemas[0].getTargetNamespace();
                 } else {
                     try {
-                        nsUri = new URI("http://www.kaartenbalie.nl/unknown");
+                        nsUri = new URI("http://www.kaartenbalie.nl/"+nsPrefix);
                     } catch (URISyntaxException ex) {
                         log.debug(ex);
                     }
@@ -847,8 +958,6 @@ public class DataStoreUtil {
     static public void main(String[] args) throws URISyntaxException, IOException, Exception {
         HashMap params = new HashMap();
         String url = "http://localhost:8084/kaartenbalie/services/?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetCapabilities";
-//        String url = "http://x5.b3p.nl/cgi-bin/mapserv_fwtools?map=/srv/maps/kaartenbalie.map&SERVICE=WFS&VERSION=1.0.0&REQUEST=GetCapabilities";
-//        String url = "http://afnemers.ruimtelijkeplannen.nl:80/afnemers/services?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetCapabilities";
         params.put(WFSDataStoreFactory.URL.key, url);
         params.put(WFSDataStoreFactory.TIMEOUT.key, 60000);
         params.put(WFSDataStoreFactory.USERNAME.key, "Beheerder");
@@ -867,7 +976,7 @@ public class DataStoreUtil {
                 if (fds.getNamespace() != null) {
                     continue;
                 }
-                QName qname = convertFullnameToQName(fds.getName());
+                QName qname = convertFeatureTypeToQName(fds.getName(), ds);
                 fds.setName(qname.getLocalPart());
                 fds.setNamespace(new URI(qname.getNamespaceURI()));
             }
@@ -876,48 +985,30 @@ public class DataStoreUtil {
             boolean b = filterCap.supports(FilterCapabilities.SIMPLE_COMPARISONS_OPENGIS);
             wfscap.setFilterCapabilities(filterCap);
         }
-        if (ds instanceof WFS_1_1_0_DataStore) {
-            WFS_1_1_0_DataStore wfs110ds = (WFS_1_1_0_DataStore) ds;
-//            throw new Exception("WFS 1.1.0 datastore kent niet alle geometry elementen, dus nu niet gebruiken");
-        }
 
         String prefixedFTName = "demowfs_rivieren_nl";
 //        String prefixedFTName = "app:roowfs_Bestemmingsplangebied";
-        QName ftName = convertFullnameToQName(prefixedFTName);
+        QName ftName = convertFeatureTypeToQName(prefixedFTName, ds);
 
         DefaultQuery query = null;
         SimpleFeatureType sft = null;
         FeatureSource fs = null;
 
-        if (ds instanceof WFS_1_1_0_DataStore) {
-            sft = ds.getSchema(new NameImpl(ftName.getNamespaceURI(), ftName.getLocalPart()));
-            fs = ds.getFeatureSource(new NameImpl(ftName.getNamespaceURI(), ftName.getLocalPart())); // hierkomt een FeatureSource uit met als typename een prefixed name
-        } else {
-            sft = ds.getSchema(ftName.getLocalPart());
-            fs = ds.getFeatureSource(ftName.getLocalPart());
-        }
-
-        String ftNaam = sft.getTypeName();
-        Name name = sft.getName();
-        String ftNaam2 = sft.getName().getLocalPart();
-        String ftNs = sft.getName().getNamespaceURI();
+        sft = getSchema(ds, ftName);
+        fs = getFeatureSource(ds, ftName); // hierkomt een FeatureSource uit met namespace
+ 
+            
         String geomAttributeName = sft.getGeometryDescriptor().getLocalName();
-        String geomAttributeName2 = sft.getGeometryDescriptor().getName().getLocalPart();
-        String geomAttributeNS = sft.getGeometryDescriptor().getName().getNamespaceURI();
         CoordinateReferenceSystem crs = sft.getGeometryDescriptor().getCoordinateReferenceSystem();
 
         ReferencedEnvelope bbox = new ReferencedEnvelope(201000, 380000, 202000, 381000, crs);
         Filter filter = ff.bbox(ff.property(geomAttributeName), bbox);
 
-        if (ds instanceof WFS_1_1_0_DataStore) {
-            // deze query moet passen bij feature source dus moet prefixed name zijn
-            String prefixedName = ftName.getPrefix() + ":" + ftName.getLocalPart();
-            query = new DefaultQuery(prefixedName, filter);
-            query.setNamespace(new URI(ftName.getNamespaceURI())); // wordt niet gebruikt
-        } else {
-            query = new DefaultQuery(ftName.getLocalPart(), filter);
-        }
-
+        // deze query moet passen bij feature source dus moet prefixed name zijn
+        String prefixedName = ftName.getPrefix() + ":" + ftName.getLocalPart();
+        query = new DefaultQuery(prefixedName, filter);
+        query.setNamespace(new URI(ftName.getNamespaceURI())); // wordt niet gebruikt
+ 
         query.setMaxFeatures(3);
         List<String> propNames = new ArrayList<String>();
         propNames.add(geomAttributeName);

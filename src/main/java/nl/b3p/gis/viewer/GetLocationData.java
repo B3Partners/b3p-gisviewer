@@ -499,7 +499,7 @@ public class GetLocationData {
             while (it.hasNext()) {
                 ThemaData td = (ThemaData) it.next();
                 Filter f = FilterBuilder.createLikeFilter(
-                        DataStoreUtil.convertFullnameToQName(td.getKolomnaam()).getLocalPart(),
+                        DataStoreUtil.convertColumnNameToQName(td.getKolomnaam()).getLocalPart(),
                         '%' + extraCriterium + '%');
                 if (f != null) {
                     filters.add(f);

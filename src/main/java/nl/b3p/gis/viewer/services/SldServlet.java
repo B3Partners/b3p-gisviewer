@@ -175,7 +175,7 @@ public class SldServlet extends HttpServlet {
 
                 String sldattribuut = th.getSldattribuut();
                 if (sldattribuut == null || sldattribuut.length() == 0) {
-                    sldattribuut = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
+                    sldattribuut = DataStoreUtil.convertColumnNameToQName(gb.getAdmin_pk()).getLocalPart();
                 }
                 if (sldattribuut == null || sldattribuut.length() == 0) {
                     log.debug("thema heeft geen sld attribuut");

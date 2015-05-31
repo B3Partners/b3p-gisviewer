@@ -403,7 +403,7 @@ public class GetViewerDataAction extends BaseGisAction {
             return null;
         }
 
-        String adminPk = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
+        String adminPk = DataStoreUtil.convertColumnNameToQName(gb.getAdmin_pk()).getLocalPart();
         String id = null;
         Filter filter = null;
         if (adminPk != null) {
@@ -478,7 +478,7 @@ public class GetViewerDataAction extends BaseGisAction {
     protected AdminDataRowBean getRegel(Feature f, Gegevensbron gb, List<ThemaData> thema_items) throws SQLException, UnsupportedEncodingException, Exception {
         AdminDataRowBean regel = new AdminDataRowBean();
 
-        String adminPk = DataStoreUtil.convertFullnameToQName(gb.getAdmin_pk()).getLocalPart();
+        String adminPk = DataStoreUtil.convertColumnNameToQName(gb.getAdmin_pk()).getLocalPart();
         if (adminPk != null) {
             regel.setPrimaryKey(f.getProperty(adminPk).getValue());
         }
@@ -492,7 +492,7 @@ public class GetViewerDataAction extends BaseGisAction {
              */
             String kolomnaam = td.getKolomnaam();
             if (kolomnaam != null && kolomnaam.length() > 0) {
-                kolomnaam = DataStoreUtil.convertFullnameToQName(td.getKolomnaam()).getLocalPart();
+                kolomnaam = DataStoreUtil.convertColumnNameToQName(td.getKolomnaam()).getLocalPart();
             }
             /*
              * Controleer om welk datatype dit themadata object om draait.
