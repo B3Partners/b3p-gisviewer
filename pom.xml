@@ -8,7 +8,7 @@
     
     <properties>
         <project.build.sourceEncoding>windows-1252</project.build.sourceEncoding>
-        <geotools.version>13.0</geotools.version>
+        <geotools.version>10.4</geotools.version>
     </properties>
     
     <dependencies>

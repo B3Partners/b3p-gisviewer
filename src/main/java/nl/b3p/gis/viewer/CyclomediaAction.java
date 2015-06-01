@@ -95,6 +95,14 @@ public class CyclomediaAction extends ViewerCrudAction {
             request.setAttribute("apiKey", apiKey);
             request.setAttribute("imageId", imageId);
             request.setAttribute("tid", tid);
+            
+            StringBuilder sb = new StringBuilder("Cyclomedia globespotter aanroep: ");
+            sb.append("\ntoken (X + accountId + & + imageId + & + datum + Z): ");
+            sb.append(token);
+            sb.append("\ntid: ");
+            sb.append(tid);
+            sb.append("\n");
+            log.debug(sb.toString());
         }
         
         return mapping.findForward(SUCCESS);

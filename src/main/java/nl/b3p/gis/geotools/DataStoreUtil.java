@@ -798,12 +798,15 @@ public class DataStoreUtil {
         QName convName = new QName(nsUriString, localName, nsPrefix);
       
         List<Name> names = ds.getNames();
+        String[] localNames = ds.getTypeNames();
         if (names == null || names.isEmpty()) {
-           String[] localNames = ds.getTypeNames();
             for (int i = 0; i < localNames.length; i++) {
-                 if (localNames[i].equals(convName.getLocalPart())) {
+                if (localNames[i].equals(convName.getLocalPart())) {
                     return convName;
-//                    return new QName(localNames[i]);
+                }
+                if (localNames[i].equalsIgnoreCase(convName.getLocalPart())) {
+                    log.debug("Ignore case for Oracle");
+                    return convName;
                 }
             }
         } else {
@@ -816,11 +819,27 @@ public class DataStoreUtil {
                     if (convName.getLocalPart().equals(name.getLocalPart())) {
                         return n2Qn(name);
                     }
+                    if (convName.getLocalPart().equalsIgnoreCase(name.getLocalPart())) {
+                        log.debug("Ignore case for Oracle");
+                        return n2Qn(name);
+                    }
                 }
             }
         }
-        throw new Exception("typename not found in datastore");
-//       return convName;
+        
+        StringBuilder sb = new StringBuilder("Typename not found in datastore, ");
+        sb.append("looking for typename: ");
+        sb.append(ln);
+        sb.append(", found typenames: ");
+            for (int i = 0; i < localNames.length; i++) {
+                if (i!=0) {
+                    sb.append(", ");
+                }
+                sb.append(localNames[i]);
+            }
+        sb.append("!");
+       
+        throw new Exception(sb.toString());
     }
  
     public static QName convertColumnNameToQName(String ln) {
