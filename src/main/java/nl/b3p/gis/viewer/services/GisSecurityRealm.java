@@ -24,13 +24,17 @@ package nl.b3p.gis.viewer.services;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -451,12 +455,31 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         String fileName = cacheOnDiskPath + key + ".xml";
 
         DOMSource source = new DOMSource(doc);
-        StreamResult result = new StreamResult(new File(fileName));
 
+        FileOutputStream fop = null;
+        File file;
         try {
+            file = new File(fileName);
+            fop = new FileOutputStream(file);
+            // if file doesnt exists, then create it
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+
+            StreamResult result = new StreamResult(fop);
+
             transformer.transform(source, result);
-        } catch (TransformerException ex) {
+            
+        } catch (Exception ex) {
             log.error("Error writing cache to disk: ", ex);
+        } finally {
+            try {
+                if (fop != null) {
+                    fop.close();
+                }
+            } catch (IOException e) {
+               log.error("Error closing stream for cache to disk: ", e);
+            }
         }
     }
 
