@@ -44,7 +44,7 @@ import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geotools.data.DataStore;
-import org.geotools.data.FeatureStore;
+import org.geotools.data.FeatureSource;
 import org.geotools.data.wfs.WFSDataStore;
 import org.geotools.data.wfs.v1_0_0.WFS_1_0_0_DataStore;
 import org.geotools.data.wfs.v1_1_0.WFS_1_1_0_DataStore;
@@ -229,7 +229,7 @@ public class DownloadThread extends Thread {
         Bron bron = getCorrectBron(gb);
 
         if (bron != null) {
-            DataStore datastore = datastore = bron.toDatastore();
+            DataStore datastore = bron.toDatastore();
 
             FeatureCollection fc = null;
             FeatureIterator it = null;
@@ -272,7 +272,7 @@ public class DownloadThread extends Thread {
         Bron bron = getCorrectBron(gb);
 
         if (bron != null) {
-            DataStore datastore = datastore = bron.toDatastore();
+            DataStore datastore = bron.toDatastore();
 
             FeatureCollection fc = null;
             FeatureIterator it = null;
@@ -639,7 +639,7 @@ public class DownloadThread extends Thread {
 
         } else { // JDBC Bron
             String typeName = gb.getAdmin_tabel();
-            FeatureStore<SimpleFeatureType, SimpleFeature> fs = (FeatureStore<SimpleFeatureType, SimpleFeature>) datastore.getFeatureSource(typeName);
+            FeatureSource<SimpleFeatureType, SimpleFeature> fs = datastore.getFeatureSource(typeName);
             
             if (geomFilter != null)
                 fc = fs.getFeatures(geomFilter);
