@@ -6,10 +6,8 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.URLDecoder;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -196,7 +194,7 @@ public class Data2CSV extends HttpServlet {
     /**
      * Writes a error message to the response
      */
-    private void writeErrorMessage(HttpServletResponse response, String message) throws IOException {
+    protected void writeErrorMessage(HttpServletResponse response, String message) throws IOException {
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter pw = response.getWriter();
         pw.println("<html>");

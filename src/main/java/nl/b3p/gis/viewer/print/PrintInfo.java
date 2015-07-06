@@ -23,7 +23,8 @@ import javax.xml.bind.annotation.XmlType;
     "titleColumnOne",
     "titleColumnTwo",
     "titleColumnThree",
-    "scale"
+    "scale",
+    "organizationcode"
 })
 public class PrintInfo {
     private String titel;
@@ -46,6 +47,8 @@ public class PrintInfo {
     private String titleColumnThree;
     
     private Integer scale;
+
+    private String organizationcode;
 
     public PrintInfo() {
     }    
@@ -192,4 +195,14 @@ public class PrintInfo {
     public void setTitleColumnThree(String titleColumnThree) {
         this.titleColumnThree = titleColumnThree;
     }
+    
+    @XmlElement(name="organizationcode")
+    public String getOrganizationcode() {
+        return organizationcode;
+    }
+
+    public void setOrganizationcode(String organizationcode) {
+        this.organizationcode = organizationcode;
+    }
+
 }

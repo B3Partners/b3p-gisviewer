@@ -23,6 +23,7 @@
 package nl.b3p.gis.viewer;
 
 import java.io.OutputStream;
+import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -268,6 +269,10 @@ public class PrintAction extends BaseHibernateAction {
         if (strPPI != null) {
             PPI = (Integer) strPPI;
         }
+        
+        Principal user = request.getUserPrincipal();
+        GisPrincipal gp = (GisPrincipal) user;
+        String organizationcode = gp.getSp().getOrganizationCode();
 
         /* huidige CombineImageSettings ophalen */
         CombineImageSettings originalSettings = (CombineImageSettings) request.getSession().getAttribute(imageId);
@@ -325,6 +330,7 @@ public class PrintAction extends BaseHibernateAction {
         info.setImageUrl(imageUrl);
         info.setBbox(bbox);
         info.setOpmerking(remark);
+        info.setOrganizationcode(organizationcode);
 
         /* Indien schaal ingevuld in printvoorbeeld de bbox opnieuw berekenen. */
         Integer currentScale = calcCurrentScale(settings);
@@ -464,7 +470,7 @@ public class PrintAction extends BaseHibernateAction {
         }
     }
 
-    private CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
+    static public CombineImageSettings getCombineImageSettings(HttpServletRequest request) throws Exception {
         String jsonSettingsParam = FormUtils.nullIfEmpty(request.getParameter("jsonSettings"));
         String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
 

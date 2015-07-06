@@ -5,16 +5,15 @@ import com.vividsolutions.jts.geom.Geometry;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import nl.b3p.combineimages.CombineImagesServlet;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.commons.struts.ExtendedMethodProperties;
 import nl.b3p.gis.geotools.FilterBuilder;
@@ -29,6 +28,7 @@ import nl.b3p.gis.viewer.db.Themas;
 import nl.b3p.gis.viewer.services.GisPrincipal;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.viewer.services.SpatialUtil;
+import nl.b3p.imagetool.CombineImageSettings;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -170,6 +170,18 @@ public class GetViewerDataAction extends BaseGisAction {
 
         if (gb == null) {
             return mapping.findForward("aanvullendeinfo");
+        }
+        
+        boolean addKaart = false;
+        if (FormUtils.nullIfEmpty(request.getParameter("addKaart")) != null) {
+            addKaart = true;
+        }
+        
+        if(addKaart){
+            CombineImageSettings settings = ImageAction.getCombineImageSettings(request);
+            String imageId = CombineImagesServlet.uniqueName("");
+            request.getSession().setAttribute(imageId, settings);
+            request.setAttribute("imageId", imageId);
         }
 
         String appCode = (String) request.getParameter("appCode"); //TODO CvL
