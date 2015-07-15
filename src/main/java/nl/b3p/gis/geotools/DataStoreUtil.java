@@ -302,68 +302,72 @@ public class DataStoreUtil {
         if (max > 0) {
             query.setMaxFeatures(max);
         }
-        if (propNames != null) {
-            //zorg er voor dat de pk ook wordt opgehaald
-            String adminPk = null;
-            String tmpAdminPk = gb.getAdmin_pk();
-            if (tmpAdminPk != null) {
-                adminPk = DataStoreUtil.convertColumnNameToQName(tmpAdminPk).getLocalPart();
-            }
+        
+        if (propNames == null) {
+            propNames = new ArrayList();
+        }
 
-            if (adminPk != null && adminPk.length() > 0 && !propNames.contains(adminPk)) {
-                propNames.add(adminPk);
-            }
+        //zorg er voor dat de pk ook wordt opgehaald
+        String adminPk = null;
+        String tmpAdminPk = gb.getAdmin_pk();
+        if (tmpAdminPk != null) {
+            adminPk = DataStoreUtil.convertColumnNameToQName(tmpAdminPk).getLocalPart();
+        }
 
-            String adminFk = null;
-            String tmpAdminFk = gb.getAdmin_fk();
-            if (tmpAdminFk != null) {
-                adminFk = DataStoreUtil.convertColumnNameToQName(tmpAdminFk).getLocalPart();
-            }
+        if (adminPk != null && adminPk.length() > 0 && !propNames.contains(adminPk)) {
+            propNames.add(adminPk);
+        }
 
-            if (adminFk != null && adminFk.length() > 0 && !propNames.contains(adminFk)) {
-                propNames.add(adminFk);
-            }
+        String adminFk = null;
+        String tmpAdminFk = gb.getAdmin_fk();
+        if (tmpAdminFk != null) {
+            adminFk = DataStoreUtil.convertColumnNameToQName(tmpAdminFk).getLocalPart();
+        }
 
-            if (collectGeom) {
-                // zorg ervoor dat de geometry wordt opgehaald, indien aanwezig.
-                String geomAttributeName = getGeometryAttributeName(ds, gb);
-                if (geomAttributeName != null && geomAttributeName.length() > 0 && !propNames.contains(geomAttributeName)) {
-                    propNames.add(geomAttributeName);
-                }
-            }
+        if (adminFk != null && adminFk.length() > 0 && !propNames.contains(adminFk)) {
+            propNames.add(adminFk);
+        }
 
-            /*Als een themaDataObject van het type query is en er zitten [] in
-             dan moeten deze ook worden opgehaald*/
-            Iterator<ThemaData> it = SpatialUtil.getThemaData(gb, false).iterator();
-            while (it.hasNext()) {
-                ThemaData td = it.next();
-                //als de td van het type query is.
-                if (td.getDataType() != null && td.getDataType().getId() == DataTypen.QUERY) {
-                    String commando = td.getCommando();
-                    //als er in het commando [replaceme] voorkomt
-                    while (commando != null && commando.indexOf("[") != -1 && commando.indexOf("]") != -1) {
-                        //haal alle properties er uit.en stuur deze mee in de query
-                        int beginIndex = commando.indexOf("[") + 1;
-                        int endIndex = commando.indexOf("]");
-                        QName propName = convertColumnNameToQName(commando.substring(beginIndex, endIndex));
-                        //geen dubbele meegeven.
-                        if (propName != null && !propNames.contains(propName.getLocalPart())) {
-                            propNames.add(propName.getLocalPart());
-                        }
-                        if (endIndex + 1 >= commando.length() - 1) {
-                            commando = "";
-                        } else {
-                            commando = commando.substring(endIndex + 1);
-                        }
+        if (collectGeom) {
+            // zorg ervoor dat de geometry wordt opgehaald, indien aanwezig.
+            String geomAttributeName = getGeometryAttributeName(ds, gb);
+            if (geomAttributeName != null && geomAttributeName.length() > 0 && !propNames.contains(geomAttributeName)) {
+                propNames.add(geomAttributeName);
+            }
+        }
+
+        /*Als een themaDataObject van het type query is en er zitten [] in
+         dan moeten deze ook worden opgehaald*/
+        Iterator<ThemaData> it = SpatialUtil.getThemaData(gb, false).iterator();
+        while (it.hasNext()) {
+            ThemaData td = it.next();
+            //als de td van het type query is.
+            if (td.getDataType() != null && td.getDataType().getId() == DataTypen.QUERY) {
+                String commando = td.getCommando();
+                //als er in het commando [replaceme] voorkomt
+                while (commando != null && commando.indexOf("[") != -1 && commando.indexOf("]") != -1) {
+                    //haal alle properties er uit.en stuur deze mee in de query
+                    int beginIndex = commando.indexOf("[") + 1;
+                    int endIndex = commando.indexOf("]");
+                    QName propName = convertColumnNameToQName(commando.substring(beginIndex, endIndex));
+                    //geen dubbele meegeven.
+                    if (propName != null && !propNames.contains(propName.getLocalPart())) {
+                        propNames.add(propName.getLocalPart());
+                    }
+                    if (endIndex + 1 >= commando.length() - 1) {
+                        commando = "";
+                    } else {
+                        commando = commando.substring(endIndex + 1);
                     }
                 }
             }
-            if (propNames.size() > 0) {
-                /* TODO: Als er een spatie in een Oracle column voorkomt dan gaat
-                 * getFeatures fout. */
-                query.setPropertyNames(propNames);
-            }
         }
+        if (propNames.size() > 0) {
+            /* TODO: Als er een spatie in een Oracle column voorkomt dan gaat
+             * getFeatures fout. */
+            query.setPropertyNames(propNames);
+        }
+        
         FeatureCollection fc = null;
         try {
             fc = fs.getFeatures(query);

@@ -132,7 +132,7 @@ public class GetLocationData {
         returnValue[1] = "Fout (zie log)";
 
         try {
-            sess = HibernateUtil.getSessionFactory().openSession();
+            sess = HibernateUtil.getSessionFactory().getCurrentSession();
             sess.beginTransaction();
 
             WebContext ctx = WebContextFactory.get();
@@ -147,10 +147,7 @@ public class GetLocationData {
             DataStore ds = b.toDatastore();
             try {
                 //haal alleen de geometry op.
-                String geometryName = "the_geom";
-                ArrayList<String> propertyNames = new ArrayList();
-                propertyNames.add(geometryName);
-                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
+                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), null, 1, true);
                 if (list.size() >= 1) {
                     Feature f = list.get(0);
                     area = ((Geometry) f.getDefaultGeometryProperty().getValue()).getArea();
