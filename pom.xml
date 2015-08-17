@@ -33,6 +33,11 @@
             <version>3.6.3.Final</version>
         </dependency>
         <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <version>3.6.3.Final</version>
+        </dependency>
+        <dependency>
             <!-- nodig voor hibernate -->
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
