@@ -26,6 +26,7 @@ public class WktAction extends ViewerCrudAction{
     
     @Override
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        BaseGisAction.setCMSPageFromRequest(request);
         return mapping.findForward(SUCCESS);
     }
 }

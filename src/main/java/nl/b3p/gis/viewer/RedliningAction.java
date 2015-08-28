@@ -102,7 +102,7 @@ public class RedliningAction extends ViewerCrudAction {
     public ActionForward prepareRedlining(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         dynaForm.initialize(mapping);
         useInstellingen(dynaForm, request);
-
+        BaseGisAction.setCMSPageFromRequest(request);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
@@ -110,7 +110,7 @@ public class RedliningAction extends ViewerCrudAction {
     public ActionForward sendRedlining(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
         useInstellingen(dynaForm, request);
-
+        BaseGisAction.setCMSPageFromRequest(request);
         ActionErrors errors = dynaForm.validate(mapping, request);
         if (!errors.isEmpty()) {
             addMessages(request, errors);
@@ -153,7 +153,7 @@ public class RedliningAction extends ViewerCrudAction {
     }
 
     public ActionForward removeRedlining(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-
+        BaseGisAction.setCMSPageFromRequest(request);
         Integer ggbId = (Integer) dynaForm.get("gegevensbron");
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
         Gegevensbron ggb = (Gegevensbron) sess.get(Gegevensbron.class, ggbId);

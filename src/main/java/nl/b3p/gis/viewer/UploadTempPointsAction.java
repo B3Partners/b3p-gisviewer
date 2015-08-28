@@ -29,21 +29,21 @@ public class UploadTempPointsAction extends ViewerCrudAction {
     @Override
     public ActionForward unspecified(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         dynaForm.initialize(mapping);
-
+        BaseGisAction.setCMSPageFromRequest(request);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
 
     @Override
     public ActionForward list(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-
+        BaseGisAction.setCMSPageFromRequest(request);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
 
     @Override
     public ActionForward save(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
-
+        BaseGisAction.setCMSPageFromRequest(request);
         ActionErrors errors = dynaForm.validate(mapping, request);
         if (!errors.isEmpty()) {
             addMessages(request, errors);

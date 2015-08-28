@@ -124,7 +124,7 @@ public class MeldingAction extends ViewerCrudAction {
     public ActionForward prepareMelding(ActionMapping mapping, DynaValidatorForm dynaForm, HttpServletRequest request, HttpServletResponse response) throws Exception {
         dynaForm.initialize(mapping);
         useInstellingen(dynaForm, request);
-
+        BaseGisAction.setCMSPageFromRequest(request);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
     }
@@ -165,7 +165,7 @@ public class MeldingAction extends ViewerCrudAction {
         sendMeldingEmail(dynaForm, m, request);
 
         populateMeldingenForm(m, dynaForm, request);
-
+        BaseGisAction.setCMSPageFromRequest(request);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         ActionMessage amsg = new ActionMessage("melding.kenmerk", m.getKenmerk());
         addAttributeMessage(request, ACKNOWLEDGE_MESSAGES, amsg);
@@ -319,7 +319,7 @@ public class MeldingAction extends ViewerCrudAction {
             c = getFirstMelding();
         }
         populateMeldingenForm(c, dynaForm, request);
-
+        BaseGisAction.setCMSPageFromRequest(request);
         prepareMethod(dynaForm, request, EDIT, LIST);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return mapping.findForward(SUCCESS);
@@ -331,6 +331,7 @@ public class MeldingAction extends ViewerCrudAction {
         if (c == null) {
             c = getFirstMelding();
         }
+        BaseGisAction.setCMSPageFromRequest(request);
         populateMeldingenForm(c, dynaForm, request);
         prepareMethod(dynaForm, request, EDIT, LIST);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
@@ -375,6 +376,7 @@ public class MeldingAction extends ViewerCrudAction {
         sess.refresh(c);
         populateMeldingenForm(c, dynaForm, request);
 
+        BaseGisAction.setCMSPageFromRequest(request);
         prepareMethod(dynaForm, request, LIST, EDIT);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);
         return getDefaultForward(mapping, request);
@@ -402,6 +404,7 @@ public class MeldingAction extends ViewerCrudAction {
         sess.delete(c);
         sess.flush();
 
+        BaseGisAction.setCMSPageFromRequest(request);
         dynaForm.initialize(mapping);
         prepareMethod(dynaForm, request, LIST, EDIT);
         addDefaultMessage(mapping, request, ACKNOWLEDGE_MESSAGES);

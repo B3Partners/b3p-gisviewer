@@ -38,7 +38,7 @@ public class BagAction extends ViewerCrudAction{
         String appCode = (String) session.getAttribute("appCode");
         ConfigKeeper configKeeper = new ConfigKeeper();
         Map instellingen = configKeeper.getConfigMap(appCode, true);
-
+        BaseGisAction.setCMSPageFromRequest(request);
         Integer bagkaartlaagid = (Integer) instellingen.get("bagkaartlaagid");
 
         if (bagkaartlaagid == null || bagkaartlaagid < 1) {
