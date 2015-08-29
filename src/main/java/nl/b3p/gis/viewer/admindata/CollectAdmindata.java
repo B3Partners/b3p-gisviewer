@@ -197,11 +197,11 @@ public class CollectAdmindata {
                      * zegt de wfs wel dat hij de intersects fully support maar er komen
                      * geen features terug met dat filter.
                      */
-                    if (features == null || features.size() < 1) {
-                        if (gb.getBron().getUrl().contains("wfs")) {
-                            features = DataStoreUtil.getWfsFeaturesWithGeotools(gb, geom);
-                        }
-                    }
+//                    if (features == null || features.size() < 1) {
+//                        if (gb.getBron().getUrl().contains("wfs")) {
+//                            features = DataStoreUtil.getWfsFeaturesWithGeotools(gb, geom);
+//                        }
+//                    }
 
                     //featuretype waarmee gekeken kan worden of er een geometry in de feature zit.
                     DataStore tempDatastore = b.toDatastore();

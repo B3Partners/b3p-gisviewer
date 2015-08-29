@@ -203,6 +203,9 @@ public class DataStoreUtil {
      */
     public static ArrayList<Feature> getFeatures(DataStore ds, Gegevensbron gb, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
         FeatureCollection fc = getFeatureCollection(ds, gb, f, propNames, maximum, collectGeom);
+        if (fc==null) {
+            return null;
+        }
         FeatureIterator fi = fc.features();
         ArrayList<Feature> features = new ArrayList();
         try {
@@ -239,6 +242,10 @@ public class DataStoreUtil {
     }
     
     public static FeatureCollection getFeatureCollection(DataStore ds, Gegevensbron gb, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
+        if (gb==null || gb.getAdmin_tabel()==null || gb.getAdmin_tabel().isEmpty()) {
+            return null;
+        }
+        
         ArrayList<Filter> filters = new ArrayList();
         if (f != null) {
             filters.add(f);
@@ -573,9 +580,9 @@ public class DataStoreUtil {
      */
     public static SimpleFeatureType getSchema(DataStore ds, Gegevensbron gb) throws Exception {
 
-        /* TODO
-         * spatial tabel indien null check ?
-         */
+        if (gb==null || gb.getAdmin_tabel()==null || gb.getAdmin_tabel().isEmpty()) {
+            return null;
+        }
         return getSchema(ds, convertFeatureTypeToQName(gb.getAdmin_tabel(), ds));
     }
 
@@ -784,8 +791,8 @@ public class DataStoreUtil {
     }
 
     public static QName convertFeatureTypeToQName(String ln, DataStore ds) throws IOException, Exception {
-        if (ln == null) {
-            return null;
+        if (ln == null  || ln.isEmpty()) {
+            throw new Exception("FeatureType name may not be null or empty");
         }
         String localName = ln;
         String nsPrefix = "";
