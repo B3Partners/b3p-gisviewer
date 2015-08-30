@@ -220,27 +220,39 @@ public class DataStoreUtil {
         return features;
     }
 
+    /**
+     * Beperkingen bij de Geotools implementatie van WFS 1.0 en 1.1 maken het 
+     * onmogelijk om zowel de prefix als de namespace url te bewaren. Deze 
+     * methode probeert op basis van de
+     * localpart van de qname de oorspronkelijke prefix terug te vinden in 
+     * ds.getTypeNames(). Binnen een datastore mag een localpart van een 
+     * typename dan maar één keer voorkomen. Dit is natuurlijk vanzelf waar 
+     * indien er maar één namespace wordt gebruikt per datastore, hetgeen 
+     * meestal het geval is.
+     * @param qname typename met namespace
+     * @param ds datastore waarin de typename te vinden is.
+     * @return typename waarbij de namespace url is omgezet in een prefix
+     * @throws IOException 
+     */
     public static String reconstructPrefixedName(QName qname, DataStore ds) throws IOException {
-        if (qname.getNamespaceURI()==null || qname.getNamespaceURI().isEmpty()) {
-            // geen namespace, dan ook niet zinvol om prefix op te zoeken.
-            return qname.getLocalPart();
-        }
-        List<Name> names = ds.getNames(); 
-        if (names != null && !names.isEmpty()) {
-            //find prefix via ds.getTypeNames();
-            String[] prefixedNames = ds.getTypeNames();
-            for (int i = 0; i < names.size(); i++) {
-                if (qname.getLocalPart()
-                        .equals(names.get(i).getLocalPart())
-                        && qname.getNamespaceURI()
-                        .equals(names.get(i).getNamespaceURI())) {
-                    return prefixedNames[i];
-                }
+        //find prefix via ds.getTypeNames();
+        String[] prefixedNames = ds.getTypeNames();
+        for (int i = 0; i < prefixedNames.length; i++) {
+            String[] lna = prefixedNames[i].split(":");
+            String localName;
+            if (lna.length == 2) {
+                localName = lna[1];
+            } else {
+                localName = prefixedNames[i];
+            }
+            if (qname.getLocalPart().equals(localName)) {
+                return prefixedNames[i];
             }
         }
-        return null;
+
+        return qname.getLocalPart();
     }
-    
+   
     public static FeatureCollection getFeatureCollection(DataStore ds, Gegevensbron gb, Filter f, List<String> propNames, Integer maximum, boolean collectGeom) throws IOException, Exception {
         if (gb==null || gb.getAdmin_tabel()==null || gb.getAdmin_tabel().isEmpty()) {
             return null;
