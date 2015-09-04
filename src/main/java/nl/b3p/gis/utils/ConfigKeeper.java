@@ -521,6 +521,13 @@ public class ConfigKeeper {
         sess.save(cfg);
         
         cfg = new Configuratie();
+        cfg.setProperty("homeUrl");
+        cfg.setPropval(null);
+        cfg.setSetting(appCode);
+        cfg.setType("java.lang.String");
+        sess.save(cfg);
+        
+        cfg = new Configuratie();
         cfg.setProperty("helpUrl");
         cfg.setPropval(null);
         cfg.setSetting(appCode);
