@@ -850,6 +850,7 @@ public class ViewerAction extends BaseGisAction {
 
             jsonCluster.put("title", titel);
             jsonCluster.put("cluster", true);
+            jsonCluster.put("tree_order", cluster.getBelangnr());
 
             if (cluster.isExclusive_childs()) {
                 jsonCluster.put("exclusive_childs", true);
@@ -966,6 +967,7 @@ public class ViewerAction extends BaseGisAction {
 
             order++;
             jsonCluster.put("order", order);
+            jsonCluster.put("tree_order", th.getBelangnr());
 
             if (th.getOrganizationcodekey() != null && th.getOrganizationcodekey().length() > 0) {
                 jsonCluster.put("organizationcodekey", th.getOrganizationcodekey().toUpperCase());
