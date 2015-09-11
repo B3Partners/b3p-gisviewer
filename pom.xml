@@ -25,7 +25,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-zoeker</artifactId>
-            <version>${project.version}</version>
+            <version>4.2.1</version>
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
@@ -51,12 +51,12 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-commons-core</artifactId>
-            <version>${project.version}</version>
+            <version>4.2.1</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-commons-gis</artifactId>
-            <version>${project.version}</version>
+            <version>4.2.1</version>
         </dependency>
         <dependency>
             <groupId>org.geotools</groupId>
@@ -76,12 +76,12 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>commons-mail-b3p</artifactId>
-            <version>${project.version}</version>
+            <version>4.2.1</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-combineImageTool</artifactId>
-            <version>${project.version}</version>
+            <version>4.2.1</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -91,7 +91,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-openbare-ruimte</artifactId>
-            <version>${project.version}</version>
+            <version>4.2.1</version>
         </dependency>
         <dependency>
             <groupId>com.lowagie</groupId>
@@ -121,6 +121,11 @@
         </dependency>
     </dependencies>
     <repositories>
+       <repository>
+            <id>repo.b3p.nl</id>
+            <name>B3P file Repository</name>
+            <url>http://repo.b3p.nl/nexus/content/repositories/releases/</url>
+        </repository>
         <repository>
             <id>osgeo</id>
             <name>Open Source Geospatial Foundation Repository</name>
@@ -132,4 +137,29 @@
             <url>https://repository.jboss.org/nexus/content/groups/public/</url>
         </repository>
     </repositories>
+    <scm>
+        <connection>scm:git:git@github.com:B3Partners/b3p-gisviewer.git</connection>
+        <developerConnection>scm:git:git@github.com:B3Partners/b3p-gisviewer.git</developerConnection>
+        <url>https://github.com/B3Partners/b3p-gisviewer</url>
+      <tag>b3p-gisviewer-4.2.1</tag>
+    </scm>
+    <distributionManagement>
+        <repository>
+            <id>repo.b3p.nl</id>
+            <name>B3P file Repository</name>
+            <url>http://repo.b3p.nl/nexus/content/repositories/releases/</url>
+        </repository>
+    </distributionManagement>
+    <build>        
+        <plugins>            
+            <plugin>                
+                <groupId>org.apache.maven.plugins</groupId>                
+                <artifactId>maven-release-plugin</artifactId>                
+                <version>2.5.2</version>                
+                <configuration>                    
+                    <pushChanges>true</pushChanges>                
+                </configuration>            
+            </plugin>
+        </plugins>
+    </build>
 </project>
