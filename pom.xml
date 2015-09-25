@@ -56,7 +56,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-commons-gis</artifactId>
-            <version>4.2.1</version>
+            <version>4.2.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.geotools</groupId>
