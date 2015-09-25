@@ -238,7 +238,8 @@ public class ViewerAction extends BaseGisAction {
 
         GisPrincipal user = GisPrincipal.getGisPrincipal(request);
         String userCode = user.getCode();
-
+        request.setAttribute("userRoles", new JSONArray(user.getRoles()));
+        
         /* Applicatie instellingen ophalen */
         Applicatie app = null;
         String appCode = request.getParameter(ViewerAction.APPCODE);
