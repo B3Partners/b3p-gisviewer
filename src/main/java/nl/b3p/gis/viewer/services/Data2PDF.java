@@ -84,7 +84,7 @@ public class Data2PDF extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        String appCode = (String) request.getParameter("appCode"); //TODO CvL
+        String appCode = (String) request.getParameter("appCode"); 
         String gegevensbronId = request.getParameter("gbId");
         String objectIds = request.getParameter("objectIds");
         String orientation = request.getParameter("orientation");

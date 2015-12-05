@@ -3,6 +3,7 @@ package nl.b3p.gis.viewer;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import com.vividsolutions.jts.geom.Geometry;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -184,7 +185,7 @@ public class GetViewerDataAction extends BaseGisAction {
             request.setAttribute("imageId", imageId);
         }
 
-        String appCode = (String) request.getParameter("appCode"); //TODO CvL
+        String appCode = (String) request.getParameter("appCode");
         
         String gegevensbronId = (String) request.getParameter("gegevensbronid");
 
@@ -441,7 +442,9 @@ public class GetViewerDataAction extends BaseGisAction {
             } else {
                 // tbv data2info meerdere id's
                 String primaryKeys = request.getParameter("primaryKeys");
+                
                 if (primaryKeys != null) {
+                    primaryKeys = URLDecoder.decode(primaryKeys.toString().trim(), "utf-8");
                     String[] primaryKeysArray = primaryKeys.split(",");
                     filter = FilterBuilder.createOrEqualsFilter(adminPk, primaryKeysArray);
                 }

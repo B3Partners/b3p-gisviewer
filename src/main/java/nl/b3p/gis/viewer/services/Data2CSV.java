@@ -46,7 +46,7 @@ public class Data2CSV extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        String appCode = (String) request.getParameter("appCode"); //TODO CvL
+        String appCode = (String) request.getParameter("appCode"); 
         String gegevensbronId = request.getParameter("themaId");
         String objectIds = request.getParameter("objectIds");
         String seperator = request.getParameter("seperator");

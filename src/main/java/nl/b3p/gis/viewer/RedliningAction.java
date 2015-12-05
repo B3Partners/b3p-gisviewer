@@ -262,6 +262,10 @@ public class RedliningAction extends ViewerCrudAction {
             dynaForm.set("groepnaam", orgCode);
         }
 
+        if(rl.getProjectnaam() != null) {
+            dynaForm.set("projectnaam", rl.getProjectnaam());
+        }
+
         /* klaarzetten huidige projecten */
         Integer ggbId = (Integer) dynaForm.get("gegevensbron");
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();

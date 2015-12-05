@@ -56,7 +56,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-commons-gis</artifactId>
-            <version>4.2.2-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.geotools</groupId>
@@ -141,7 +141,7 @@
         <connection>scm:git:git@github.com:B3Partners/b3p-gisviewer.git</connection>
         <developerConnection>scm:git:git@github.com:B3Partners/b3p-gisviewer.git</developerConnection>
         <url>https://github.com/B3Partners/b3p-gisviewer</url>
-      <tag>b3p-gisviewer-4.2.1</tag>
+      <tag>b3p-gisviewer-${project.version}</tag>
     </scm>
     <distributionManagement>
         <repository>
