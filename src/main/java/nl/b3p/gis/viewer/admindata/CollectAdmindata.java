@@ -90,7 +90,7 @@ public class CollectAdmindata {
             JSONObject cqlFilters = new JSONObject(jsonCQL);
             tx = sess.beginTransaction();
 
-            Gegevensbron gb = retrieveGegevensbron(gegevensBronId,themaId, sess);
+            Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensBronId);
             if (gb != null) {
                 /* addChilds */
                 List childBronnen = sess.createQuery("from Gegevensbron where parent = :parentId order by volgordenr, naam").setInteger("parentId", gb.getId()).list();
@@ -833,18 +833,6 @@ public class CollectAdmindata {
         }
 
         return count;
-    }
-    
-    private Gegevensbron retrieveGegevensbron(int gegevensbronId, int themaId, Session sess){
-        Gegevensbron gegevensbron = null;
-        gegevensbron = (Gegevensbron) sess.get(Gegevensbron.class, gegevensbronId);
-        if(gegevensbron == null && themaId > 0){
-            Themas t = (Themas) sess.get(Themas.class, themaId);
-            if(t != null){
-                gegevensbron = t.getGegevensbron();
-            }
-        }
-        return gegevensbron;
     }
 
     static private String findDataAdminLayout(Themas thema, GisPrincipal user, String appCode) throws Exception {
