@@ -342,6 +342,10 @@ public class Data2PDF extends HttpServlet {
     }
 
     public String[] getThemaPropertyNames(Gegevensbron gb) {
+        return getThemaPropertyNames(gb, true);
+    }
+    
+    public String[] getThemaPropertyNames(Gegevensbron gb, boolean basisOnly) {
         Set themadata = gb.getThemaData();
 
         Iterator it = themadata.iterator();
@@ -350,10 +354,11 @@ public class Data2PDF extends HttpServlet {
             ThemaData td = (ThemaData) it.next();
             if (td.getKolomnaam() != null) {
                 if (!columns.contains(td.getKolomnaam())) {
-
-                    if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
-                            && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
-                        columns.add(td.getKolomnaam());
+                    if (td.isBasisregel() || !basisOnly) {
+                        if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
+                                && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
+                            columns.add(td.getKolomnaam());
+                        }
                     }
                 }
             }
@@ -364,8 +369,12 @@ public class Data2PDF extends HttpServlet {
         }
         return s;
     }
-    
+
     public Map getThemaLabelNames(Gegevensbron gb) {
+        return getThemaLabelNames(gb, true);
+    }
+
+    public Map getThemaLabelNames(Gegevensbron gb, boolean basisOnly) {
         Set themadata = gb.getThemaData();
 
         Iterator it = themadata.iterator();
@@ -375,15 +384,16 @@ public class Data2PDF extends HttpServlet {
             ThemaData td = (ThemaData) it.next();
             if (td.getKolomnaam() != null) {
                 if (!columns.contains(td.getKolomnaam())) {
+                    if (td.isBasisregel() || !basisOnly) {
+                        if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
+                                && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
+                            columns.add(td.getKolomnaam());
 
-                    if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
-                            && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
-                        columns.add(td.getKolomnaam());
-                        
-                        if(td.getLabel() != null){
-                            labels.put(td.getKolomnaam(), td.getLabel());
-                        } else {
-                            labels.put(td.getKolomnaam(), td.getKolomnaam());
+                            if (td.getLabel() != null) {
+                                labels.put(td.getKolomnaam(), td.getLabel());
+                            } else {
+                                labels.put(td.getKolomnaam(), td.getKolomnaam());
+                            }
                         }
                     }
                 }
