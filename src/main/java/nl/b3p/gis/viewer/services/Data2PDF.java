@@ -5,17 +5,16 @@ import com.vividsolutions.jts.geom.Geometry;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.MalformedURLException;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -28,8 +27,11 @@ import javax.xml.bind.util.JAXBSource;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.sax.SAXResult;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import nl.b3p.commons.services.FormUtils;
 import nl.b3p.gis.geotools.DataStoreUtil;
@@ -42,6 +44,7 @@ import nl.b3p.imagetool.CombineImageSettings;
 import nl.b3p.imagetool.CombineImagesHandler;
 import nl.b3p.ogc.utils.OGCRequest;
 import nl.b3p.zoeker.configuratie.Bron;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,8 +59,6 @@ import org.json.JSONObject;
 import org.opengis.feature.Feature;
 import org.opengis.feature.Property;
 import org.opengis.filter.Filter;
-import org.xml.sax.SAXException;
-import sun.misc.BASE64Encoder;
 
 /**
  *
@@ -66,8 +67,9 @@ import sun.misc.BASE64Encoder;
 public class Data2PDF extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(Data2PDF.class);
-    private static String HTMLTITLE = "Exporteer naar PDF";
+    private static String HTMLTITLE = "Exporteren";
     private static String xsl_data2pdf = null;
+    private static String xsl_data2html = null;
     private static Integer MAX_PDF_RECORDS = 25;
     
     public static String fopConfig = null;
@@ -88,6 +90,7 @@ public class Data2PDF extends HttpServlet {
         String gegevensbronId = request.getParameter("gbId");
         String objectIds = request.getParameter("objectIds");
         String orientation = request.getParameter("orientation");
+        String format = request.getParameter("format");
 
         if (gegevensbronId == null || gegevensbronId.equals("")
                 || objectIds == null || objectIds.equals("")) {
@@ -97,9 +100,17 @@ public class Data2PDF extends HttpServlet {
             return;
         }
 
-        if (xsl_data2pdf == null || xsl_data2pdf.equals("")) {
-            writeErrorMessage(response, "Xsl template niet geconfigureerd.");
-            log.error("Xsl template niet geconfigureerd.");
+        if ((xsl_data2pdf == null || xsl_data2pdf.equals("")) 
+                 && (format == null || format.equalsIgnoreCase("pdf")) ) {
+            writeErrorMessage(response, "Xsl PDF template niet geconfigureerd.");
+            log.error("Xsl PDF template niet geconfigureerd.");
+
+            return;
+        }
+        if ((xsl_data2html == null || xsl_data2html.equals("")) 
+                && format != null && format.equalsIgnoreCase("html") ) {
+            writeErrorMessage(response, "Xsl HTML template niet geconfigureerd.");
+            log.error("Xsl HTML template niet geconfigureerd.");
 
             return;
         }
@@ -113,8 +124,8 @@ public class Data2PDF extends HttpServlet {
 
             if (ids != null && ids.length > MAX_PDF_RECORDS) {
 
-                String msg = "Er mogen maximaal " + MAX_PDF_RECORDS + " records in een"
-                        + " pdf geexporteerd worden. Momenteel zijn er " + ids.length + " records"
+                String msg = "Er mogen maximaal " + MAX_PDF_RECORDS + " records "
+                        + " geexporteerd worden. Momenteel zijn er " + ids.length + " records"
                         + " geselecteerd.";
 
                 writeErrorMessage(response, msg);
@@ -150,14 +161,13 @@ public class Data2PDF extends HttpServlet {
             SimpleDateFormat df = new SimpleDateFormat("d MMMMM yyyy", new Locale("NL"));
 
             ObjectdataPdfInfo pdfInfo = new ObjectdataPdfInfo();
-            pdfInfo.setTitel("Export van " + gb.getNaam());
+            pdfInfo.setTitel(gb.getNaam());
             pdfInfo.setDatum(df.format(now));
 
             Map<Integer, Record> records = new HashMap();
 
-
-            BASE64Encoder enc = new BASE64Encoder();
-
+            Base64 enc  = new Base64();
+            
             String jsonSettingsParam = FormUtils.nullIfEmpty(request.getParameter("jsonSettings"));
             String legendUrls = FormUtils.nullIfEmpty(request.getParameter("legendUrls"));
             JSONObject jsonSettings = new JSONObject(jsonSettingsParam);
@@ -215,7 +225,7 @@ public class Data2PDF extends HttpServlet {
                     CombineImagesHandler.combineImage(baos, settings);
 
                     byte[] imageBytes = baos.toByteArray();
-                    imageUrl = enc.encode(imageBytes);
+                    imageUrl = enc.encodeToString(imageBytes);
                 } catch (Exception ex) {
                 }
 
@@ -238,14 +248,12 @@ public class Data2PDF extends HttpServlet {
             //String xmlFile = "/home/boy/dev/tmp/data.xml";
             //createXmlOutput(pdfInfo, xmlFile);
 
-            try {
+            if (format == null || format.isEmpty() || format.equalsIgnoreCase("pdf")) {
                 createPdfOutput(pdfInfo, xsl_data2pdf, response);
-            } catch (MalformedURLException ex) {
-                writeErrorMessage(response, ex.getMessage());
-                log.error("Fout tijdens maken pdf: ", ex);
-            } catch (SAXException ex) {
-                writeErrorMessage(response, ex.getMessage());
-                log.error("Fout tijdens maken pdf: ", ex);
+            } else if (format.equalsIgnoreCase("html")) {
+                createHtmlOutput(pdfInfo, xsl_data2html, response);
+            } else if (format.equalsIgnoreCase("xml")) {
+                createXmlOutput(pdfInfo, response);
             }
 
         } catch (JSONException ex) {
@@ -255,41 +263,98 @@ public class Data2PDF extends HttpServlet {
         }
     }
 
-    public static void createXmlOutput(ObjectdataPdfInfo object, String xmlFile) {
-        try {
-            File file = new File(xmlFile);
-            JAXBContext jaxbContext = JAXBContext.newInstance(ObjectdataPdfInfo.class);
-            Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-
-            // output pretty printed
-            jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-
-            jaxbMarshaller.marshal(object, file);
-        } catch (JAXBException e) {
-            log.error("Fout tijdens maken objectdata export naar xml: ", e);
-        }
-    }
-
-    public static void createPdfOutput(ObjectdataPdfInfo pdfInfo, String template,
-            HttpServletResponse response) throws MalformedURLException, IOException, SAXException {
-
-        /* TODO: Ook liggend maken via orientation param ? */
-
-        File xslFile = new File(template);
-        String path = new File(xslFile.getParent()).toURI().toString();
-
-        /* Setup fopfactory */
-        FopFactory fopFactory = FopFactory.newInstance();
-
-        /* Set BaseUrl so that fop knows paths to images etc... */
-        fopFactory.setBaseURL(path);
-        fopFactory.getFontManager().setFontBaseURL(fontPath);
-        fopFactory.setUserConfig(new File(fopConfig));
+    public static void createXmlOutput(ObjectdataPdfInfo pdfInfo,
+            HttpServletResponse response) throws IOException  {
 
         /* Setup output stream */
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
+            JAXBContext jaxbContext = JAXBContext.newInstance(ObjectdataPdfInfo.class);
+            Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+            jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+            jaxbMarshaller.marshal(pdfInfo, out);
+
+            response.setContentType("text/xml");
+            response.setContentLength(out.size());
+
+            SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy", new Locale("NL"));
+            String date = df.format(new Date());
+            String fileName = "Objectdata_Export_" + date + ".xml";
+
+            response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+            response.getOutputStream().write(out.toByteArray());
+            response.getOutputStream().flush();
+            // output pretty printed
+        } catch (JAXBException jex) {
+           log.error("Fout tijdens objectdata xml export: ", jex);
+        } finally {
+            out.close();
+        }
+    }
+ 
+    public static void createHtmlOutput(ObjectdataPdfInfo pdfInfo, String template,
+            HttpServletResponse response) throws IOException  {
+
+        /* Setup output stream */
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        File xslFile = new File(template);
+
+        try {
+            /* Setup Jaxb */
+            JAXBContext jc = JAXBContext.newInstance(ObjectdataPdfInfo.class);
+            JAXBSource src = new JAXBSource(jc, pdfInfo);
+
+            /* Setup xslt */
+            Source xsltSrc = new StreamSource(xslFile);
+            TransformerFactory factory = TransformerFactory.newInstance();
+            Transformer transformer = factory.newTransformer(xsltSrc);
+            if (transformer == null) {
+                log.error("Fout tijdens inlezen xsl bestand.");
+                return;
+            }
+            Result res = new StreamResult(out);
+            transformer.transform(src, res);
+            
+            response.setContentType("text/html");
+            response.setContentLength(out.size());
+
+            SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy", new Locale("NL"));
+            String date = df.format(new Date());
+            String fileName = "Objectdata_Export_" + date + ".html";
+
+            response.setHeader("Content-Disposition", "inline; filename=" + fileName);
+            response.getOutputStream().write(out.toByteArray());
+            response.getOutputStream().flush();
+            // output pretty printed
+        } catch (JAXBException jex) {
+            log.error("Fout tijdens objectdata html export: ", jex);
+        } catch (TransformerConfigurationException ex) {
+            log.error("Fout tijdens objectdata html export: ", ex);
+        } catch (TransformerException ex) {
+            log.error("Fout tijdens objectdata html export: ", ex);
+        } finally {
+            out.close();
+        }
+     }
+    
+    public static void createPdfOutput(ObjectdataPdfInfo pdfInfo, String template,
+            HttpServletResponse response) throws IOException {
+
+        /* TODO: Ook liggend maken via orientation param ? */
+        File xslFile = new File(template);
+        String path = new File(xslFile.getParent()).toURI().toString();
+        /* Setup fopfactory */
+        FopFactory fopFactory = FopFactory.newInstance();
+        /* Setup output stream */
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        try {
+            /* Set BaseUrl so that fop knows paths to images etc... */
+             fopFactory.setBaseURL(path);
+             fopFactory.getFontManager().setFontBaseURL(fontPath);
+             fopFactory.setUserConfig(new File(fopConfig));
+
             /* Construct fop */
             FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
             foUserAgent.setCreator("Gisviewer webapplicatie");
@@ -346,7 +411,8 @@ public class Data2PDF extends HttpServlet {
     }
     
     public String[] getThemaPropertyNames(Gegevensbron gb, boolean basisOnly) {
-        Set themadata = gb.getThemaData();
+        List themadata = new ArrayList(gb.getThemaData());
+        Collections.sort(themadata);
 
         Iterator it = themadata.iterator();
         ArrayList columns = new ArrayList();
@@ -375,7 +441,8 @@ public class Data2PDF extends HttpServlet {
     }
 
     public Map getThemaLabelNames(Gegevensbron gb, boolean basisOnly) {
-        Set themadata = gb.getThemaData();
+        List themadata = new ArrayList(gb.getThemaData());
+        Collections.sort(themadata);
 
         Iterator it = themadata.iterator();
         ArrayList columns = new ArrayList();
@@ -470,6 +537,9 @@ public class Data2PDF extends HttpServlet {
         try {
             if (config.getInitParameter("xsl_data2pdf") != null) {
                 xsl_data2pdf = getServletContext().getRealPath(config.getInitParameter("xsl_data2pdf"));
+            }
+            if (config.getInitParameter("xsl_data2html") != null) {
+                xsl_data2html = getServletContext().getRealPath(config.getInitParameter("xsl_data2html"));
             }
 
             fopConfig = getServletContext().getRealPath("/WEB-INF/xsl/fop.xml");
