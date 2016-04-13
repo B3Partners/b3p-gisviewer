@@ -72,6 +72,15 @@ public class CollectAdmindata {
     public static final String DEFAULT_LAYOUT = "admindata";
     private static DecimalFormat threeDBFormat = new DecimalFormat("#.##");
 
+
+    public GegevensBronBean fillGegevensBronBeanFromPoint( int themaId,
+            String wkt, String jsonCQL, boolean collectGeom, String appCode, String scale, String tolerance) {
+        
+        double distance = getDistance(scale, tolerance);
+        Geometry g = getGeometry(distance,wkt,null, "0");
+        return fillGegevensBronBean(-1, themaId, g.toText(), jsonCQL, collectGeom, "-1", appCode);
+    }
+
     /*je wilt juist wel die geom op kunnen halen met een AJAX verzoek!
      * en aangezien je voor DWR ajax unieke functie namen moet hebben deze verwijderd:
      */
@@ -943,15 +952,20 @@ public class CollectAdmindata {
     static public Geometry getGeometry(HttpServletRequest request) {
         String geom = FormUtils.nullIfEmpty(request.getParameter("geom"));
         String withinObject = request.getParameter("withinObject");
-
         double distance = getDistance(request);
+        double[] coords = getCoords(request);
+        Geometry geometry = getGeometry(distance, geom, coords, withinObject);
 
+        return geometry;
+    }
+
+    
+    static public Geometry getGeometry(double distance, String geom, double[] coords, String withinObject) {
         Geometry geometry = null;
         if (geom != null) {
             geometry = SpatialUtil.geometrieFromText(geom, 28992);
         } else {
             GeometryFactory gf = new GeometryFactory();
-            double[] coords = getCoords(request);
             if (coords == null) {
                 geometry = null;
             } else if (coords.length == 2) {
@@ -983,7 +997,6 @@ public class CollectAdmindata {
                 geometry = geometry.buffer(distance);
             }
         }
-
         return geometry;
     }
 
@@ -1001,6 +1014,11 @@ public class CollectAdmindata {
 
     static private double getDistance(HttpServletRequest request) {
         String s = request.getParameter("scale");
+        String tolerance = request.getParameter("tolerance");
+        return getDistance(s, tolerance);
+    }
+
+    static private double getDistance(String s,String tolerance) {
         double scale = 0.0;
         try {
             if (s != null) {
@@ -1013,7 +1031,6 @@ public class CollectAdmindata {
             scale = 0.0;
             logger.debug("Scale is geen double dus wordt genegeerd");
         }
-        String tolerance = request.getParameter("tolerance");
         double clickTolerance = DEFAULTTOLERANCE;
         try {
             if (tolerance != null) {
