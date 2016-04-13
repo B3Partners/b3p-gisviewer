@@ -55,52 +55,21 @@ public class GetLocationData {
     public GetLocationData() {
     }
 
-    public String getWkt(String ggbId, String attributeName, String compareValue) throws SQLException {
-        String wkt = "";
-
-        Transaction tx = null;
-        DataStore ds = null;
+     public String getWktByThema(String themaId, String attributeName, String compareValue){
+          String wkt = "";
 
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
+        Transaction tx = null;
+        tx = sess.beginTransaction();
         try {
-            tx = sess.beginTransaction();
-
             Integer id = -1;
 
-            id = new Integer(ggbId);
+            id = new Integer(themaId);
 
-            if (id != null) {
-                WebContext ctx = WebContextFactory.get();
-                HttpServletRequest request = ctx.getHttpServletRequest();
-
-                Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, id);
-
-                if (gb != null) {
-                    Bron b = gb.getBron(request);
-
-                    if (b != null) {
-                        ds = b.toDatastore();
-
-                        if (ds != null) {
-                            GeometryDescriptor gDescr = DataStoreUtil.getSchema(ds, gb).getGeometryDescriptor();
-
-                            if (gDescr != null) {
-                                String geometryName = gDescr.getLocalName();
-                                ArrayList<String> propertyNames = new ArrayList();
-                                propertyNames.add(geometryName);
-                                ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
-
-                                if (list.size() >= 1) {
-                                    Feature f = list.get(0);
-                                    wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
+            Themas thema = (Themas) sess.get(Themas.class, id);
+            Gegevensbron gb = thema.getGegevensbron();
+            wkt = getWkt(gb, sess, attributeName, compareValue);
             tx.commit();
 
         } catch (NumberFormatException ex) {
@@ -115,15 +84,79 @@ public class GetLocationData {
             if (tx != null && tx.isActive()) {
                 tx.rollback();
             }
+        }
+        return wkt;
+    }
+
+    public String getWkt(String ggbId, String attributeName, String compareValue) throws SQLException {
+        String wkt = "";
+
+        Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
+
+        Transaction tx = null;
+        tx = sess.beginTransaction();
+        try {
+            Integer id = -1;
+
+            id = new Integer(ggbId);
+
+            Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, id);
+            wkt = getWkt(gb, sess, attributeName, compareValue);
+            tx.commit();
+
+        } catch (NumberFormatException ex) {
+            log.error("Fout tijdens omzetten gegevensbronid: " + ex);
+
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
+        } catch (Exception ex) {
+            log.error("Fout tijdens ophalen wkt: " + ex);
+
+            if (tx != null && tx.isActive()) {
+                tx.rollback();
+            }
+        }
+        return wkt;
+    }
+
+    private String getWkt(Gegevensbron gb, Session sess, String attributeName, String compareValue) throws Exception {
+        DataStore ds = null;
+        String wkt = null;
+        try {
+            if (gb != null) {
+                WebContext ctx = WebContextFactory.get();
+                HttpServletRequest request = ctx.getHttpServletRequest();
+                Bron b = gb.getBron(request);
+
+                if (b != null) {
+                    ds = b.toDatastore();
+
+                    if (ds != null) {
+                        GeometryDescriptor gDescr = DataStoreUtil.getSchema(ds, gb).getGeometryDescriptor();
+
+                        if (gDescr != null) {
+                            String geometryName = gDescr.getLocalName();
+                            ArrayList<String> propertyNames = new ArrayList();
+                            propertyNames.add(geometryName);
+                            ArrayList<Feature> list = DataStoreUtil.getFeatures(ds, gb, FilterBuilder.createEqualsFilter(attributeName, compareValue), propertyNames, 1, true);
+
+                            if (list.size() >= 1) {
+                                Feature f = list.get(0);
+                                wkt = DataStoreUtil.selecteerKaartObjectWkt(f);
+                            }
+                        }
+
+                    }
+                }
+            }
         } finally {
             if (ds != null) {
                 ds.dispose();
             }
         }
-
         return wkt;
     }
-
     public String[] getArea(String elementId, String themaId, String attributeName, String compareValue, String eenheid) throws SQLException {
         Session sess = null;
         double area = 0.0;

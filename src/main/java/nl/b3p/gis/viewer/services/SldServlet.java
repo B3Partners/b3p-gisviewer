@@ -187,7 +187,6 @@ public class SldServlet extends HttpServlet {
                     continue;
                 }
 
-                featureType = featureType.substring(featureType.indexOf("_") + 1);
                 String geometryType = null;
                 try {
                     geometryType = getGeomtryType(th, request);
@@ -275,7 +274,8 @@ public class SldServlet extends HttpServlet {
             String[] value, String geometryType, String sldType, boolean not,
             String sldPart) {
 
-        Node name = doc.createElementNS(SLDNS, "Name");
+        Node name = doc.createElementNS(SENS, "Name");
+        name.setPrefix("se");
         name.appendChild(doc.createTextNode(featureName));
         Node namedLayer = doc.createElementNS(SLDNS, "NamedLayer");
         namedLayer.appendChild(name);
