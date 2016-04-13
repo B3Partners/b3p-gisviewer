@@ -1,0 +1,21 @@
+﻿--kopieer deze regels voor elke applicatie in de configuratie tabel: vervang 'default' voor applicatienaam
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('boomGegevensbron', '0', 'default', 'java.lang.Integer');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('ziekteGegevensbron', '0', 'default', 'java.lang.Integer');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('contactUrl', null, 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('defaultSearchRadius', '10000', 'default', 'java.lang.Integer');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('fullextent', '', 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('helpUrl', null, 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('homeUrl', null, 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('logoutUrl', null, 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('opstartKaarten', null, 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('showBookmarkIcon', 'false', 'default', 'java.lang.Boolean');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('showGoogleMapsIcon', 'false', 'default', 'java.lang.Boolean');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('showInfoTab', 'off', 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('showXYTool', 'true', 'default', 'java.lang.Boolean');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('tabWidthLeft', '250', 'default', 'java.lang.Integer');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('tabsLeft', '', 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('tekenFilterColumn', '', 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('tekenFilterSld', '', 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('tekenKaartlaagId', '0', 'default', 'java.lang.Integer');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('transSliderTab', 'leeg', 'default', 'java.lang.String');
+INSERT INTO configuratie (property, propval, setting, soort) VALUES ('zoekenAutoIdentify', 'true', 'default', 'java.lang.Boolean');

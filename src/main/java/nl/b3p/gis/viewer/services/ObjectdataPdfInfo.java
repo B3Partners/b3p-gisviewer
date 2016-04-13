@@ -1,6 +1,6 @@
 package nl.b3p.gis.viewer.services;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -65,7 +65,7 @@ public class ObjectdataPdfInfo {
         
         public void addItem(String key, String value) {
             if (this.items == null) {
-                this.items = new HashMap<String, String>();
+                this.items = new LinkedHashMap<String, String>();
             }
             
             this.items.put(key, value);  

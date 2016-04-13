@@ -229,24 +229,33 @@ public class DataStoreUtil {
      * typename dan maar één keer voorkomen. Dit is natuurlijk vanzelf waar 
      * indien er maar één namespace wordt gebruikt per datastore, hetgeen 
      * meestal het geval is.
+     * Extra hack voor Mapserver: indien de namespace wfs is dan verwacht
+     * Mapserver een typename zonder de wfs-prefix
      * @param qname typename met namespace
      * @param ds datastore waarin de typename te vinden is.
      * @return typename waarbij de namespace url is omgezet in een prefix
      * @throws IOException 
      */
     public static String reconstructPrefixedName(QName qname, DataStore ds) throws IOException {
-        //find prefix via ds.getTypeNames();
-        String[] prefixedNames = ds.getTypeNames();
-        for (int i = 0; i < prefixedNames.length; i++) {
-            String[] lna = prefixedNames[i].split(":");
-            String localName;
-            if (lna.length == 2) {
-                localName = lna[1];
-            } else {
-                localName = prefixedNames[i];
-            }
-            if (qname.getLocalPart().equals(localName)) {
-                return prefixedNames[i];
+        if (ds instanceof WFS_1_1_0_DataStore
+                && qname.getNamespaceURI() != null
+                && !qname.getNamespaceURI().isEmpty()
+                //Hack: ism Mapserver strategy
+                && !qname.getNamespaceURI().equals("http://www.opengis.net/wfs")) {
+            
+            //find prefix via ds.getTypeNames();
+            String[] prefixedNames = ds.getTypeNames();
+            for (int i = 0; i < prefixedNames.length; i++) {
+                String[] lna = prefixedNames[i].split(":");
+                String localName;
+                if (lna.length == 2) {
+                    localName = lna[1];
+                } else {
+                    localName = prefixedNames[i];
+                }
+                if (qname.getLocalPart().equals(localName)) {
+                    return prefixedNames[i];
+                }
             }
         }
 
