@@ -2,26 +2,20 @@ package nl.b3p.gis.viewer.downloads;
 
 import com.vividsolutions.jts.geom.Geometry;
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.mail.Address;
@@ -36,25 +30,28 @@ import nl.b3p.commons.services.SizeLimitedOutputStream;
 import nl.b3p.commons.services.StreamCopy;
 import nl.b3p.gis.geotools.DataStoreUtil;
 import nl.b3p.gis.viewer.db.Gegevensbron;
+import nl.b3p.gis.viewer.db.ThemaData;
 import nl.b3p.gis.viewer.services.DownloadServlet;
 import nl.b3p.gis.viewer.services.HibernateUtil;
 import nl.b3p.gis.writers.StreamingShapeWriter;
-import nl.b3p.ogc.utils.OGCConstants;
 import nl.b3p.zoeker.configuratie.Bron;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geotools.data.DataStore;
 import org.geotools.data.FeatureSource;
-import org.geotools.data.wfs.WFSDataStore;
 import org.geotools.data.wfs.v1_0_0.WFS_1_0_0_DataStore;
 import org.geotools.data.wfs.v1_1_0.WFS_1_1_0_DataStore;
+import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
+import org.geotools.feature.simple.SimpleFeatureBuilder;
+import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.util.logging.Logging;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.filter.Filter;
 
 /**
@@ -223,6 +220,44 @@ public class DownloadThread extends Thread {
         } // end if !stop     
     }
 
+    private SimpleFeature cleanupFeature(SimpleFeature feature, Gegevensbron gb) {
+        if (feature == null) {
+            return feature;
+        }
+
+        Map<Object, Object> ud = feature.getUserData();
+        SimpleFeatureTypeBuilder featureTypeBuilder = new SimpleFeatureTypeBuilder();
+        featureTypeBuilder.init(feature.getFeatureType());
+
+        List<AttributeDescriptor> oldAttributeDescriptors = feature.getFeatureType().getAttributeDescriptors();
+        List<AttributeDescriptor> attributeDescriptors = new ArrayList<AttributeDescriptor>(oldAttributeDescriptors);
+        List<Object> attributes = feature.getAttributes();
+        
+        Set themadata = gb.getThemaData();
+        for (int i = 0; i < attributeDescriptors.size(); i++) { // of oldAttributeDescriptors?
+            int attributeID = i;
+            Iterator it = themadata.iterator();
+            while (it.hasNext()) {
+                ThemaData td = (ThemaData) it.next();
+                if (attributeDescriptors.get(i).getLocalName().equalsIgnoreCase(td.getKolomnaam())) {
+                    attributeID = -1;
+                    break;
+                }
+            }
+            if (attributeID >= 0) {
+                attributeDescriptors.remove(attributeID);
+                attributes.remove(attributeID);
+            }
+        }
+ 
+        featureTypeBuilder.setAttributes(attributeDescriptors);
+        SimpleFeatureBuilder simpleFeatureBuilder = new SimpleFeatureBuilder(featureTypeBuilder.buildFeatureType());
+        feature = simpleFeatureBuilder.buildFeature(feature.getID(), attributes.toArray(new Object[attributes.size()]));
+        feature.getUserData().putAll(ud);
+
+        return feature;
+    }
+    
     private void writeShapesToWorkingDir(File workingDir, Gegevensbron gb)
             throws Exception {
 
@@ -245,7 +280,11 @@ public class DownloadThread extends Thread {
 
                     while (it.hasNext()) {
                         SimpleFeature feature = (SimpleFeature) it.next();
-                        ssw.write((SimpleFeature) feature);
+                        
+                        //strip ongeconfigureerde attributen van feature
+                        feature = cleanupFeature(feature, gb);
+                        
+                        ssw.write( feature);
                     }
                 }
 
@@ -279,35 +318,29 @@ public class DownloadThread extends Thread {
             FileOutputStream out = null;
 
             String gmlFile = workingDir + File.separator + fileName + GML_EXTENSION;
-
+            
             try {
-                if (datastore instanceof WFS_1_0_0_DataStore) {
-                    InputStream in = getInputStreamForWfs(bron, gb);
+                fc = getFeatureCollection(datastore, gb);
+
+                if (fc != null && fc.size() > 0) {
+                    //helaas in geheugen omdat features aangepast moeten worden
+                    DefaultFeatureCollection outputFeatureCollection 
+                            = new DefaultFeatureCollection();
+            
                     out = new FileOutputStream(gmlFile);
+                    it = fc.features();
+                    while (it.hasNext()) {
+                        SimpleFeature feature = (SimpleFeature) it.next();
 
-                    byte[] buffer = new byte[BUFFER_SIZE];
-                    int len;
-                    while ((len = in.read(buffer)) > 0) {
-                        out.write(buffer, 0, len);
+                        //strip ongeconfigureerde attributen van feature
+                        feature = cleanupFeature(feature, gb);
+                        outputFeatureCollection.add(feature);
                     }
-                    in.close();
-                    out.flush();
 
-                } else {
-                    fc = getFeatureCollection(datastore, gb);
-
-                    if (fc != null && fc.size() > 0) {
-                        it = fc.features();
-
-                        out = new FileOutputStream(gmlFile);
-
-                        org.geotools.xml.Configuration configuration = new org.geotools.gml3.GMLConfiguration();
-                        org.geotools.xml.Encoder encoder = new org.geotools.xml.Encoder(configuration);
-
-                        encoder.encode(fc, org.geotools.gml3.GML._FeatureCollection, out);
-                    }
+                    org.geotools.xml.Configuration configuration = new org.geotools.gml3.GMLConfiguration();
+                    org.geotools.xml.Encoder encoder = new org.geotools.xml.Encoder(configuration);
+                    encoder.encode(outputFeatureCollection, org.geotools.gml3.GML._FeatureCollection, out);
                 }
-
             } catch (Exception ex) {
                 log.error("Fout tijdens schrijven gml: ", ex);
 
@@ -325,23 +358,6 @@ public class DownloadThread extends Thread {
         }
     }
 
-    private InputStream getInputStreamForWfs(Bron bron, Gegevensbron gb)
-            throws MalformedURLException, IOException {
-
-        InputStream in = null;
-
-        String wfsUrl = bron.getUrl();
-        String typeName = gb.getAdmin_tabel(); //fc.getSchema().getName().getLocalPart();
-        String part = "service=WFS&version=1.0.0&request=GetFeature&typename=";
-        String url = wfsUrl + part + typeName;
-
-        URL xmlUrl = new URL(url);
-
-        in = xmlUrl.openStream();
-
-        return in;
-    }
-    
     private void sendErrorEmail() {
         sendEmail("", "", null, null, MAIL_TYPE_ERROR);
     }
@@ -529,40 +545,6 @@ public class DownloadThread extends Thread {
 
     private static synchronized String nextThreadName() {
         return ("DownloadKaartThread-" + threadCounter++);
-    }
-
-    public org.geotools.xml.Configuration getCorrectConfiguration(WFSDataStore ds, String outputFormat) {
-        org.geotools.xml.Configuration gmlconfig;
-        String version="1.0.0";
-        if (ds instanceof WFS_1_1_0_DataStore){
-            version="1.1.0";
-        }
-        if (version.equalsIgnoreCase(OGCConstants.WFS_VERSION_100) || (outputFormat != null && (outputFormat.toLowerCase().indexOf("gml/2") >= 0 || outputFormat.equalsIgnoreCase("gml2")))) {
-            gmlconfig = new org.geotools.gml2.GMLConfiguration();
-        } else {
-            gmlconfig = new org.geotools.gml3.GMLConfiguration();
-        }
-        return gmlconfig;
-    }
-
-    private String getServiceException(File gmlFile) throws FileNotFoundException, UnsupportedEncodingException, IOException {
-        Writer writer = new StringWriter();
-        FileInputStream fis = new FileInputStream(gmlFile);
-        try{
-            char[] buffer = new char[BUFFER_SIZE];
-            Reader reader = new BufferedReader(new InputStreamReader(fis, UTF8_CHARSET));
-            int n=reader.read(buffer);
-            writer.write(buffer, 0, n);
-        }finally{
-            fis.close();
-        }
-        String begin=writer.toString();
-        if (begin.indexOf("<ServiceExceptionReport")>0 && begin.indexOf("<ServiceExceptionReport")< 1000){
-            return begin;
-        }else{
-            return null;
-        }
-
     }
 
     public String getEmail() {
