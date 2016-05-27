@@ -57,6 +57,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.securityfilter.filter.SecurityFilter;
 import org.securityfilter.filter.SecurityRequestWrapper;
 import org.securityfilter.realm.ExternalAuthenticatedRealm;
 import org.securityfilter.realm.FlexibleRealmInterface;
@@ -77,8 +78,27 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         String password = FormUtils.nullIfEmpty(request.getParameter(FORM_PASSWORD));
         String code = FormUtils.nullIfEmpty(request.getParameter(FORM_CODE));
 
+        String appCode = FormUtils.nullIfEmpty(request.getParameter("appCode"));
+        String cmsPageId = FormUtils.nullIfEmpty(request.getParameter("cmsPageId"));
+        String forceViewer = FormUtils.nullIfEmpty(request.getParameter("forceViewer"));
+
         HttpSession session = request.getSession();
         session.setAttribute("loginForm", true);
+        
+        if(appCode != null) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("viewer.do?appCode=");
+            sb.append(appCode);
+            if(cmsPageId != null) {
+                sb.append("&cmsPageId=");
+                sb.append(cmsPageId);
+            }
+            if(forceViewer != null) {
+                sb.append("&forceViewer=");
+                sb.append(forceViewer);
+            }
+            session.setAttribute(SecurityFilter.SAVED_REQUEST_URL, sb.toString());
+        }
 
         return authenticate(username, password, code, request);
     }
