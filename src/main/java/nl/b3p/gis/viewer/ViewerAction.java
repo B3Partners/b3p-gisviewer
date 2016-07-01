@@ -1049,6 +1049,10 @@ public class ViewerAction extends BaseGisAction {
                 if (th.getWms_legendlayer_real() != null) {
                     jsonCluster.put("legendurl", user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer_real()), th.getStyle()));
                 }
+                if(th.isLocatie_thema()) {
+                    // We are abusing the locatie_thema field to add scaling possibilities to the legend
+                    jsonCluster.put("legendscaling", true);
+                }
                 layer = user.getLayer(th.getWms_layers_real());
             } else {
                 jsonCluster.put("wmslayers", th.getWms_layers());
@@ -1058,6 +1062,10 @@ public class ViewerAction extends BaseGisAction {
                 }
                 if (th.getWms_legendlayer() != null) {
                     jsonCluster.put("legendurl", user.getLegendGraphicUrl(user.getLayer(th.getWms_legendlayer()), th.getStyle()));
+                }
+                if(th.isLocatie_thema()) {
+                    // We are abusing the locatie_thema field to add scaling possibilities to the legend
+                    jsonCluster.put("legendscaling", true);
                 }
                 layer = user.getLayer(th.getWms_layers());
             }

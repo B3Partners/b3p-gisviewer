@@ -102,9 +102,6 @@ public class SpatialUtil {
         Session sess = HibernateUtil.getSessionFactory().getCurrentSession();
 
         String hquery = "FROM Themas t LEFT JOIN FETCH t.gegevensbron ";
-        if (locatie) {
-            hquery += "WHERE locatie_thema = true ";
-        }
 
         hquery += "ORDER BY t.belangnr, t.naam DESC";
 

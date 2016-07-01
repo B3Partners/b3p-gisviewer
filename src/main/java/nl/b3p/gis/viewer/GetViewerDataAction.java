@@ -246,6 +246,8 @@ public class GetViewerDataAction extends BaseGisAction {
      *
      * object_data
      *
+     * @deprecated
+     *
      */
     public ActionForward objectdata(ActionMapping mapping, DynaValidatorForm dynaForm,
             HttpServletRequest request, HttpServletResponse response) throws Exception {        

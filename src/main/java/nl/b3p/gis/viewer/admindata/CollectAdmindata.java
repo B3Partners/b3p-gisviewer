@@ -905,9 +905,6 @@ public class CollectAdmindata {
         while (iter.hasNext()) {
             Themas thema = (Themas) iter.next();
             logger.debug("checking thema: " + thema == null ? "<null>" : thema.getNaam());
-            if (locatie && !thema.isLocatie_thema()) {
-                continue;
-            }
             Gegevensbron gb = thema.getGegevensbron();
 
             if (gb != null) {
