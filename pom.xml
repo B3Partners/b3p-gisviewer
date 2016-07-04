@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>nl.b3p</groupId>
     <artifactId>b3p-gisviewer</artifactId>
-    <version>4.2.5</version>
+    <version>4.2.6-SNAPSHOT</version>
     <packaging>jar</packaging>
     
     <properties>
@@ -146,7 +146,7 @@
         <connection>scm:git:git@github.com:B3Partners/b3p-gisviewer.git</connection>
         <developerConnection>scm:git:git@github.com:B3Partners/b3p-gisviewer.git</developerConnection>
         <url>https://github.com/B3Partners/b3p-gisviewer</url>
-      <tag>b3p-gisviewer-4.2.5</tag>
+      <tag>b3p-gisviewer-${project.version}</tag>
     </scm>
     <distributionManagement>
         <repository>
