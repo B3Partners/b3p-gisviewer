@@ -560,11 +560,11 @@ public class GetLocationData {
         Point southWestPoint = convertWktToLatLonPoint(minWkt);
         Point northEastPoint = convertWktToLatLonPoint(maxWkt);
 
-        double spnLat = northEastPoint.getX() - southWestPoint.getX();
-        double spnLon = northEastPoint.getY() - southWestPoint.getY();
+        double spnLat = northEastPoint.getY() - southWestPoint.getY();
+        double spnLon = northEastPoint.getX() - southWestPoint.getX();
 
-        llSpnParams[0] = Double.toString(centerPoint.getX());
-        llSpnParams[1] = Double.toString(centerPoint.getY());
+        llSpnParams[0] = Double.toString(centerPoint.getY());
+        llSpnParams[1] = Double.toString(centerPoint.getX());
         llSpnParams[2] = Double.toString(spnLat);
         llSpnParams[3] = Double.toString(spnLon);
 
@@ -578,8 +578,8 @@ public class GetLocationData {
         if (startGeom != null) {
             Point start = convertWktToLatLonPoint(startGeom.toText());
 
-            llParams[0] = Double.toString(start.getX());
-            llParams[1] = Double.toString(start.getY());
+            llParams[0] = Double.toString(start.getY());
+            llParams[1] = Double.toString(start.getX());
         } else {
             llParams[0] = "";
             llParams[1] = "";
@@ -587,8 +587,8 @@ public class GetLocationData {
 
         Point centerPoint = convertWktToLatLonPoint(destWkt);
 
-        llParams[2] = Double.toString(centerPoint.getX());
-        llParams[3] = Double.toString(centerPoint.getY());
+        llParams[2] = Double.toString(centerPoint.getY());
+        llParams[3] = Double.toString(centerPoint.getX());
 
         return llParams;
     }
