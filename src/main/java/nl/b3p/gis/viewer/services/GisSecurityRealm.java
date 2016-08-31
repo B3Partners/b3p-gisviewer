@@ -83,7 +83,7 @@ public class GisSecurityRealm implements FlexibleRealmInterface, ExternalAuthent
         String forceViewer = FormUtils.nullIfEmpty(request.getParameter("forceViewer"));
 
         HttpSession session = request.getSession();
-        session.setAttribute("loginForm", true);
+//        session.setAttribute("loginForm", true);
         
         if(appCode != null) {
             StringBuilder sb = new StringBuilder();
