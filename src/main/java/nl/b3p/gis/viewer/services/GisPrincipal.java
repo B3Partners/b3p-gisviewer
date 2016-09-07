@@ -301,19 +301,19 @@ public class GisPrincipal implements Principal {
             app = KaartSelectieUtil.getApplicatie(appCode);
         }
 
-        Boolean loginForm = (Boolean) session.getAttribute("loginForm");
-        if (loginForm == null) {
-            loginForm = false;
-        }
+//        Boolean loginForm = (Boolean) session.getAttribute("loginForm"); // remove this
+//        if (loginForm == null) {
+//            loginForm = false;
+//        }
 
         /* Applicatie geen gebruikerscode en niet via formulier gekomen */
-        if (app != null && app.getGebruikersCode() == null && !loginForm) {
-            session.invalidate();
-
-            log.debug("Applicatie zonder gebruikerscode. Terug naar login form.");
-
-            return null;
-        }
+//        if (app != null && app.getGebruikersCode() == null && !loginForm) { // this can probaly be removed
+//            session.invalidate();
+//
+//            log.debug("Applicatie zonder gebruikerscode. Terug naar login form.");
+//
+//            return null;
+//        }
 
         /* Gebruikerscode verschilt met huidige inlog. Automatisch inloggen. */
         if (gp != null && app != null && app.getGebruikersCode() != null && !app.getGebruikersCode().equals(gp.getCode())) {
@@ -342,7 +342,7 @@ public class GisPrincipal implements Principal {
         }
 
         /* Applicatie geen gebruikerscode. Inloggen met gegevens van formulier. */
-        if (app != null && app.getGebruikersCode() == null && loginForm) {
+        if (app != null && app.getGebruikersCode() == null ) { // check how this works
             SecurityRequestWrapper srw = (SecurityRequestWrapper) request;
 
             gp = (GisPrincipal) GisSecurityRealm.authenticate(gpUsername, gpPassword, gpCode);
