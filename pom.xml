@@ -51,12 +51,12 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-commons-core</artifactId>
-            <version>4.2.2</version>
+            <version>4.2.3</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-commons-gis</artifactId>
-            <version>4.2.3</version>
+            <version>4.2.4</version>
         </dependency>
         <dependency>
             <groupId>org.geotools</groupId>
@@ -81,7 +81,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>b3p-combineImageTool</artifactId>
-            <version>4.2.2</version>
+            <version>4.2.3</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
