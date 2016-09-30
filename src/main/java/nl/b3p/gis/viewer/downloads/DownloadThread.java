@@ -20,10 +20,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.mail.Address;
 import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.SendFailedException;
 import javax.mail.Transport;
-import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import nl.b3p.commons.services.SizeLimitedOutputStream;
@@ -52,6 +49,7 @@ import org.hibernate.Transaction;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
+import org.opengis.feature.type.GeometryDescriptor;
 import org.opengis.filter.Filter;
 
 /**
@@ -252,6 +250,12 @@ public class DownloadThread extends Thread {
         
         Set themadata = gb.getThemaData();
         for (int i = 0; i < attributeDescriptors.size(); i++) { // of oldAttributeDescriptors?
+            
+            GeometryDescriptor gd = feature.getFeatureType().getGeometryDescriptor();
+            if (gd!=null && attributeDescriptors.get(i).getLocalName().equalsIgnoreCase(gd.getLocalName())) {
+                break; // niet verwijderen
+            }
+            
             int attributeID = i;
             Iterator it = themadata.iterator();
             while (it.hasNext()) {
@@ -274,7 +278,6 @@ public class DownloadThread extends Thread {
 
         return feature;
     }
-
     
     private void writeShapesToWorkingDir(File workingDir, Gegevensbron gb)
             throws Exception {
@@ -472,21 +475,21 @@ public class DownloadThread extends Thread {
     private String createRemarks(ArrayList<String> successTitles, ArrayList<String> erroredTitles, ArrayList<String> extraMessages) {
         
         String laagStatus = "";
-        if (successTitles.size() > 0){
+        if (successTitles!=null && successTitles.size() > 0){
             laagStatus += "\nDe volgende kaart(en) zijn klaar gezet ("+successTitles.size()+"): \n";
             for (String title : successTitles){
                 laagStatus += "- " + title + "\n";
             }
         }
         
-        if (erroredTitles.size() > 0) {
+        if (erroredTitles!=null && erroredTitles.size() > 0) {
             laagStatus += "\nDe volgende kaart(en) is/zijn tijdelijk niet (volledig) beschikbaar ("+erroredTitles.size()+"): \n";
             for (String title : erroredTitles) {
                 laagStatus += "- " + title + "\n";
             }
         }
         
-        if (extraMessages.size() > 0) {
+        if (extraMessages!=null && extraMessages.size() > 0) {
             laagStatus += "\nHiernaast zijn de volgende berichten beschikbaar ("+extraMessages.size()+"): \n";
             for (String message : extraMessages) {
                 laagStatus += "- " + message + "\n";
