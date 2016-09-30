@@ -114,7 +114,7 @@ public class DownloadServlet extends HttpServlet {
                     os.flush();
 
                     //after download remove the dir and file.
-                    RemoveFilesWithDelayThread removeThread = new RemoveFilesWithDelayThread(downloadCode,zipfile.getParentFile(), 60000, removeThreads);
+                    RemoveFilesWithDelayThread removeThread = new RemoveFilesWithDelayThread(downloadCode,zipfile.getParentFile(), 3600000, removeThreads);
                     removeThreads.put(downloadCode, removeThread);
                     removeThread.start();
 

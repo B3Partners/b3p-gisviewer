@@ -91,7 +91,6 @@ public class DownloadThread extends Thread {
     private final long MAX_ZIP_FILESIZE = 1024L * 1024L * 100; // 100MB
     
     public static final int MAIL_TYPE_SUCCES = 1;
-    public static final int MAIL_TYPE_TOO_LARGE = 2;
     public static final int MAIL_TYPE_ERROR = 99;
     
     private boolean stop = false;
@@ -122,7 +121,8 @@ public class DownloadThread extends Thread {
                 String folderName = downloadPath + folder;
                 File workingDir = new File(folderName);
                 if (!workingDir.mkdirs()) {
-                    throw new IOException("Cannot create folder: " + workingDir.getAbsolutePath());
+                    log.debug("Cannot create folder: " + workingDir.getAbsolutePath());
+                    throw new IOException("Er kan geen downloadmap worden aangemaakt!");
                 }
 
                 /* Pad naar zipfile */
@@ -135,7 +135,6 @@ public class DownloadThread extends Thread {
                 ArrayList<String> successTitles = new ArrayList<String>();
 
                 for (String uuid : uuids) { 
-                    boolean error = false;
 
                     Integer gegevensbronId = new Integer(uuid);
                     Gegevensbron gb = (Gegevensbron) sess.get(Gegevensbron.class, gegevensbronId);
@@ -146,24 +145,15 @@ public class DownloadThread extends Thread {
                     try {
                         if (getFormaat().equals(FORMAAT_SHP)) {
                             writeShapesToWorkingDir(workingDir, gb);
-                        }  
-
-                        if (getFormaat().equals(FORMAAT_GML)) {
+                        } else if (getFormaat().equals(FORMAAT_GML)) {
                             writeGMLToWorkingDir(workingDir, title, gb);
                         } 
 
-                    } catch (Exception e) {
-                        error = true;
-                        log.debug("Dataset opgehaald met fouten: ", e);
-                    }
-
-                    if (error) {                    
-                        log.debug("Error while getting data for uuid: "+ uuid);
-                        erroredTitles.add(title);
-                    } else {                    
                         successTitles.add(title);
+                    } catch (Exception e) {
+                        log.debug("Dataset met uuid (" + uuid + ") opgehaald met fouten: ", e);
+                        erroredTitles.add(title);
                     }
-
                 }
 
                 if (uuids.length - erroredTitles.size() > 0) {
@@ -173,38 +163,37 @@ public class DownloadThread extends Thread {
 
                     try {
                         fos = new FileOutputStream(zipFile);
-                        limitOut = new SizeLimitedOutputStream(fos, MAX_ZIP_FILESIZE);                    
+                        limitOut = new SizeLimitedOutputStream(fos, MAX_ZIP_FILESIZE);
                         zip = new ZipOutputStream(limitOut);
 
-                        putDirInZip(zip, new File(workingDir.getAbsolutePath()), "");                    
-                    } catch (Exception ex) {                    
-                        throw new Exception("Error creating zip: ", ex);
+                        putDirInZip(zip, new File(workingDir.getAbsolutePath()), "");
                     } finally {
-                        try {
-                            if (zip != null) {
-                                zip.close();
-                            }
-                            if (limitOut != null) {
-                                limitOut.close();
-                            }
-                            if (fos != null) {
-                                fos.close();
-                            }   
-                        } catch (Exception e) {
-                            log.error("Cannot close zip.", e);
-                        }                                  
+                        if (zip != null) {
+                            zip.close();
+                        }
+                        if (limitOut != null) {
+                            limitOut.close();
+                        }
+                        if (fos != null) {
+                            fos.close();
+                        }
                     }
                 }
 
                 String downloadLink = folder + File.separator + zipFileName;            
-                sendEmail(zipFile, downloadLink, erroredTitles, successTitles, MAIL_TYPE_SUCCES);
-
+                sendEmail(zipFile, downloadLink, erroredTitles, successTitles, null, MAIL_TYPE_SUCCES);
                 threadStatus = STATUS_FINISHED;
-            } catch (Exception e) {       
-                threadStatus = STATUS_ERROR;
+                
+            } catch (Exception e) {   
+                
                 log.error("Error downloading the data: ", e);
-
-                sendErrorEmail();
+                
+                ArrayList<String> extraMessages = new ArrayList<String>();
+                extraMessages.add("Het downloadbestand kon worden aangemaakt, oorzaak: " + e.getLocalizedMessage());
+                
+                sendEmail("", "", null, null, extraMessages, MAIL_TYPE_ERROR);
+                threadStatus = STATUS_ERROR;
+                
             } finally {
                 try {
                     if (tx != null) {
@@ -220,6 +209,34 @@ public class DownloadThread extends Thread {
         } // end if !stop     
     }
 
+    private boolean cleanupFeatureNeeded(SimpleFeature feature, Gegevensbron gb) {
+        if (feature == null) {
+            return false;
+        }
+
+        List<AttributeDescriptor> attributeDescriptors = feature.getFeatureType().getAttributeDescriptors();
+        Set themadata = gb.getThemaData();
+        boolean allFound = true;
+        for (AttributeDescriptor attributeDescriptor : attributeDescriptors) {
+            boolean found = false;
+            Iterator it = themadata.iterator();
+            while (it.hasNext()) {
+                ThemaData td = (ThemaData) it.next();
+                if (attributeDescriptor.getLocalName().equalsIgnoreCase(td.getKolomnaam())) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                allFound = false;
+                break;
+            }
+        }
+ 
+        return !allFound;
+    }
+
+    
     private SimpleFeature cleanupFeature(SimpleFeature feature, Gegevensbron gb) {
         if (feature == null) {
             return feature;
@@ -257,6 +274,7 @@ public class DownloadThread extends Thread {
 
         return feature;
     }
+
     
     private void writeShapesToWorkingDir(File workingDir, Gegevensbron gb)
             throws Exception {
@@ -266,33 +284,37 @@ public class DownloadThread extends Thread {
         if (bron != null) {
             DataStore datastore = bron.toDatastore();
 
-            FeatureCollection fc = null;
             FeatureIterator it = null;
             StreamingShapeWriter ssw = null;
 
             try {
-                fc = getFeatureCollection(datastore, gb);
+                FeatureCollection fc = getFeatureCollection(datastore, gb);
 
                 if (fc != null && fc.size() > 0) {
                     it = fc.features();
 
                     ssw = new StreamingShapeWriter(workingDir.getAbsolutePath() + File.separator);
 
+                    boolean firstFeature = true;
+                    boolean cleanupNeeded = false;
                     while (it.hasNext()) {
                         SimpleFeature feature = (SimpleFeature) it.next();
                         
                         //strip ongeconfigureerde attributen van feature
-                        feature = cleanupFeature(feature, gb);
+                        if (firstFeature) {
+                            cleanupNeeded = cleanupFeatureNeeded(feature, gb);
+                            firstFeature = false;
+                        }
+                        if (cleanupNeeded) {
+                            feature = cleanupFeature(feature, gb);
+                        }
                         
                         ssw.write( feature);
                     }
                 }
 
-            } catch (Exception ex) {
-                log.error("Fout tijdens schrijven shape: ", ex);
-
             } finally {
-                if (fc != null) {
+                if (it != null) {
                     it.close();
                 }
                 if (datastore != null) {
@@ -313,14 +335,13 @@ public class DownloadThread extends Thread {
         if (bron != null) {
             DataStore datastore = bron.toDatastore();
 
-            FeatureCollection fc = null;
             FeatureIterator it = null;
             FileOutputStream out = null;
 
             String gmlFile = workingDir + File.separator + fileName + GML_EXTENSION;
             
             try {
-                fc = getFeatureCollection(datastore, gb);
+                FeatureCollection fc = getFeatureCollection(datastore, gb);
 
                 if (fc != null && fc.size() > 0) {
                     //helaas in geheugen omdat features aangepast moeten worden
@@ -328,24 +349,38 @@ public class DownloadThread extends Thread {
                             = new DefaultFeatureCollection();
             
                     out = new FileOutputStream(gmlFile);
-                    it = fc.features();
-                    while (it.hasNext()) {
-                        SimpleFeature feature = (SimpleFeature) it.next();
-
-                        //strip ongeconfigureerde attributen van feature
-                        feature = cleanupFeature(feature, gb);
-                        outputFeatureCollection.add(feature);
-                    }
-
                     org.geotools.xml.Configuration configuration = new org.geotools.gml3.GMLConfiguration();
                     org.geotools.xml.Encoder encoder = new org.geotools.xml.Encoder(configuration);
-                    encoder.encode(outputFeatureCollection, org.geotools.gml3.GML._FeatureCollection, out);
+                    
+                    it = fc.features();
+                    boolean cleanupNeeded = false;
+                    SimpleFeature firstFeature = null;
+                    if (it.hasNext()) {
+                        firstFeature = (SimpleFeature) it.next();
+                        //strip ongeconfigureerde attributen van feature
+                        cleanupNeeded = cleanupFeatureNeeded(firstFeature, gb);
+                    }
+
+                    if (cleanupNeeded) {
+                        // bewaar eerste feature van test hiervoor
+                        outputFeatureCollection.add(firstFeature);
+                        
+                        while (it.hasNext()) {
+                            SimpleFeature feature = (SimpleFeature) it.next();
+                            //strip ongeconfigureerde attributen van feature
+                            feature = cleanupFeature(feature, gb);
+                            outputFeatureCollection.add(feature);
+                        }
+                        encoder.encode(outputFeatureCollection, org.geotools.gml3.GML._FeatureCollection, out);
+                        
+                    } else {
+                        encoder.encode(fc, org.geotools.gml3.GML._FeatureCollection, out);
+                        
+                    }
                 }
-            } catch (Exception ex) {
-                log.error("Fout tijdens schrijven gml: ", ex);
 
             } finally {
-                if (fc != null) {
+                if (it != null) {
                     it.close();
                 }
                 if (datastore != null) {
@@ -358,12 +393,8 @@ public class DownloadThread extends Thread {
         }
     }
 
-    private void sendErrorEmail() {
-        sendEmail("", "", null, null, MAIL_TYPE_ERROR);
-    }
-    
     private void sendEmail(String zipFile, String zipFileName, ArrayList<String> erroredTitles,
-            ArrayList<String> successTitles, int mailType) {
+            ArrayList<String> successTitles, ArrayList<String> extraMessages, int mailType) {
         
         File zip = new File(zipFile);
         
@@ -393,46 +424,29 @@ public class DownloadThread extends Thread {
 
             /* Subject */
             String onderwerp = null;
-
-            if (mailType == MAIL_TYPE_SUCCES) {
-                onderwerp = "Het downloadbestand staat klaar.";
-            } else if (mailType == MAIL_TYPE_TOO_LARGE) {
-                onderwerp = "Het downloadbestand is te groot.";
-            } else {
-                onderwerp = "Fout tijdens klaarzetten van het downloadbestand.";
-            }
-            msg.setSubject(onderwerp);
-
-            /* Get mail text from file */
             String file = null;
-            if (mailType == MAIL_TYPE_SUCCES) {
-                file = DownloadServlet.getMailDownloadSucces();
-            } else {
-                file = DownloadServlet.getMailDownloadError();
-            }
-
-            /* Object params */
             Object[] params = null;
+            String remarks = createRemarks(successTitles, erroredTitles, extraMessages);
+            String link = getApplicationPath() + DownloadServlet.getDownloadServletPath()
+                + "?download=" + zipFileName;
+            
             if (mailType == MAIL_TYPE_SUCCES && zip.exists()) {
-                String link = getApplicationPath() + DownloadServlet.getDownloadServletPath()
-                        + "?download=" + zipFileName;
-
-                String lagenString = getLagenString(successTitles, erroredTitles);
-
+                onderwerp = "Het downloadbestand staat klaar.";
+                file = DownloadServlet.getMailDownloadSucces();
                 params = new Object[] {
                     link, // 0 = download link
-                    lagenString, // 1 = lagen string
+                    remarks, // 1 = opmerkingen
                     contactEmail // 2 = contact email
                 };
-            } else if (mailType == MAIL_TYPE_TOO_LARGE) {
-                params = new Object[] {                
-                    contactEmail // 0 = contact email
-                };
             } else {
+                onderwerp = "Fout tijdens klaarzetten van het downloadbestand.";
+                file = DownloadServlet.getMailDownloadError();
                 params = new Object[] {                
-                    contactEmail // 0 = contact email
+                    contactEmail, // 0 = contact email
+                    remarks // 1 = opmerkingen
                 };
-            }
+           }
+            msg.setSubject(onderwerp);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();            
             InputStream in = null;
@@ -450,36 +464,32 @@ public class DownloadThread extends Thread {
             /* Send it */
             Transport.send(msg);
         
-        } catch (AddressException ae) {
-            log.error("Fout bij het opgegeven emailadres. ", ae);
-        } catch (SendFailedException sfe) {
-            log.error("Fout bij het verzenden van het bericht.", sfe);
-        } catch (MessagingException me) {
-            log.error("Fout bij het verzenden van het bericht. ", me);
         } catch (Exception e) {
             log.error("Error", e);
         }
     }
     
-    private String getLagenString(ArrayList<String> successTitles, 
-            ArrayList<String> erroredTitles) {
+    private String createRemarks(ArrayList<String> successTitles, ArrayList<String> erroredTitles, ArrayList<String> extraMessages) {
         
         String laagStatus = "";
         if (successTitles.size() > 0){
-            laagStatus = "De volgende kaart(en) zijn klaar gezet ("+successTitles.size()+"): \n";
+            laagStatus += "\nDe volgende kaart(en) zijn klaar gezet ("+successTitles.size()+"): \n";
             for (String title : successTitles){
                 laagStatus += "- " + title + "\n";
             }
         }
         
         if (erroredTitles.size() > 0) {
-            if (laagStatus.length() < 1) {
-                laagStatus = "De volgende kaart(en) is/zijn tijdelijk niet compleet of beschikbaar ("+erroredTitles.size()+"): \n";
-            } else {
-                laagStatus += "\nDe volgende kaart(en) is/zijn tijdelijk niet compleet of beschikbaar ("+erroredTitles.size()+"): \n";
-            }            
+            laagStatus += "\nDe volgende kaart(en) is/zijn tijdelijk niet (volledig) beschikbaar ("+erroredTitles.size()+"): \n";
             for (String title : erroredTitles) {
                 laagStatus += "- " + title + "\n";
+            }
+        }
+        
+        if (extraMessages.size() > 0) {
+            laagStatus += "\nHiernaast zijn de volgende berichten beschikbaar ("+extraMessages.size()+"): \n";
+            for (String message : extraMessages) {
+                laagStatus += "- " + message + "\n";
             }
         }
         
