@@ -121,6 +121,9 @@ public class Data2PDF extends HttpServlet {
 
             String decoded = URLDecoder.decode(objectIds, "UTF-8");
             String[] ids = decoded.split(",");
+            
+            // check if number of max records specified in config
+            MAX_PDF_RECORDS = getMaxPDFRecords(gb, appCode);
 
             if (ids != null && ids.length > MAX_PDF_RECORDS) {
 
@@ -566,6 +569,28 @@ public class Data2PDF extends HttpServlet {
             settings.setLegendMap(legendMap);
         }
         return settings;
+    }
+    
+    public int getMaxPDFRecords(Gegevensbron gb, String appCode) {
+        Integer maxPDFRecords = null;
+
+        try {
+            ConfigKeeper configKeeper = new ConfigKeeper();
+            Map map = configKeeper.getConfigMap(appCode, true);
+            if (map != null) {
+                maxPDFRecords = (Integer) map.get("maxPDFRecords");
+
+            }
+        } catch (Exception ex) {
+            // just pass and give back the default value
+        }
+
+        if (maxPDFRecords != null) {
+            return maxPDFRecords;
+        } else {
+            return MAX_PDF_RECORDS;
+        }
+
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
