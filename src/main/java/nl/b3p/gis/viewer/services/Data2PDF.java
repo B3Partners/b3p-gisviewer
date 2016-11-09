@@ -150,8 +150,20 @@ public class Data2PDF extends HttpServlet {
             }
 
             List data = null;
-            String[] propertyNames = getThemaPropertyNames(gb);
-            Map columnLabels = getThemaLabelNames(gb);
+            
+            // see if need to display columns with data order
+            Boolean withDataOrder = displayAllWithDataOrder(gb, appCode);
+            
+            // see if need to display only columns with basisRegel
+            Boolean basisOnly = displayOnlyBasisRegel(gb, appCode);
+            
+            // if to display columns with dataOrder, then we want more than basisregel
+            if (withDataOrder) {
+                basisOnly = false;
+            }
+            
+            String[] propertyNames = getThemaPropertyNames(gb, basisOnly, withDataOrder);
+            Map columnLabels = getThemaLabelNames(gb, basisOnly, withDataOrder);
             try {
                 data = getData(b, gb, ids, propertyNames, appCode);
             } catch (Exception ex) {
@@ -410,10 +422,10 @@ public class Data2PDF extends HttpServlet {
     }
 
     public String[] getThemaPropertyNames(Gegevensbron gb) {
-        return getThemaPropertyNames(gb, true);
+        return getThemaPropertyNames(gb, true, false);
     }
     
-    public String[] getThemaPropertyNames(Gegevensbron gb, boolean basisOnly) {
+    public String[] getThemaPropertyNames(Gegevensbron gb, boolean basisOnly, boolean withDataOrder) {
         List themadata = new ArrayList(gb.getThemaData());
         Collections.sort(themadata);
 
@@ -428,6 +440,13 @@ public class Data2PDF extends HttpServlet {
                                 && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
                             columns.add(td.getKolomnaam());
                         }
+                        
+                        // if we only to display columns with data order, remove if dataOrder null
+                        if(td.getDataorder() == null && withDataOrder ){
+                            columns.remove(columns.size() -1 );
+                            
+                            
+                        }
                     }
                 }
             }
@@ -440,10 +459,10 @@ public class Data2PDF extends HttpServlet {
     }
 
     public Map getThemaLabelNames(Gegevensbron gb) {
-        return getThemaLabelNames(gb, true);
+        return getThemaLabelNames(gb, true, false);
     }
 
-    public Map getThemaLabelNames(Gegevensbron gb, boolean basisOnly) {
+    public Map getThemaLabelNames(Gegevensbron gb, boolean basisOnly, boolean withDataOrder) {
         List themadata = new ArrayList(gb.getThemaData());
         Collections.sort(themadata);
 
@@ -454,6 +473,7 @@ public class Data2PDF extends HttpServlet {
             ThemaData td = (ThemaData) it.next();
             if (td.getKolomnaam() != null) {
                 if (!columns.contains(td.getKolomnaam())) {
+                    
                     if (td.isBasisregel() || !basisOnly) {
                         if (!td.getKolomnaam().equalsIgnoreCase("the_geom")
                                 && !td.getKolomnaam().equalsIgnoreCase("geometry")) {
@@ -463,6 +483,11 @@ public class Data2PDF extends HttpServlet {
                                 labels.put(td.getKolomnaam(), td.getLabel());
                             } else {
                                 labels.put(td.getKolomnaam(), td.getKolomnaam());
+                            }
+                            // if we only to display columns with data order, remove if dataOrder null
+                            if (td.getDataorder() == null && withDataOrder){
+                                labels.remove(td.getKolomnaam());
+                                        
                             }
                         }
                     }
@@ -589,6 +614,54 @@ public class Data2PDF extends HttpServlet {
             return maxPDFRecords;
         } else {
             return MAX_PDF_RECORDS;
+        }
+
+    }
+    
+    public boolean displayOnlyBasisRegel(Gegevensbron gb, String appCode) {
+        Boolean basisRegelOnly = null;
+
+        try {
+            ConfigKeeper configKeeper = new ConfigKeeper();
+            Map map = configKeeper.getConfigMap(appCode, true);
+            if (map != null) {
+                basisRegelOnly = (Boolean) map.get("displayOnlyBasisRegel");
+
+            }
+        } catch (Exception ex) {
+            log.error(ex);
+            // just pass and give back the value true
+            // to display only basisRegel
+        }
+
+        if (basisRegelOnly != null) {
+            return basisRegelOnly;
+        } else {
+            return true;
+        }
+
+    }
+    
+        public boolean displayAllWithDataOrder(Gegevensbron gb, String appCode) {
+        Boolean displayAllWithDataOrder = null;
+
+        try {
+            ConfigKeeper configKeeper = new ConfigKeeper();
+            Map map = configKeeper.getConfigMap(appCode, true);
+            if (map != null) {
+                displayAllWithDataOrder = (Boolean) map.get("displayAllWithDataOrder");
+
+            }
+        } catch (Exception ex) {
+            log.error(ex);
+            // just pass and give back the value false
+            // to get default behaviour
+        }
+
+        if (displayAllWithDataOrder != null) {
+            return displayAllWithDataOrder;
+        } else {
+            return true;
         }
 
     }
