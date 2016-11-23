@@ -661,7 +661,7 @@ public class Data2PDF extends HttpServlet {
         if (displayAllWithDataOrder != null) {
             return displayAllWithDataOrder;
         } else {
-            return true;
+            return false;
         }
 
     }
